@@ -8,7 +8,7 @@ export function GameHud() {
         <i />
       </div>
       <span>BOOMSTICK // v{APP_VERSION}</span>
-      <span className="hud-hint">Click arena for mouse look · Esc to pause</span>
+      <span className="hud-hint">Enter Arena for mouse look</span>
     </div>
   );
 }
