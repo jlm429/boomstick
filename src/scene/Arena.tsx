@@ -1,4 +1,3 @@
-import { Float, Text } from '@react-three/drei';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 
 function Structure({
@@ -39,7 +38,6 @@ export function Arena() {
       <pointLight position={[-10, 3, -8]} intensity={16} distance={15} color="#ff7e55" />
       <pointLight position={[11, 4, 8]} intensity={13} distance={14} color="#7867ff" />
       <Structure position={[0, -0.5, 0]} args={[18, 0.5, 18]} color="#1b2d40" />
-      <Structure position={[0, 8, 0]} args={[18, 0.25, 18]} color="#17283a" />
       <Structure position={[0, 3.5, -18]} args={[18, 4, 0.5]} />
       <Structure position={[0, 3.5, 18]} args={[18, 4, 0.5]} />
       <Structure position={[-18, 3.5, 0]} args={[0.5, 4, 18]} />
@@ -63,17 +61,6 @@ export function Arena() {
           <meshStandardMaterial color="#20d2eb" emissive="#0e5f75" emissiveIntensity={2} />
         </mesh>
       ))}
-      <Float speed={1.6} rotationIntensity={0.15} floatIntensity={0.3}>
-        <Text
-          position={[0, 5.4, -17.3]}
-          fontSize={1.25}
-          letterSpacing={0.18}
-          color="#b6f5ff"
-          anchorX="center"
-        >
-          BOOMSTICK
-        </Text>
-      </Float>
     </>
   );
 }

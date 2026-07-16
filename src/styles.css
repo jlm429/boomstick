@@ -33,6 +33,7 @@ button:focus-visible {
     radial-gradient(circle at 70% 10%, #173c51 0, transparent 35%),
     linear-gradient(125deg, #071018, #101c2b 58%, #080b15);
   position: relative;
+  isolation: isolate;
 }
 .screen-shell::before {
   content: '';
@@ -45,6 +46,20 @@ button:focus-visible {
     linear-gradient(90deg, #78e9ff16 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: linear-gradient(to bottom, black, transparent);
+}
+.screen-shell::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: min(72vw, 760px);
+  aspect-ratio: 1;
+  right: -18vw;
+  bottom: -42vw;
+  border: 1px solid #54deef55;
+  transform: rotate(28deg);
+  box-shadow:
+    0 0 0 42px #2dc9dd08,
+    0 0 0 86px #2dc9dd06;
 }
 .menu-panel {
   position: relative;
@@ -131,6 +146,16 @@ h2 {
   color: #7893a7;
   font-size: 0.78rem;
   line-height: 1.5;
+}
+.menu-footnote kbd {
+  display: inline-block;
+  margin-right: 0.18rem;
+  border: 1px solid #7cd8e866;
+  border-radius: 3px;
+  padding: 0.12rem 0.32rem;
+  background: #102638;
+  color: #cdf9ff;
+  font-size: 0.68rem;
 }
 .about-panel {
   max-width: 700px;
@@ -257,10 +282,22 @@ h2 {
   color: #8dafc2;
   font-weight: 600;
   letter-spacing: 0.05em;
+  max-width: 30ch;
+  line-height: 1.5;
 }
 .entry-prompt .button {
-  min-width: 190px;
+  min-width: min(100%, 260px);
   text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 @media (max-width: 560px) {
   .screen-shell {

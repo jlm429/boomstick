@@ -22,11 +22,15 @@ export function Player({ active }: { active: boolean }) {
   useEffect(() => {
     const canvas = gl.domElement;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!active) return;
       pressed.current[event.code] = true;
       if (event.code === 'Space') event.preventDefault();
     };
     const onKeyUp = (event: KeyboardEvent) => {
       pressed.current[event.code] = false;
+    };
+    const clearPressed = () => {
+      pressed.current = {};
     };
     const onMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement !== canvas || !active) return;
@@ -35,10 +39,12 @@ export function Player({ active }: { active: boolean }) {
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', clearPressed);
     document.addEventListener('mousemove', onMouseMove);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', clearPressed);
       document.removeEventListener('mousemove', onMouseMove);
     };
   }, [active, gl]);
@@ -47,7 +53,10 @@ export function Player({ active }: { active: boolean }) {
     rotation.set(pitch.current, yaw.current, 0);
     camera.quaternion.setFromEuler(rotation);
     const rigidBody = body.current;
-    if (!rigidBody || !active) return;
+    if (!rigidBody) return;
+    const position = rigidBody.translation();
+    camera.position.set(position.x, position.y + 0.48, position.z);
+    if (!active) return;
     const input = movementVector({
       forward: Boolean(pressed.current.KeyW),
       backward: Boolean(pressed.current.KeyS),
@@ -73,8 +82,6 @@ export function Player({ active }: { active: boolean }) {
       rigidBody.setLinvel({ x: velocity.x, y: JUMP_VELOCITY, z: velocity.z }, true);
       pressed.current.Space = false;
     }
-    const position = rigidBody.translation();
-    camera.position.set(position.x, position.y + 0.48, position.z);
   });
 
   return (
