@@ -10,6 +10,6 @@ Boomstick is a browser-first, single-player movement prototype.
 | Gravity, colliders, player rigid body           | Rapier                                   |
 | Movement input mapping                          | Rendering-independent TypeScript utility |
 
-`App` switches between React screens. The Zustand store owns one game phase: `entry`, `playing`, or `paused`. Pointer-lock acquisition moves the game into `playing`; losing it pauses the game. This prevents the UI, physics, and input from disagreeing about whether a run is active. `GameViewport` owns the Canvas, and scene components never update React state per frame. The player reads input through refs, drives its Rapier body, and updates the Three camera in the render loop.
+`App` switches between React screens. The Zustand store owns the game phase (`entry`, `playing`, or `paused`) and pointer-lock state. Pointer-lock acquisition moves the game into `playing`; losing it pauses the game. `App` derives active play from both values and passes it to the viewport, which gates physics and input. This prevents the UI, physics, and input from disagreeing about whether a run is active. `GameViewport` owns the Canvas, and scene components never update React state per frame. The player reads input through refs, drives its Rapier body, and updates the Three camera in the render loop.
 
 This boundary keeps gameplay additions testable and prevents UI work from coupling to physics presentation.

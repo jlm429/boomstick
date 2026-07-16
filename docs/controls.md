@@ -4,6 +4,9 @@ Select **Play** from the main menu, then select **Enter arena** to capture the p
 explains mouse capture before the run starts. If pointer lock is released, the game pauses; select
 **Resume** to capture the pointer and continue.
 
+From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh run, or
+select **Main menu** to return to the landing page.
+
 | Input                | Action                                |
 | -------------------- | ------------------------------------- |
 | Enter arena / Resume | Capture pointer and enable mouse look |
