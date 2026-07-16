@@ -3,24 +3,60 @@ import { useAppStore } from './store';
 
 describe('application state', () => {
   beforeEach(() => {
-    useAppStore.setState({ screen: 'main', isPaused: false, hasPointerLock: false, runId: 0 });
+    useAppStore.setState({
+      screen: 'main',
+      gamePhase: 'entry',
+      hasPointerLock: false,
+      runId: 0,
+    });
   });
 
-  it('moves through the game and pause flow', () => {
+  it('only enables play after pointer lock is acquired', () => {
     const state = useAppStore.getState();
     state.startGame();
-    expect(useAppStore.getState()).toMatchObject({ screen: 'game', isPaused: false, runId: 1 });
-    useAppStore.getState().pause();
-    expect(useAppStore.getState().isPaused).toBe(true);
-    useAppStore.getState().resume();
-    expect(useAppStore.getState().isPaused).toBe(false);
+    expect(useAppStore.getState()).toMatchObject({
+      screen: 'game',
+      gamePhase: 'entry',
+      runId: 1,
+    });
+    useAppStore.getState().handlePointerLockChange(true);
+    expect(useAppStore.getState()).toMatchObject({
+      gamePhase: 'playing',
+      hasPointerLock: true,
+    });
   });
 
-  it('restarts a new arena run and can return home', () => {
+  it('pauses when pointer lock is lost and resumes only after a new lock', () => {
     useAppStore.getState().startGame();
+    useAppStore.getState().handlePointerLockChange(true);
+    useAppStore.getState().handlePointerLockChange(false);
+    expect(useAppStore.getState()).toMatchObject({
+      gamePhase: 'paused',
+      hasPointerLock: false,
+    });
+    useAppStore.getState().prepareArenaEntry();
+    expect(useAppStore.getState().gamePhase).toBe('entry');
+    useAppStore.getState().handlePointerLockChange(true);
+    expect(useAppStore.getState()).toMatchObject({
+      gamePhase: 'playing',
+      hasPointerLock: true,
+    });
+  });
+
+  it('restarts a fresh spawn run and can return home without stale lock state', () => {
+    useAppStore.getState().startGame();
+    useAppStore.getState().handlePointerLockChange(true);
     useAppStore.getState().restart();
-    expect(useAppStore.getState().runId).toBe(2);
+    expect(useAppStore.getState()).toMatchObject({
+      runId: 2,
+      gamePhase: 'entry',
+      hasPointerLock: false,
+    });
     useAppStore.getState().showMainMenu();
-    expect(useAppStore.getState()).toMatchObject({ screen: 'main', isPaused: false });
+    expect(useAppStore.getState()).toMatchObject({
+      screen: 'main',
+      gamePhase: 'entry',
+      hasPointerLock: false,
+    });
   });
 });

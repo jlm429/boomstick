@@ -8,7 +8,7 @@ export function GameHud() {
         <i />
       </div>
       <span>BOOMSTICK // v{APP_VERSION}</span>
-      <span className="hud-hint">Click arena for mouse look · Esc to pause</span>
+      <span className="hud-hint">Enter Arena for mouse look</span>
     </div>
   );
 }
@@ -16,11 +16,13 @@ export function GameHud() {
 export function EntryPrompt({ onEnter }: { onEnter: () => void }) {
   return (
     <div className="entry-prompt">
-      <p>Pointer lock is off</p>
+      <p>Ready for the arena?</p>
       <button className="button button-primary" onClick={onEnter}>
         Enter arena
       </button>
-      <span>Mouse and keyboard recommended</span>
+      <span>
+        Enter Arena captures your mouse. WASD moves, Mouse looks, Space jumps, Esc pauses.
+      </span>
     </div>
   );
 }
