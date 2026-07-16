@@ -4,7 +4,9 @@ import { App } from './App';
 import { useAppStore } from './game/store';
 
 vi.mock('./scene/GameViewport', () => ({
-  GameViewport: () => <div data-testid="game-viewport" />,
+  GameViewport: ({ active }: { active: boolean }) => (
+    <div data-active={active} data-testid="game-viewport" />
+  ),
 }));
 
 describe('App navigation', () => {
@@ -25,8 +27,10 @@ describe('App navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     fireEvent.keyDown(window, { code: 'Escape' });
     expect(screen.getByRole('dialog', { name: 'Catch your breath.' })).toBeInTheDocument();
+    expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-active', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-active', 'true');
   });
 
   it('keeps Settings visibly unavailable', () => {

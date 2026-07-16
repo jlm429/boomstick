@@ -17,7 +17,7 @@ export function GameViewport({ active, runId }: { active: boolean; runId: number
       }}
     >
       <Suspense fallback={null}>
-        <Physics gravity={[0, -20, 0]}>
+        <Physics gravity={[0, -20, 0]} paused={!active}>
           <Arena />
           <Player key={runId} active={active} />
         </Physics>
