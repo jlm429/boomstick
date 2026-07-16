@@ -2,85 +2,170 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Euler, Vector3 } from 'three';
-import { JUMP_VELOCITY, MOVE_SPEED, PLAYER_SPAWN } from '../game/constants';
+import { shouldResetPlayerPosition } from '../game/arena';
+import {
+  CAMERA_EYE_OFFSET,
+  JUMP_VELOCITY,
+  MAX_FRAME_DELTA,
+  MOVE_SPEED,
+  PLAYER_SPAWN,
+} from '../game/constants';
+import {
+  clearPressedKeys,
+  createPressedKeys,
+  isGameControl,
+  movementInput,
+  pressKey,
+  releaseKey,
+  type PressedKeys,
+} from '../game/input';
 import { movementVector } from '../game/movement';
+import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 
 const UP = new Vector3(0, 1, 0);
 const walkDirection = new Vector3();
 const cameraDirection = new Vector3();
 const rotation = new Euler(0, 0, 0, 'YXZ');
 
-type Pressed = Record<string, boolean>;
+function resetBody(rigidBody: RapierRigidBody) {
+  rigidBody.setTranslation(
+    { x: PLAYER_SPAWN[0], y: PLAYER_SPAWN[1], z: PLAYER_SPAWN[2] },
+    true,
+  );
+  rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+}
 
 export function Player({ active }: { active: boolean }) {
   const body = useRef<RapierRigidBody>(null);
-  const pressed = useRef<Pressed>({});
+  const activeRef = useRef(active);
+  const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
+  const lastDiagnosticSample = useRef(0);
   const { camera, gl } = useThree();
+
+  useEffect(() => {
+    activeRef.current = active;
+    if (!active) clearPressedKeys(pressed.current);
+  }, [active]);
 
   useEffect(() => {
     const canvas = gl.domElement;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!active) return;
-      pressed.current[event.code] = true;
-      if (event.code === 'Space') event.preventDefault();
+      if (!activeRef.current || document.pointerLockElement !== canvas) return;
+      pressKey(pressed.current, event.code, true);
+      if (isGameControl(event.code)) event.preventDefault();
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      pressed.current[event.code] = false;
+      releaseKey(pressed.current, event.code);
     };
-    const clearPressed = () => {
-      pressed.current = {};
+    const clearInput = () => clearPressedKeys(pressed.current);
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') clearInput();
     };
     const onMouseMove = (event: MouseEvent) => {
-      if (document.pointerLockElement !== canvas || !active) return;
+      if (!activeRef.current || document.pointerLockElement !== canvas) return;
+      if (!Number.isFinite(event.movementX) || !Number.isFinite(event.movementY)) return;
       yaw.current -= event.movementX * 0.0022;
       pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current - event.movementY * 0.0022));
     };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('blur', clearPressed);
+    window.addEventListener('blur', clearInput);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     document.addEventListener('mousemove', onMouseMove);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('blur', clearPressed);
+      window.removeEventListener('blur', clearInput);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       document.removeEventListener('mousemove', onMouseMove);
     };
-  }, [active, gl]);
+  }, [gl]);
 
-  useFrame(() => {
+  useFrame(({ clock }, delta) => {
+    if (!Number.isFinite(yaw.current) || !Number.isFinite(pitch.current)) {
+      yaw.current = 0;
+      pitch.current = 0;
+    }
     rotation.set(pitch.current, yaw.current, 0);
     camera.quaternion.setFromEuler(rotation);
+
     const rigidBody = body.current;
     if (!rigidBody) return;
     const position = rigidBody.translation();
-    camera.position.set(position.x, position.y + 0.48, position.z);
-    if (!active) return;
-    const input = movementVector({
-      forward: Boolean(pressed.current.KeyW),
-      backward: Boolean(pressed.current.KeyS),
-      left: Boolean(pressed.current.KeyA),
-      right: Boolean(pressed.current.KeyD),
-    });
+    if (shouldResetPlayerPosition(position.x, position.y, position.z)) {
+      resetBody(rigidBody);
+      camera.position.set(
+        PLAYER_SPAWN[0],
+        PLAYER_SPAWN[1] + CAMERA_EYE_OFFSET,
+        PLAYER_SPAWN[2],
+      );
+      clearPressedKeys(pressed.current);
+      return;
+    }
+
+    camera.position.set(position.x, position.y + CAMERA_EYE_OFFSET, position.z);
+    if (
+      DEVELOPMENT_DIAGNOSTICS.enabled &&
+      clock.elapsedTime - lastDiagnosticSample.current >=
+        DEVELOPMENT_DIAGNOSTICS.sampleIntervalSeconds
+    ) {
+      lastDiagnosticSample.current = clock.elapsedTime;
+      reportRuntimeDiagnostics({
+        input: Object.keys(pressed.current),
+        player: [position.x, position.y, position.z],
+      });
+    }
+
+    if (!activeRef.current) return;
+    if (!Number.isFinite(delta) || delta > MAX_FRAME_DELTA) {
+      clearPressedKeys(pressed.current);
+      const velocity = rigidBody.linvel();
+      rigidBody.setLinvel(
+        { x: 0, y: Number.isFinite(velocity.y) ? velocity.y : 0, z: 0 },
+        true,
+      );
+      return;
+    }
+
+    const input = movementVector(movementInput(pressed.current));
     camera.getWorldDirection(cameraDirection);
     cameraDirection.y = 0;
+    if (
+      !Number.isFinite(cameraDirection.x) ||
+      !Number.isFinite(cameraDirection.y) ||
+      !Number.isFinite(cameraDirection.z)
+    )
+      return;
     cameraDirection.normalize();
     walkDirection.crossVectors(cameraDirection, UP).multiplyScalar(input[0]);
-    walkDirection.addScaledVector(cameraDirection, -input[1]).normalize();
-    const velocity = rigidBody.linvel();
+    walkDirection.addScaledVector(cameraDirection, -input[1]);
     const hasInput = input[0] !== 0 || input[1] !== 0;
+    if (hasInput) walkDirection.normalize();
+
+    const velocity = rigidBody.linvel();
+    const safeVerticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
     rigidBody.setLinvel(
       {
         x: hasInput ? walkDirection.x * MOVE_SPEED : 0,
-        y: velocity.y,
+        y: safeVerticalVelocity,
         z: hasInput ? walkDirection.z * MOVE_SPEED : 0,
       },
       true,
     );
-    if (pressed.current.Space && Math.abs(velocity.y) < 0.12) {
-      rigidBody.setLinvel({ x: velocity.x, y: JUMP_VELOCITY, z: velocity.z }, true);
-      pressed.current.Space = false;
+    if (pressed.current.Space && Math.abs(safeVerticalVelocity) < 0.12) {
+      rigidBody.setLinvel(
+        {
+          x: hasInput ? walkDirection.x * MOVE_SPEED : 0,
+          y: JUMP_VELOCITY,
+          z: hasInput ? walkDirection.z * MOVE_SPEED : 0,
+        },
+        true,
+      );
+      releaseKey(pressed.current, 'Space');
     }
   });
 
@@ -89,6 +174,8 @@ export function Player({ active }: { active: boolean }) {
       ref={body}
       position={PLAYER_SPAWN}
       enabledRotations={[false, false, false]}
+      canSleep={false}
+      ccd
       friction={0}
       linearDamping={7}
     >

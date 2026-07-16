@@ -1,6 +1,6 @@
 import { APP_VERSION } from '../game/constants';
 
-export function GameHud() {
+export function GameHud({ playing }: { playing: boolean }) {
   return (
     <div className="hud" aria-hidden="true">
       <div className="crosshair">
@@ -8,30 +8,51 @@ export function GameHud() {
         <i />
       </div>
       <span>BOOMSTICK // v{APP_VERSION}</span>
-      <span className="hud-hint">Enter Arena for mouse look</span>
-    </div>
-  );
-}
-
-export function EntryPrompt({ onEnter }: { onEnter: () => void }) {
-  return (
-    <div className="entry-prompt">
-      <p>Ready for the arena?</p>
-      <button className="button button-primary" onClick={onEnter}>
-        Enter arena
-      </button>
-      <span>
-        Enter Arena captures your mouse. WASD moves, Mouse looks, Space jumps, Esc pauses.
+      <span className="hud-hint">
+        {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
       </span>
     </div>
   );
 }
 
+export function EntryPrompt({ error, onEnter }: { error: string | null; onEnter: () => void }) {
+  return (
+    <section className="entry-prompt" aria-labelledby="entry-title">
+      <p id="entry-title">Enter Arena</p>
+      <span className="entry-instruction">Click to capture the mouse and begin.</span>
+      <button className="button button-primary" onClick={onEnter}>
+        Enter Arena
+      </button>
+      <dl className="entry-controls" aria-label="Arena controls">
+        <div>
+          <dt>WASD</dt>
+          <dd>Move</dd>
+        </div>
+        <div>
+          <dt>Mouse</dt>
+          <dd>Look</dd>
+        </div>
+        <div>
+          <dt>Space</dt>
+          <dd>Jump</dd>
+        </div>
+        <div>
+          <dt>Escape</dt>
+          <dd>Pause</dd>
+        </div>
+      </dl>
+      {error && <span className="entry-error">{error}</span>}
+    </section>
+  );
+}
+
 export function PauseMenu({
+  error,
   onResume,
   onRestart,
   onMainMenu,
 }: {
+  error: string | null;
   onResume: () => void;
   onRestart: () => void;
   onMainMenu: () => void;
@@ -50,6 +71,7 @@ export function PauseMenu({
         <button className="button" onClick={onMainMenu}>
           Return to Main Menu
         </button>
+        {error && <p className="pause-error">{error}</p>}
       </section>
     </div>
   );
