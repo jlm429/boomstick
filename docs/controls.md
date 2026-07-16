@@ -1,5 +1,8 @@
 # Controls
 
+Select **Play** from the main menu, then select **Enter arena** or click the arena to capture the
+pointer.
+
 | Input           | Action                                |
 | --------------- | ------------------------------------- |
 | Click arena     | Capture pointer and enable mouse look |
