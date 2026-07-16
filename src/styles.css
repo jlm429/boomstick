@@ -190,7 +190,13 @@ h2 {
   height: 100% !important;
   outline: none;
 }
+.game-viewport {
+  position: absolute !important;
+  z-index: 0;
+  inset: 0;
+}
 .hud {
+  z-index: 1;
   pointer-events: none;
   position: absolute;
   inset: 0;
@@ -234,6 +240,7 @@ h2 {
 }
 .pause-layer {
   position: absolute;
+  z-index: 3;
   inset: 0;
   display: grid;
   place-items: center;
@@ -256,14 +263,24 @@ h2 {
   width: 100%;
   margin-top: 0.75rem;
 }
+.pause-error {
+  margin: 1rem 0 0;
+  color: #ffbc9e;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
 .entry-prompt {
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: 50%;
   display: grid;
   justify-items: center;
   gap: 0.75rem;
+  width: min(calc(100% - 2rem), 380px);
+  max-height: calc(100dvh - 2rem);
   padding: 1.2rem;
+  overflow-y: auto;
   transform: translate(-50%, 48px);
   color: #c9f8ff;
   background: #06111bb8;
@@ -277,6 +294,44 @@ h2 {
   letter-spacing: 0.12em;
   font-size: 0.62rem;
   font-weight: 800;
+}
+.entry-prompt .entry-instruction {
+  max-width: none;
+  color: #c9f8ff;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.entry-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  margin: 0;
+  gap: 0.4rem;
+}
+.entry-controls div {
+  min-width: 0;
+  border: 1px solid #7ce6f02e;
+  padding: 0.45rem;
+  background: #102638b8;
+}
+.entry-controls dt,
+.entry-controls dd {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+.entry-controls dt {
+  color: #d9fbff;
+  font-weight: 800;
+}
+.entry-controls dd {
+  color: #8dafc2;
+}
+.entry-prompt .entry-error {
+  max-width: 36ch;
+  color: #ffbc9e;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 .entry-prompt span {
   color: #8dafc2;
@@ -311,5 +366,12 @@ h2 {
   }
   .hud-hint {
     display: none;
+  }
+}
+@media (max-height: 680px) {
+  .entry-prompt {
+    gap: 0.5rem;
+    padding: 0.85rem;
+    transform: translate(-50%, -50%);
   }
 }

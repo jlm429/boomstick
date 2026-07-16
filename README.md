@@ -9,8 +9,8 @@ Boomstick is an original, single-player first-person movement prototype. It pair
 ## What is included
 
 - Full-screen menu, About screen, accessible pause menu, HUD, and pointer-lock guidance
-- Original indoor sci-fi arena with fog, lighting, shadows, collision, and gravity
-- WASD movement, mouse look, jumping, pause, restart, and return-to-menu flows
+- Procedural, high-contrast arena with a visible sky, landmark, lighting, conservative shadows, matching collision, and gravity
+- WASD movement, mouse look, jumping, pause, restart, and an authoritative pointer-lock lifecycle
 - React 19, TypeScript, Vite, Three.js, React Three Fiber, Rapier, Zustand, Vitest, ESLint, and Prettier
 - GitHub Actions validation and Pages deployment
 

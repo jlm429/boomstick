@@ -7,3 +7,7 @@ All notable changes are documented here.
 - Initial playable Boomstick movement prototype.
 - Repaired the arena entry and pointer-lock lifecycle so input and physics only run during an active locked session.
 - Improved the landing identity, arena visibility, entry guidance, and pause/resume flow.
+- Rebuilt the arena with a bright procedural level, matching visual and physics boundaries, readable obstacles, and a landmark facing the spawn.
+- Unified menu, entry, play, and pause transitions around authoritative pointer-lock events.
+- Stabilized player input, camera following, restart behavior, invalid transform recovery, and large frame-delta handling.
+- Added development-only runtime diagnostics for Canvas, WebGL, Rapier, camera, player, input, and frame-loop inspection.

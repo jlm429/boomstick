@@ -9,7 +9,7 @@ export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () 
     <Frame>
       <section className="menu-panel" aria-labelledby="boomstick-title">
         <p className="eyebrow">by Pew Pew Labs</p>
-        <h1 id="boomstick-title">Boomstick</h1>
+        <h1 id="boomstick-title">BOOMSTICK</h1>
         <p className="tagline">Bounce, blast off, and make the floor yours.</p>
         <nav className="menu-actions" aria-label="Main navigation">
           <button className="button button-primary" onClick={onPlay}>
