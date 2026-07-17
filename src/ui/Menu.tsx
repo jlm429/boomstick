@@ -1,7 +1,13 @@
 import { type ReactNode } from 'react';
+import landingPageArtwork from '../../docs/images/landingpage.png';
 
 export function Frame({ children }: { children: ReactNode }) {
-  return <main className="screen-shell">{children}</main>;
+  return (
+    <main className="screen-shell">
+      <img className="landing-artwork" src={landingPageArtwork} alt="" aria-hidden="true" />
+      {children}
+    </main>
+  );
 }
 
 export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () => void }) {
@@ -10,18 +16,15 @@ export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () 
       <section className="menu-panel" aria-labelledby="boomstick-title">
         <p className="eyebrow">by Pew Pew Labs</p>
         <h1 id="boomstick-title">BOOMSTICK</h1>
-        <p className="tagline">Bounce, blast off, and make the floor yours.</p>
+        <p className="tagline">Built for modern browsers. Inspired by the classics.</p>
         <nav className="menu-actions" aria-label="Main navigation">
           <button className="button button-primary" onClick={onPlay}>
-            Play
+            Enter Arena
           </button>
           <button className="button" onClick={onAbout}>
-            About the arena
+            About
           </button>
         </nav>
-        <p className="menu-footnote">
-          <kbd>WASD</kbd> move <kbd>Mouse</kbd> look <kbd>Space</kbd> jump <kbd>Esc</kbd> pause
-        </p>
       </section>
     </Frame>
   );
@@ -30,18 +33,23 @@ export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () 
 export function About({ onBack }: { onBack: () => void }) {
   return (
     <Frame>
-      <section className="menu-panel about-panel" aria-labelledby="about-title">
-        <p className="eyebrow">About</p>
-        <h1 id="about-title">Built for velocity.</h1>
+      <section
+        className="menu-panel about-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="about-title"
+      >
+        <h1 id="about-title">About</h1>
         <p>
-          Boomstick is an original browser-based arena foundation. This first arena is about
-          clean movement, responsive controls, and a place that feels worth exploring.
+          Boomstick is a modern browser-based first-person arena built with JavaScript, React,
+          WebGL, and Rapier physics.
         </p>
-        <p className="controls-copy">
-          <kbd>WASD</kbd> move <kbd>Mouse</kbd> look <kbd>Space</kbd> jump <kbd>Esc</kbd> pause
+        <p>
+          It explores responsive movement, real-time rendering, collision systems, and
+          browser-based game architecture, with inspiration from classic first-person shooters.
         </p>
-        <button className="button button-primary" onClick={onBack}>
-          Back to main menu
+        <button className="button" onClick={onBack}>
+          Close
         </button>
       </section>
     </Frame>

@@ -57,15 +57,15 @@ describe('App navigation', () => {
 
   it('navigates menu to About and back', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'About the arena' }));
-    expect(screen.getByRole('heading', { name: 'Built for velocity.' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Back to main menu' }));
+    fireEvent.click(screen.getByRole('button', { name: 'About' }));
+    expect(screen.getByRole('dialog', { name: 'About' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.getByRole('heading', { name: 'BOOMSTICK' })).toBeInTheDocument();
   });
 
   it('moves from menu to the complete arena entry step', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     expect(screen.getByText('Click to capture the mouse and begin.')).toBeInTheDocument();
     expect(screen.getByText('WASD')).toBeInTheDocument();
     expect(screen.getByText('Mouse')).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe('App navigation', () => {
 
   it('requests lock from the R3F canvas and only plays after pointerlockchange', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     expect(requestPointerLock).toHaveBeenCalledOnce();
@@ -88,7 +88,7 @@ describe('App navigation', () => {
 
   it('pauses on pointer-lock loss and resumes only after an explicit click and new lock', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     act(() => setPointerLockElement(canvas));
     act(() => setPointerLockElement(null));
@@ -103,7 +103,7 @@ describe('App navigation', () => {
 
   it('uses Escape to release lock and pause through the authoritative lock event', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     act(() => setPointerLockElement(canvas));
     fireEvent.keyDown(window, { code: 'Escape' });
@@ -113,7 +113,7 @@ describe('App navigation', () => {
 
   it('restarts at a new spawn run and requests lock from the restart click', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     act(() => setPointerLockElement(canvas));
     act(() => setPointerLockElement(null));
@@ -125,7 +125,7 @@ describe('App navigation', () => {
 
   it('returns to the main menu without stale play state', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     act(() => setPointerLockElement(canvas));
     act(() => setPointerLockElement(null));
@@ -141,6 +141,9 @@ describe('App navigation', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'BOOMSTICK' })).toBeInTheDocument();
     expect(screen.getByText('by Pew Pew Labs')).toBeInTheDocument();
-    expect(screen.getByText(/WASD/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Built for modern browsers. Inspired by the classics.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'About' })).not.toBeInTheDocument();
   });
 });

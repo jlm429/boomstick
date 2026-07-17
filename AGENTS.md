@@ -39,3 +39,10 @@ Read every skill that crosses a task boundary.
 | Rapier bodies, colliders, movement, collision, restart, or simulation timing | [.agents/skills/physics/SKILL.md](.agents/skills/physics/SKILL.md)                     |
 | Tests, CI, or validation                                                     | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md)                     |
 | Pages hosting or deployment workflow                                         | [.agents/skills/deployment/SKILL.md](.agents/skills/deployment/SKILL.md)               |
+
+## Maintaining this file
+
+Keep this file for knowledge useful to almost every future agent session in this project.
+Do not repeat what the codebase already shows; point to the authoritative file or command instead.
+Prefer rewriting or pruning existing entries over appending new ones.
+When updating this file, preserve this bar for all agents and keep entries concise.
