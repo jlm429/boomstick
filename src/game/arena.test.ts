@@ -17,7 +17,7 @@ describe('arena configuration', () => {
 
   it('provides matching procedural boundaries, floor, obstacles, and visible rendering', () => {
     expect(ARENA_RENDER_CONFIG.background).not.toMatch(/^#0{3,6}$/i);
-    expect(ARENA_RENDER_CONFIG.fog).toBe(false);
+    expect(ARENA_RENDER_CONFIG.fog).toBe(true);
     expect(ARENA_RENDER_CONFIG.postprocessing).toBe(false);
     expect(ARENA_BLOCKS.some(({ id }) => id === 'floor')).toBe(true);
     expect(ARENA_BLOCKS.filter(({ id }) => id.endsWith('wall'))).toHaveLength(4);

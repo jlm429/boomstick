@@ -142,8 +142,8 @@ describe('App navigation', () => {
     expect(screen.getByRole('heading', { name: 'BOOMSTICK' })).toBeInTheDocument();
     expect(screen.getByText('by Pew Pew Labs')).toBeInTheDocument();
     expect(
-      screen.getByText('Built for modern browsers. Inspired by the classics.'),
-    ).toBeInTheDocument();
+      screen.queryByText('Built for modern browsers. Inspired by the classics.'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'About' })).not.toBeInTheDocument();
   });
 });

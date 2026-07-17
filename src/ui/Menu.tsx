@@ -16,7 +16,6 @@ export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () 
       <section className="menu-panel" aria-labelledby="boomstick-title">
         <p className="eyebrow">by Pew Pew Labs</p>
         <h1 id="boomstick-title">BOOMSTICK</h1>
-        <p className="tagline">Built for modern browsers. Inspired by the classics.</p>
         <nav className="menu-actions" aria-label="Main navigation">
           <button className="button button-primary" onClick={onPlay}>
             Enter Arena
