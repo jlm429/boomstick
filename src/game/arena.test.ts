@@ -46,9 +46,9 @@ describe('arena configuration', () => {
       );
     }
 
-    expect(ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight)).toHaveLength(
-      6,
-    );
+    expect(
+      ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight),
+    ).toHaveLength(6);
   });
 
   it('resets invalid or escaped player transforms', () => {

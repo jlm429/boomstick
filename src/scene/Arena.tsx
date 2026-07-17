@@ -134,9 +134,11 @@ function ArenaDressings() {
   return (
     <>
       <FixtureMeshes />
-      {ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight).map((fixture) => (
-        <FixtureLight key={fixture.id} fixture={fixture} />
-      ))}
+      {ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight).map(
+        (fixture) => (
+          <FixtureLight key={fixture.id} fixture={fixture} />
+        ),
+      )}
       {[-2.8, 2.8].map((x) => (
         <mesh key={x} position={[x, 0.28, -10]} raycast={() => null} receiveShadow>
           <boxGeometry args={[1.18, 0.22, 2.02]} />
