@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import landingPageArtwork from '../../docs/images/landingpage.png';
+import landingPageArtwork from '../../docs/images/new_landing_page.png';
 
 export function Frame({ children }: { children: ReactNode }) {
   return (
