@@ -106,31 +106,83 @@ function Shotgun({ shotIdRef }: { shotIdRef: MutableRefObject<number> }) {
     mesh.current.position.copy(camera.position);
     mesh.current.quaternion.copy(camera.quaternion);
     mesh.current.rotateX(-0.08);
-    mesh.current.translateY(-0.68 + recoil.current * 0.06);
+    mesh.current.translateY(-0.52 + recoil.current * 0.06);
     mesh.current.translateZ(-1.15 + recoil.current * 0.16);
   });
 
   return (
-    <group ref={mesh}>
-      <mesh position={[0, -0.08, 0.12]}>
-        <boxGeometry args={[0.76, 0.33, 0.74]} />
-        <meshStandardMaterial color="#514238" roughness={0.66} />
+    <group ref={mesh} scale={0.68}>
+      <pointLight position={[0, 0, -0.6]} intensity={1.2} distance={3} color="#d26a35" />
+      <mesh position={[0, -0.05, 0.06]} castShadow>
+        <boxGeometry args={[0.72, 0.38, 0.7]} />
+        <meshStandardMaterial
+          color="#302724"
+          emissive="#140b08"
+          emissiveIntensity={0.22}
+          metalness={0.56}
+          roughness={0.4}
+        />
       </mesh>
-      <mesh position={[0, 0.1, -0.48]}>
-        <boxGeometry args={[0.5, 0.26, 1.05]} />
-        <meshStandardMaterial color="#262d34" metalness={0.72} roughness={0.32} />
+      <mesh position={[0, 0.08, -0.56]} castShadow>
+        <boxGeometry args={[0.54, 0.25, 0.82]} />
+        <meshStandardMaterial
+          color="#242024"
+          emissive="#10080a"
+          emissiveIntensity={0.18}
+          metalness={0.82}
+          roughness={0.27}
+        />
       </mesh>
-      <mesh position={[-0.15, 0.11, -1.03]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.54, 10]} />
-        <meshStandardMaterial color="#181e24" metalness={0.8} roughness={0.28} />
+      <mesh position={[0, 0.02, -1.04]}>
+        <boxGeometry args={[0.59, 0.3, 0.46]} />
+        <meshStandardMaterial
+          color="#714028"
+          emissive="#210c06"
+          emissiveIntensity={0.3}
+          roughness={0.74}
+        />
       </mesh>
-      <mesh position={[0.15, 0.11, -1.03]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.54, 10]} />
-        <meshStandardMaterial color="#181e24" metalness={0.8} roughness={0.28} />
+      <mesh position={[-0.16, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.095, 0.105, 1.12, 10]} />
+        <meshStandardMaterial
+          color="#1d1c1e"
+          emissive="#090709"
+          emissiveIntensity={0.16}
+          metalness={0.88}
+          roughness={0.23}
+        />
       </mesh>
-      <mesh position={[0, -0.33, 0.35]} rotation={[0.35, 0, 0]}>
-        <boxGeometry args={[0.44, 0.35, 0.62]} />
-        <meshStandardMaterial color="#7d3e23" roughness={0.82} />
+      <mesh position={[0.16, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.095, 0.105, 1.12, 10]} />
+        <meshStandardMaterial
+          color="#1d1c1e"
+          emissive="#090709"
+          emissiveIntensity={0.16}
+          metalness={0.88}
+          roughness={0.23}
+        />
+      </mesh>
+      <mesh position={[0, 0.16, -1.9]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.115, 0.115, 0.16, 10]} />
+        <meshStandardMaterial color="#171417" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -0.3, 0.39]} rotation={[0.3, 0, 0]} castShadow>
+        <boxGeometry args={[0.46, 0.38, 0.7]} />
+        <meshStandardMaterial
+          color="#713d26"
+          emissive="#220e07"
+          emissiveIntensity={0.28}
+          roughness={0.78}
+        />
+      </mesh>
+      <mesh position={[0, -0.38, -0.14]} rotation={[0.42, 0, 0]}>
+        <boxGeometry args={[0.24, 0.46, 0.36]} />
+        <meshStandardMaterial
+          color="#392019"
+          emissive="#150705"
+          emissiveIntensity={0.22}
+          roughness={0.92}
+        />
       </mesh>
     </group>
   );

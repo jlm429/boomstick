@@ -162,7 +162,20 @@ h2 {
 .game-shell {
   position: fixed;
   inset: 0;
-  background: #071018;
+  background: #130e0e;
+}
+.game-shell::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 42%,
+    #09040530 70%,
+    #040202ad 100%
+  );
 }
 .game-shell canvas {
   display: block;
@@ -176,7 +189,7 @@ h2 {
   inset: 0;
 }
 .hud {
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
   position: absolute;
   inset: 0;
@@ -184,13 +197,13 @@ h2 {
   justify-content: space-between;
   align-items: flex-end;
   padding: 1.25rem 1.5rem;
-  color: #d8faffcc;
+  color: #f7d6b1cc;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 .hud-hint {
-  color: #b7ddeb;
+  color: #d9ad84;
 }
 .crosshair {
   position: absolute;
@@ -203,8 +216,8 @@ h2 {
 .crosshair i {
   position: absolute;
   display: block;
-  background: #e5ffff;
-  box-shadow: 0 0 6px #20e2f1;
+  background: #fff1d4;
+  box-shadow: 0 0 6px #ef642e;
 }
 .crosshair i:first-child {
   width: 18px;

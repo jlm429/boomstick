@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useRef } from 'react';
-import { NoToneMapping, SRGBColorSpace } from 'three';
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
@@ -96,8 +96,9 @@ export function GameViewport({ active, runId, onCanvasReady }: GameViewportProps
       onCreated={({ gl }) => {
         gl.autoClear = true;
         gl.outputColorSpace = SRGBColorSpace;
-        gl.toneMapping = NoToneMapping;
-        gl.setClearColor('#65bde3', 1);
+        gl.toneMapping = ACESFilmicToneMapping;
+        gl.toneMappingExposure = 0.9;
+        gl.setClearColor('#130e0e', 1);
       }}
     >
       <CanvasRegistration onCanvasReady={onCanvasReady} />
