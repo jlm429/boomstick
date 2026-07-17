@@ -1,15 +1,15 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, type MutableRefObject } from 'react';
-import { Group, Mesh, MeshStandardMaterial, Raycaster, Vector3 } from 'three';
+import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
+import { Group, MeshStandardMaterial, Vector3 } from 'three';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
 import { canFireShot, pelletOffsets } from '../game/shooting';
+import { resolvePelletHit } from '../game/hitscan';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
 const cameraUp = new Vector3();
 const pelletDirection = new Vector3();
-const raycaster = new Raycaster();
 const HIT_FLASH_SECONDS = 0.18;
 
 type TargetHitHandler = () => void;
@@ -19,16 +19,19 @@ function Target({
   register,
 }: {
   target: TargetDefinition;
-  register: (mesh: Mesh | null) => void;
+  register: (onHit: TargetHitHandler | null) => void;
 }) {
-  const mesh = useRef<Mesh>(null);
   const materialRef = useRef<MeshStandardMaterial>(null);
   const hitAtRef = useRef<number | null>(null);
 
+  const onHit: TargetHitHandler = () => {
+    hitAtRef.current = performance.now() / 1000;
+  };
+
   useEffect(() => {
-    register(mesh.current);
+    register(onHit);
     return () => register(null);
-  }, [register]);
+  }, [onHit, register]);
 
   useFrame(() => {
     const elapsed =
@@ -37,14 +40,9 @@ function Target({
     if (materialRef.current) materialRef.current.emissiveIntensity = 0.25 + strength * 2.5;
   });
 
-  const onHit: TargetHitHandler = () => {
-    hitAtRef.current = performance.now() / 1000;
-  };
-
   return (
-    <RigidBody type="fixed" colliders={false} position={[...target.position]}>
-      <CuboidCollider args={[...target.halfExtents]} />
-      <mesh ref={mesh} castShadow receiveShadow userData={{ onHit }}>
+    <group position={[...target.position]}>
+      <mesh castShadow receiveShadow>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
         />
@@ -63,26 +61,35 @@ function Target({
         <circleGeometry args={[0.23, 24]} />
         <meshBasicMaterial color="#ffbb45" />
       </mesh>
-    </RigidBody>
+    </group>
   );
 }
 
-function Targets({ targets }: { targets: MutableRefObject<Mesh[]> }) {
+function Targets({ hitHandlers }: { hitHandlers: MutableRefObject<Map<string, TargetHitHandler>> }) {
   const registerTarget = useCallback(
-    (id: string) => (mesh: Mesh | null) => {
-      targets.current = targets.current.filter((target) => target.userData.targetId !== id);
-      if (mesh) {
-        mesh.userData.targetId = id;
-        targets.current.push(mesh);
-      }
+    (id: string) => (onHit: TargetHitHandler | null) => {
+      if (onHit) hitHandlers.current.set(id, onHit);
+      else hitHandlers.current.delete(id);
     },
-    [targets],
+    [hitHandlers],
   );
 
   return (
     <>
       {ARENA_TARGETS.map((target) => (
         <Target key={target.id} target={target} register={registerTarget(target.id)} />
+      ))}
+    </>
+  );
+}
+
+export function TargetColliders() {
+  return (
+    <>
+      {ARENA_TARGETS.map((target) => (
+        <RigidBody key={target.id} type="fixed" colliders={false} position={[...target.position]}>
+          <CuboidCollider args={[...target.halfExtents]} />
+        </RigidBody>
       ))}
     </>
   );
@@ -158,7 +165,7 @@ function FireInput({ active, fire }: { active: boolean; fire: () => boolean }) {
 
 export function CombatScene({ active }: { active: boolean }) {
   const { camera } = useThree();
-  const targets = useRef<Mesh[]>([]);
+  const hitHandlers = useRef(new Map<string, TargetHitHandler>());
   const shotIdRef = useRef(0);
   const lastShotAt = useRef(-Infinity);
 
@@ -175,20 +182,19 @@ export function CombatScene({ active }: { active: boolean }) {
         .addScaledVector(cameraRight, horizontal)
         .addScaledVector(cameraUp, vertical)
         .normalize();
-      raycaster.set(camera.position, pelletDirection);
-      const hit = raycaster.intersectObjects(targets.current, false)[0];
-      const onHit = hit?.object.userData.onHit as TargetHitHandler | undefined;
-      onHit?.();
+      const targetId = resolvePelletHit(
+        [camera.position.x, camera.position.y, camera.position.z],
+        [pelletDirection.x, pelletDirection.y, pelletDirection.z],
+      );
+      if (targetId) hitHandlers.current.get(targetId)?.();
     }
     shotIdRef.current += 1;
     return true;
   }, [camera]);
 
-  const activeTargets = useMemo(() => targets, []);
-
   return (
     <>
-      <Targets targets={activeTargets} />
+      <Targets hitHandlers={hitHandlers} />
       <Shotgun shotIdRef={shotIdRef} />
       <FireInput active={active} fire={fire} />
     </>
