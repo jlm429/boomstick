@@ -1,6 +1,6 @@
 # Controls
 
-Select **Play** from the main menu, then select **Enter Arena** to capture the pointer. The prompt
+Select **Enter Arena** from the main menu, then select **Enter Arena** to capture the pointer. The prompt
 explains mouse capture before the run starts. The browser's pointer-lock event is authoritative:
 movement and mouse look begin only after capture succeeds. If pointer lock is released, the game
 pauses and clears held input. Select **Resume** to capture the pointer again from that click.
