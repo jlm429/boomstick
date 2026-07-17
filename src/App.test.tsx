@@ -14,6 +14,7 @@ vi.mock('./scene/GameViewport', () => ({
     invertY: boolean;
     runId: number;
     onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
+    onWeaponStateChange: (state: { ammunition: number; isReloading: boolean }) => void;
   }) => (
     <canvas
       data-active={active}
@@ -69,6 +70,8 @@ describe('App navigation', () => {
   it('updates and persists the vertical mouse-look setting before entering the arena', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Controls' }));
+    expect(screen.getByText('R')).toBeInTheDocument();
+    expect(screen.getByText('Reload')).toBeInTheDocument();
     const checkbox = screen.getByRole('checkbox', { name: 'Invert Y' });
     expect(checkbox).not.toBeChecked();
     fireEvent.click(checkbox);
@@ -87,6 +90,7 @@ describe('App navigation', () => {
     expect(screen.getByText('Mouse')).toBeInTheDocument();
     expect(screen.getByText('Space')).toBeInTheDocument();
     expect(screen.getByText('Escape')).toBeInTheDocument();
+    expect(screen.getByText('R')).toBeInTheDocument();
     expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-active', 'false');
   });
 

@@ -1,6 +1,13 @@
 import { APP_VERSION } from '../game/constants';
+import { MAGAZINE_CAPACITY, type WeaponState } from '../game/shooting';
 
-export function GameHud({ playing }: { playing: boolean }) {
+export function GameHud({
+  playing,
+  weaponState,
+}: {
+  playing: boolean;
+  weaponState: WeaponState;
+}) {
   return (
     <div className="hud" aria-hidden="true">
       <div className="crosshair">
@@ -8,6 +15,9 @@ export function GameHud({ playing }: { playing: boolean }) {
         <i />
       </div>
       <span>BOOMSTICK // v{APP_VERSION}</span>
+      <span className={weaponState.isReloading ? 'hud-ammo is-reloading' : 'hud-ammo'}>
+        {weaponState.ammunition} / {MAGAZINE_CAPACITY}
+      </span>
       <span className="hud-hint">
         {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
       </span>
@@ -39,6 +49,10 @@ export function EntryPrompt({ error, onEnter }: { error: string | null; onEnter:
         <div>
           <dt>Escape</dt>
           <dd>Pause</dd>
+        </div>
+        <div>
+          <dt>R</dt>
+          <dd>Reload</dd>
         </div>
       </dl>
       {error && <span className="entry-error">{error}</span>}

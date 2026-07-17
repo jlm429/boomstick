@@ -14,7 +14,12 @@ select **Return to Main Menu** to return to the landing page.
 | `W` `A` `S` `D`      | Move                                  |
 | Mouse                | Look                                  |
 | Left click           | Fire the shotgun                      |
+| `R`                  | Reload the shotgun magazine           |
 | `Space`              | Jump                                  |
 | `Esc`                | Pause and release pointer lock        |
+
+The shotgun starts each run with 10 rounds. Each valid shot consumes one round, and firing is
+disabled while the magazine is empty or a reload is in progress. Press `R` with a partially empty
+magazine to begin a fixed 1.15-second reload that refills all 10 rounds.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.

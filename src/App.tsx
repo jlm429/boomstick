@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { readInvertYSetting, writeInvertYSetting } from './game/settings';
+import { INITIAL_WEAPON_STATE, type WeaponState } from './game/shooting';
 import { useAppStore } from './game/store';
 import { GameViewport } from './scene/GameViewport';
 import { reportRuntimeDiagnostics } from './scene/runtimeDiagnostics';
@@ -9,6 +10,7 @@ import { About, Controls, MainMenu } from './ui/Menu';
 export function App() {
   const arenaCanvas = useRef<HTMLCanvasElement | null>(null);
   const [invertY, setInvertY] = useState(readInvertYSetting);
+  const [weaponState, setWeaponState] = useState<WeaponState>(INITIAL_WEAPON_STATE);
   const {
     phase,
     hasPointerLock,
@@ -109,8 +111,9 @@ export function App() {
         invertY={invertY}
         runId={runId}
         onCanvasReady={setArenaCanvas}
+        onWeaponStateChange={setWeaponState}
       />
-      <GameHud playing={phase === 'playing'} />
+      <GameHud playing={phase === 'playing'} weaponState={weaponState} />
       {phase === 'arena-entry' && (
         <EntryPrompt error={pointerLockError} onEnter={requestArenaLock} />
       )}
