@@ -1,38 +1,41 @@
 # Boomstick agent guide
 
-## Architecture
+## Project
 
-- `src/ui` contains React screens, menus, HUD, and accessible controls.
-- `src/game` contains rendering-independent gameplay utilities and Zustand app state.
-- `src/scene` contains React Three Fiber scene presentation and Rapier physics.
-- Keep coarse UI state in Zustand. Do not place per-frame values in React state.
+Boomstick is a browser-only, single-player first-person movement prototype built with React 19, TypeScript, Vite, React Three Fiber, Three.js, Rapier, and Zustand. There is no application server, API, authentication, persistent storage, or remote asset pipeline in the current codebase.
 
-## Commands
+- `src/ui` owns accessible menus, HUD, and pause UI.
+- `src/game` owns the phase store and rendering-independent arena, input, and movement rules.
+- `src/scene` owns the Canvas, Three.js presentation, Rapier world, and player runtime behavior.
+- The `playing` phase is valid only while the R3F Canvas owns pointer lock. Arena visuals stay available outside the asynchronous physics boundary.
 
-Run `npm run dev`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run format:check`, and `npm run build` before handoff.
+Read [docs/architecture.md](docs/architecture.md) for the current event and lifecycle flow.
 
-## Conventions
+## Operating principles
 
-Use TypeScript, named exports where practical, Prettier formatting, and small focused modules. Preserve the separation between UI, game rules, rendering, and physics. Keep browser-only APIs behind effects or event handlers.
+- Work from the current repository, worktree, and affected code path. State assumptions only when they materially affect behavior, scope, or architecture.
+- Implement the smallest complete change. Do not add speculative features, abstractions, configuration, fallbacks, or unrelated refactors.
+- Preserve user changes and architectural boundaries. Remove only artifacts made obsolete by your own change. Review the final diff so every changed line serves the task.
+- For meaningful work, define observable success before coding. Reproduce bugs when practical, trace the relevant flow, and add or identify regression coverage.
+- Before changing browser, input, WebGL, scene lifecycle, rendering, or physics code, rule out environment and stale-build causes. When Firefox works but Chrome fails, rule out Chrome graphics configuration before altering application code.
+- Do not make irreversible or environment-wide changes without explicit approval.
 
-## Testing
+## Safety and completion
 
-Write Vitest and React Testing Library tests for state, UI transitions, configuration, and pure utilities. Do not use WebGL image snapshots.
+- Never read, expose, summarize, or commit secrets, `.env` contents, credentials, private keys, authenticated URLs, or personal filesystem paths. If a secret is exposed, stop and notify the user.
+- Treat browser URLs, future imported data, and user-controlled text as untrusted. Do not use unsafe HTML, `dangerouslySetInnerHTML`, `eval`, generated code, or casually add dependencies. Review the relevant OWASP risks for any future network, persistence, URL, HTML, upload, or dependency change.
+- Do not commit, push, rebase, rewrite history, modify remotes, or delete Git refs unless explicitly asked. Treat workflow changes as production infrastructure.
+- A task is complete only when requested behavior, relevant tests, and applicable browser or lifecycle checks pass; the final diff contains only intended changes; and skipped validation or uncertainty is reported plainly. A build, clean console, or unit test alone does not prove a WebGL, input, scene, or physics fix.
 
-## Deployment
+## Skill routing
 
-Vite builds under `/boomstick/`. GitHub Actions publishes `dist` to GitHub Pages. See `docs/deployment.md` for the one-time repository setting.
+Read every skill that crosses a task boundary.
 
-## Performance
-
-Avoid allocations and React rerenders in frame loops. Prefer refs and the render loop for transient camera and physics data.
-
-## Documentation and workflow
-
-Update relevant docs and `CHANGELOG.md` for user-visible changes. Work on feature branches, keep commits focused, and review for accessibility, mobile fallback copy, performance, and unintended scope expansion.
-
-Repository-specific guides are under `.agents/skills/`.
-
-## Maintaining this file
-
-Keep this guide concise and project-wide. Point to authoritative source files and documentation instead of duplicating details.
+| Change area                                                                  | Read first                                                                             |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| UI, Zustand phases, pointer lock, input, or game rules                       | [.agents/skills/architecture/SKILL.md](.agents/skills/architecture/SKILL.md)           |
+| Chrome, Firefox, cache, WebGL, black canvas, or runtime diagnosis            | [.agents/skills/browser-debugging/SKILL.md](.agents/skills/browser-debugging/SKILL.md) |
+| Canvas, React Three Fiber, Three.js, scene resources, or performance         | [.agents/skills/rendering/SKILL.md](.agents/skills/rendering/SKILL.md)                 |
+| Rapier bodies, colliders, movement, collision, restart, or simulation timing | [.agents/skills/physics/SKILL.md](.agents/skills/physics/SKILL.md)                     |
+| Tests, CI, or validation                                                     | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md)                     |
+| Pages hosting or deployment workflow                                         | [.agents/skills/deployment/SKILL.md](.agents/skills/deployment/SKILL.md)               |
