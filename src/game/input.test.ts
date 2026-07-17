@@ -3,6 +3,7 @@ import {
   clearPressedKeys,
   createPressedKeys,
   movementInput,
+  mouseLookDelta,
   pressKey,
   releaseKey,
 } from './input';
@@ -37,5 +38,14 @@ describe('input lifecycle', () => {
       right: false,
     });
     expect(pressed.Space).toBeUndefined();
+  });
+
+  it('inverts only vertical mouse look when requested', () => {
+    const regular = mouseLookDelta(10, 8, false);
+    const inverted = mouseLookDelta(10, 8, true);
+    expect(regular.yaw).toBeCloseTo(-0.022);
+    expect(inverted.yaw).toBeCloseTo(regular.yaw);
+    expect(regular.pitch).toBeCloseTo(-0.0176);
+    expect(inverted.pitch).toBeCloseTo(0.0176);
   });
 });

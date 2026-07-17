@@ -15,6 +15,7 @@ import {
   createPressedKeys,
   isGameControl,
   movementInput,
+  mouseLookDelta,
   pressKey,
   releaseKey,
   type PressedKeys,
@@ -36,9 +37,10 @@ function resetBody(rigidBody: RapierRigidBody) {
   rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
 }
 
-export function Player({ active }: { active: boolean }) {
+export function Player({ active, invertY }: { active: boolean; invertY: boolean }) {
   const body = useRef<RapierRigidBody>(null);
   const activeRef = useRef(active);
+  const invertYRef = useRef(invertY);
   const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
@@ -49,6 +51,10 @@ export function Player({ active }: { active: boolean }) {
     activeRef.current = active;
     if (!active) clearPressedKeys(pressed.current);
   }, [active]);
+
+  useEffect(() => {
+    invertYRef.current = invertY;
+  }, [invertY]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -67,8 +73,9 @@ export function Player({ active }: { active: boolean }) {
     const onMouseMove = (event: MouseEvent) => {
       if (!activeRef.current || document.pointerLockElement !== canvas) return;
       if (!Number.isFinite(event.movementX) || !Number.isFinite(event.movementY)) return;
-      yaw.current -= event.movementX * 0.0022;
-      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current - event.movementY * 0.0022));
+      const delta = mouseLookDelta(event.movementX, event.movementY, invertYRef.current);
+      yaw.current += delta.yaw;
+      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + delta.pitch));
     };
 
     window.addEventListener('keydown', onKeyDown);

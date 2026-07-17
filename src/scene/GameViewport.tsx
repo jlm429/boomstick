@@ -9,6 +9,7 @@ import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiag
 
 type GameViewportProps = {
   active: boolean;
+  invertY: boolean;
   runId: number;
   onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
 };
@@ -78,7 +79,7 @@ function PhysicsDiagnostics() {
   return null;
 }
 
-export function GameViewport({ active, runId, onCanvasReady }: GameViewportProps) {
+export function GameViewport({ active, invertY, runId, onCanvasReady }: GameViewportProps) {
   return (
     <Canvas
       aria-label="Boomstick arena. Use Enter Arena to enable mouse look."
@@ -110,7 +111,7 @@ export function GameViewport({ active, runId, onCanvasReady }: GameViewportProps
           <PhysicsDiagnostics />
           <ArenaColliders />
           <TargetColliders />
-          <Player key={runId} active={active} />
+          <Player key={runId} active={active} invertY={invertY} />
         </Physics>
       </Suspense>
     </Canvas>

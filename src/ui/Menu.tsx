@@ -10,7 +10,15 @@ export function Frame({ children }: { children: ReactNode }) {
   );
 }
 
-export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () => void }) {
+export function MainMenu({
+  onPlay,
+  onAbout,
+  onControls,
+}: {
+  onPlay: () => void;
+  onAbout: () => void;
+  onControls: () => void;
+}) {
   return (
     <Frame>
       <section className="menu-panel" aria-labelledby="boomstick-title">
@@ -23,7 +31,43 @@ export function MainMenu({ onPlay, onAbout }: { onPlay: () => void; onAbout: () 
           <button className="button" onClick={onAbout}>
             About
           </button>
+          <button className="button" onClick={onControls}>
+            Controls
+          </button>
         </nav>
+      </section>
+    </Frame>
+  );
+}
+
+export function Controls({
+  invertY,
+  onInvertYChange,
+  onBack,
+}: {
+  invertY: boolean;
+  onInvertYChange: (invertY: boolean) => void;
+  onBack: () => void;
+}) {
+  return (
+    <Frame>
+      <section className="menu-panel about-panel" aria-labelledby="controls-title">
+        <p className="eyebrow">Settings</p>
+        <h1 id="controls-title">Controls</h1>
+        <label className="setting-toggle">
+          <input
+            type="checkbox"
+            checked={invertY}
+            onChange={(event) => onInvertYChange(event.target.checked)}
+          />
+          <span>Invert Y</span>
+        </label>
+        <p className="setting-copy">
+          Reverse vertical mouse look. This setting is saved in this browser.
+        </p>
+        <button className="button" onClick={onBack}>
+          Back
+        </button>
       </section>
     </Frame>
   );

@@ -60,11 +60,11 @@ export function ArenaVisuals() {
     <>
       <color attach="background" args={[ARENA_RENDER_CONFIG.background]} />
       <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 15, 48]} />
-      <ambientLight intensity={0.32} color="#8b5b4a" />
-      <hemisphereLight intensity={0.38} color="#6c3830" groundColor="#0d0908" />
+      <ambientLight intensity={0.42} color="#9a6850" />
+      <hemisphereLight intensity={0.48} color="#754237" groundColor="#0d0908" />
       <directionalLight
         position={[7, 13, 6]}
-        intensity={1.85}
+        intensity={2.05}
         color="#ffb36c"
         castShadow
         shadow-mapSize={[512, 512]}
@@ -73,8 +73,8 @@ export function ArenaVisuals() {
         shadow-camera-top={26}
         shadow-camera-bottom={-26}
       />
-      <pointLight position={[0, 5, -8]} intensity={20} distance={19} color="#e75527" />
-      <pointLight position={[0, 3.5, 12]} intensity={7} distance={15} color="#c66f3d" />
+      <pointLight position={[0, 5, -8]} intensity={22} distance={19} color="#e75527" />
+      <pointLight position={[0, 3.5, 12]} intensity={8} distance={15} color="#c66f3d" />
       {ARENA_BLOCKS.map((block) => (
         <ArenaMesh key={block.id} block={block} />
       ))}

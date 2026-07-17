@@ -29,4 +29,10 @@ describe('shotgun firing rules', () => {
       'visible-target',
     );
   });
+
+  it('keeps the visual firing pass separate from hitscan mechanics', () => {
+    expect(SHOT_PELLET_COUNT).toBe(9);
+    expect(SHOT_COOLDOWN_SECONDS).toBe(0.32);
+    expect(pelletOffsets()).toHaveLength(9);
+  });
 });

@@ -159,6 +159,26 @@ h2 {
   margin-top: 2rem;
   width: min(100%, 11rem);
 }
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 2rem;
+  color: #f4c8a5;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.setting-toggle input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: #e55320;
+}
+.setting-copy {
+  margin: 0.85rem 0 0;
+  color: #d1cbc4;
+  line-height: 1.5;
+}
 .game-shell {
   position: fixed;
   inset: 0;

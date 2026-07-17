@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-export type AppPhase = 'main-menu' | 'about' | 'arena-entry' | 'playing' | 'paused';
+export type AppPhase =
+  'main-menu' | 'about' | 'controls' | 'arena-entry' | 'playing' | 'paused';
 
 type AppState = {
   phase: AppPhase;
@@ -9,6 +10,7 @@ type AppState = {
   runId: number;
   startGame: () => void;
   showAbout: () => void;
+  showControls: () => void;
   showMainMenu: () => void;
   preparePointerLockRequest: () => void;
   restart: () => void;
@@ -38,6 +40,7 @@ export const useAppStore = create<AppState>((set) => ({
       runId: state.runId + 1,
     })),
   showAbout: () => set({ phase: 'about', hasPointerLock: false, pointerLockError: null }),
+  showControls: () => set({ phase: 'controls', hasPointerLock: false, pointerLockError: null }),
   showMainMenu: () =>
     set({ phase: 'main-menu', hasPointerLock: false, pointerLockError: null }),
   preparePointerLockRequest: () =>

@@ -6,15 +6,18 @@ import { useAppStore } from './game/store';
 vi.mock('./scene/GameViewport', () => ({
   GameViewport: ({
     active,
+    invertY,
     runId,
     onCanvasReady,
   }: {
     active: boolean;
+    invertY: boolean;
     runId: number;
     onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
   }) => (
     <canvas
       data-active={active}
+      data-invert-y={invertY}
       data-run-id={runId}
       data-testid="game-viewport"
       ref={onCanvasReady}
@@ -61,6 +64,19 @@ describe('App navigation', () => {
     expect(screen.getByRole('dialog', { name: 'About' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.getByRole('heading', { name: 'BOOMSTICK' })).toBeInTheDocument();
+  });
+
+  it('updates and persists the vertical mouse-look setting before entering the arena', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Controls' }));
+    const checkbox = screen.getByRole('checkbox', { name: 'Invert Y' });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(localStorage.getItem('boomstick.invert-y')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-invert-y', 'true');
   });
 
   it('moves from menu to the complete arena entry step', () => {
