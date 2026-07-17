@@ -47,7 +47,7 @@ function offsetWallFixture(
 function FixtureMeshes() {
   return (
     <>
-      <Instances limit={wallFixtures.length} castShadow raycast={() => null}>
+      <Instances limit={wallFixtures.length} frames={1} castShadow raycast={() => null}>
         <boxGeometry args={[0.34, 0.7, 0.18]} />
         <meshStandardMaterial color="#211614" metalness={0.54} roughness={0.48} />
         {wallFixtures.map((fixture) => (
@@ -55,10 +55,11 @@ function FixtureMeshes() {
             key={fixture.id}
             position={[...fixture.position]}
             rotation={[0, fixture.rotationY ?? 0, 0]}
+            raycast={() => null}
           />
         ))}
       </Instances>
-      <Instances limit={wallFixtures.length} raycast={() => null}>
+      <Instances limit={wallFixtures.length} frames={1} raycast={() => null}>
         <sphereGeometry args={[0.13, 10, 8]} />
         <meshStandardMaterial
           color="#f07a2c"
@@ -67,20 +68,25 @@ function FixtureMeshes() {
           roughness={0.55}
         />
         {wallFixtures.map((fixture) => (
-          <Instance key={fixture.id} position={offsetWallFixture(fixture, 0.15, 0.16)} />
+          <Instance
+            key={fixture.id}
+            position={offsetWallFixture(fixture, 0.15, 0.16)}
+            raycast={() => null}
+          />
         ))}
       </Instances>
-      <Instances limit={obstacleFixtures.length} castShadow raycast={() => null}>
+      <Instances limit={obstacleFixtures.length} frames={1} castShadow raycast={() => null}>
         <cylinderGeometry args={[0.2, 0.24, 0.12, 10]} />
         <meshStandardMaterial color="#211614" metalness={0.48} roughness={0.52} />
         {obstacleFixtures.map((fixture) => (
           <Instance
             key={fixture.id}
             position={[fixture.position[0], fixture.position[1] + 0.06, fixture.position[2]]}
+            raycast={() => null}
           />
         ))}
       </Instances>
-      <Instances limit={obstacleFixtures.length} raycast={() => null}>
+      <Instances limit={obstacleFixtures.length} frames={1} raycast={() => null}>
         <sphereGeometry args={[0.12, 10, 8]} />
         <meshStandardMaterial
           color="#f07a2c"
@@ -92,6 +98,7 @@ function FixtureMeshes() {
           <Instance
             key={fixture.id}
             position={[fixture.position[0], fixture.position[1] + 0.17, fixture.position[2]]}
+            raycast={() => null}
           />
         ))}
       </Instances>
