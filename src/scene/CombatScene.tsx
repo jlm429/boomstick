@@ -27,7 +27,6 @@ function targetHitHandler(object: Object3D): TargetHitHandler | null {
 function TargetVisual({ target }: { target: TargetDefinition }) {
   const materialRef = useRef<MeshStandardMaterial>(null);
   const hitAtRef = useRef<number | null>(null);
-
   useFrame(() => {
     const elapsed =
       hitAtRef.current === null ? Infinity : performance.now() / 1000 - hitAtRef.current;
