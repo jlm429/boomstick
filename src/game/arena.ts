@@ -15,6 +15,7 @@ export type ArenaLightFixture = Readonly<{
   position: Vector3Tuple;
   rotationY?: number;
   kind: 'wall' | 'pillar' | 'cover' | 'landmark';
+  contributesLight: boolean;
 }>;
 
 export const ARENA_RENDER_CONFIG = {
@@ -122,6 +123,7 @@ const wallFixtures = (
         id: `north-wall-light-${offset}`,
         position: [offset, WALL_MOUNT_HEIGHT, -INNER_WALL_FACE],
         kind: 'wall',
+        contributesLight: offset === WALL_REPEAT_OFFSETS[0],
       };
     }
     if (wall === 'south') {
@@ -130,6 +132,7 @@ const wallFixtures = (
         position: [-offset, WALL_MOUNT_HEIGHT, INNER_WALL_FACE],
         rotationY: Math.PI,
         kind: 'wall',
+        contributesLight: offset === WALL_REPEAT_OFFSETS[0],
       };
     }
     if (wall === 'west') {
@@ -138,6 +141,7 @@ const wallFixtures = (
         position: [-INNER_WALL_FACE, WALL_MOUNT_HEIGHT, -offset],
         rotationY: Math.PI / 2,
         kind: 'wall',
+        contributesLight: offset === WALL_REPEAT_OFFSETS[0],
       };
     }
     return {
@@ -145,15 +149,19 @@ const wallFixtures = (
       position: [INNER_WALL_FACE, WALL_MOUNT_HEIGHT, offset],
       rotationY: -Math.PI / 2,
       kind: 'wall',
+      contributesLight: offset === WALL_REPEAT_OFFSETS[0],
     };
   });
 
 const topMountedFixtures = (kind: 'pillar' | 'cover'): readonly ArenaLightFixture[] =>
-  ARENA_BLOCKS.filter(({ id }) => id.includes(kind)).map(({ id, position, halfExtents }) => ({
-    id: `${id}-light`,
-    position: [position[0], position[1] + halfExtents[1] + 0.08, position[2]],
-    kind,
-  }));
+  ARENA_BLOCKS.filter(({ id }) => id.includes(kind)).map(
+    ({ id, position, halfExtents }, index) => ({
+      id: `${id}-light`,
+      position: [position[0], position[1] + halfExtents[1], position[2]],
+      kind,
+      contributesLight: kind === 'pillar' && index === 0,
+    }),
+  );
 
 export const ARENA_LIGHT_FIXTURES: readonly ArenaLightFixture[] = [
   ...wallFixtures('north'),
@@ -166,6 +174,7 @@ export const ARENA_LIGHT_FIXTURES: readonly ArenaLightFixture[] = [
     id: 'landmark-light',
     position: [0, 5.65, -9.12],
     kind: 'landmark',
+    contributesLight: true,
   },
 ];
 

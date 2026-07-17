@@ -42,9 +42,13 @@ describe('arena configuration', () => {
       const lights = ARENA_LIGHT_FIXTURES.filter((fixture) => fixture.kind === kind);
       expect(lights).toHaveLength(blocks.length);
       expect(lights.map(({ position }) => position[1])).toEqual(
-        blocks.map(({ position, halfExtents }) => position[1] + halfExtents[1] + 0.08),
+        blocks.map(({ position, halfExtents }) => position[1] + halfExtents[1]),
       );
     }
+
+    expect(ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight)).toHaveLength(
+      6,
+    );
   });
 
   it('resets invalid or escaped player transforms', () => {

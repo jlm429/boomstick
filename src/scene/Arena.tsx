@@ -1,4 +1,5 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
+import { Instance, Instances } from '@react-three/drei';
 import {
   ARENA_BLOCKS,
   ARENA_LIGHT_FIXTURES,
@@ -23,19 +24,41 @@ function ArenaMesh({ block }: { block: ArenaBlock }) {
   );
 }
 
-function WallLight({ fixture }: { fixture: ArenaLightFixture }) {
-  const isLandmark = fixture.kind === 'landmark';
+const wallFixtures = ARENA_LIGHT_FIXTURES.filter(
+  ({ kind }) => kind === 'wall' || kind === 'landmark',
+);
+const obstacleFixtures = ARENA_LIGHT_FIXTURES.filter(
+  ({ kind }) => kind === 'pillar' || kind === 'cover',
+);
+
+function offsetWallFixture(
+  fixture: ArenaLightFixture,
+  height: number,
+  depth: number,
+): [number, number, number] {
+  const rotationY = fixture.rotationY ?? 0;
+  return [
+    fixture.position[0] + Math.sin(rotationY) * depth,
+    fixture.position[1] + height,
+    fixture.position[2] + Math.cos(rotationY) * depth,
+  ];
+}
+
+function FixtureMeshes() {
   return (
-    <group
-      position={[...fixture.position]}
-      rotation={[0, fixture.rotationY ?? 0, 0]}
-      raycast={() => null}
-    >
-      <mesh castShadow raycast={() => null}>
+    <>
+      <Instances limit={wallFixtures.length} castShadow raycast={() => null}>
         <boxGeometry args={[0.34, 0.7, 0.18]} />
         <meshStandardMaterial color="#211614" metalness={0.54} roughness={0.48} />
-      </mesh>
-      <mesh position={[0, 0.15, 0.16]} raycast={() => null}>
+        {wallFixtures.map((fixture) => (
+          <Instance
+            key={fixture.id}
+            position={[...fixture.position]}
+            rotation={[0, fixture.rotationY ?? 0, 0]}
+          />
+        ))}
+      </Instances>
+      <Instances limit={wallFixtures.length} raycast={() => null}>
         <sphereGeometry args={[0.13, 10, 8]} />
         <meshStandardMaterial
           color="#f07a2c"
@@ -43,26 +66,21 @@ function WallLight({ fixture }: { fixture: ArenaLightFixture }) {
           emissiveIntensity={1.8}
           roughness={0.55}
         />
-      </mesh>
-      <pointLight
-        position={[0, 0.15, 0.28]}
-        intensity={isLandmark ? 18 : 3.4}
-        distance={isLandmark ? 17 : 6}
-        color="#e75a24"
-      />
-    </group>
-  );
-}
-
-function ObstacleLight({ fixture }: { fixture: ArenaLightFixture }) {
-  const isCover = fixture.kind === 'cover';
-  return (
-    <group position={[...fixture.position]} raycast={() => null}>
-      <mesh position={[0, 0.06, 0]} castShadow raycast={() => null}>
+        {wallFixtures.map((fixture) => (
+          <Instance key={fixture.id} position={offsetWallFixture(fixture, 0.15, 0.16)} />
+        ))}
+      </Instances>
+      <Instances limit={obstacleFixtures.length} castShadow raycast={() => null}>
         <cylinderGeometry args={[0.2, 0.24, 0.12, 10]} />
         <meshStandardMaterial color="#211614" metalness={0.48} roughness={0.52} />
-      </mesh>
-      <mesh position={[0, 0.17, 0]} raycast={() => null}>
+        {obstacleFixtures.map((fixture) => (
+          <Instance
+            key={fixture.id}
+            position={[fixture.position[0], fixture.position[1] + 0.06, fixture.position[2]]}
+          />
+        ))}
+      </Instances>
+      <Instances limit={obstacleFixtures.length} raycast={() => null}>
         <sphereGeometry args={[0.12, 10, 8]} />
         <meshStandardMaterial
           color="#f07a2c"
@@ -70,27 +88,48 @@ function ObstacleLight({ fixture }: { fixture: ArenaLightFixture }) {
           emissiveIntensity={1.65}
           roughness={0.58}
         />
-      </mesh>
+        {obstacleFixtures.map((fixture) => (
+          <Instance
+            key={fixture.id}
+            position={[fixture.position[0], fixture.position[1] + 0.17, fixture.position[2]]}
+          />
+        ))}
+      </Instances>
+    </>
+  );
+}
+
+function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
+  if (fixture.kind === 'wall' || fixture.kind === 'landmark') {
+    const isLandmark = fixture.kind === 'landmark';
+    return (
       <pointLight
-        position={[0, 0.3, 0]}
-        intensity={isCover ? 2.6 : 3.1}
-        distance={isCover ? 4.6 : 5.2}
-        color="#df5724"
+        position={offsetWallFixture(fixture, 0.15, 0.28)}
+        intensity={isLandmark ? 18 : 3.4}
+        distance={isLandmark ? 17 : 6}
+        color="#e75a24"
       />
-    </group>
+    );
+  }
+
+  const isCover = fixture.kind === 'cover';
+  return (
+    <pointLight
+      position={[fixture.position[0], fixture.position[1] + 0.3, fixture.position[2]]}
+      intensity={isCover ? 2.6 : 3.1}
+      distance={isCover ? 4.6 : 5.2}
+      color="#df5724"
+    />
   );
 }
 
 function ArenaDressings() {
   return (
     <>
-      {ARENA_LIGHT_FIXTURES.map((fixture) =>
-        fixture.kind === 'wall' || fixture.kind === 'landmark' ? (
-          <WallLight key={fixture.id} fixture={fixture} />
-        ) : (
-          <ObstacleLight key={fixture.id} fixture={fixture} />
-        ),
-      )}
+      <FixtureMeshes />
+      {ARENA_LIGHT_FIXTURES.filter(({ contributesLight }) => contributesLight).map((fixture) => (
+        <FixtureLight key={fixture.id} fixture={fixture} />
+      ))}
       {[-2.8, 2.8].map((x) => (
         <mesh key={x} position={[x, 0.28, -10]} raycast={() => null} receiveShadow>
           <boxGeometry args={[1.18, 0.22, 2.02]} />
