@@ -3,7 +3,7 @@ import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useRef } from 'react';
 import { NoToneMapping, SRGBColorSpace } from 'three';
 import { ArenaColliders, ArenaVisuals } from './Arena';
-import { CombatScene } from './CombatScene';
+import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 
@@ -103,12 +103,13 @@ export function GameViewport({ active, runId, onCanvasReady }: GameViewportProps
       <CanvasRegistration onCanvasReady={onCanvasReady} />
       <RenderDiagnostics />
       <ArenaVisuals />
+      <CombatScene active={active} />
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
           <ArenaColliders />
+          <TargetColliders />
           <Player key={runId} active={active} />
-          <CombatScene active={active} />
         </Physics>
       </Suspense>
     </Canvas>

@@ -1,9 +1,9 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, type MutableRefObject } from 'react';
-import { Group, Mesh, MeshStandardMaterial, Raycaster, Vector3 } from 'three';
+import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
+import { Group, MeshStandardMaterial, Object3D, Raycaster, Vector3 } from 'three';
+import { canFireShot, firstShotTarget, pelletOffsets } from '../game/shooting';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
-import { canFireShot, pelletOffsets } from '../game/shooting';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
@@ -14,21 +14,19 @@ const HIT_FLASH_SECONDS = 0.18;
 
 type TargetHitHandler = () => void;
 
-function Target({
-  target,
-  register,
-}: {
-  target: TargetDefinition;
-  register: (mesh: Mesh | null) => void;
-}) {
-  const mesh = useRef<Mesh>(null);
+function targetHitHandler(object: Object3D): TargetHitHandler | null {
+  let current: Object3D | null = object;
+  while (current) {
+    const onHit = current.userData.onHit as TargetHitHandler | undefined;
+    if (onHit) return onHit;
+    current = current.parent;
+  }
+  return null;
+}
+
+function TargetVisual({ target }: { target: TargetDefinition }) {
   const materialRef = useRef<MeshStandardMaterial>(null);
   const hitAtRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    register(mesh.current);
-    return () => register(null);
-  }, [register]);
 
   useFrame(() => {
     const elapsed =
@@ -42,9 +40,8 @@ function Target({
   };
 
   return (
-    <RigidBody type="fixed" colliders={false} position={[...target.position]}>
-      <CuboidCollider args={[...target.halfExtents]} />
-      <mesh ref={mesh} castShadow receiveShadow userData={{ onHit }}>
+    <group position={[...target.position]} userData={{ onHit }}>
+      <mesh castShadow receiveShadow>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
         />
@@ -63,26 +60,32 @@ function Target({
         <circleGeometry args={[0.23, 24]} />
         <meshBasicMaterial color="#ffbb45" />
       </mesh>
-    </RigidBody>
+    </group>
   );
 }
 
-function Targets({ targets }: { targets: MutableRefObject<Mesh[]> }) {
-  const registerTarget = useCallback(
-    (id: string) => (mesh: Mesh | null) => {
-      targets.current = targets.current.filter((target) => target.userData.targetId !== id);
-      if (mesh) {
-        mesh.userData.targetId = id;
-        targets.current.push(mesh);
-      }
-    },
-    [targets],
-  );
-
+export function TargetColliders() {
   return (
     <>
       {ARENA_TARGETS.map((target) => (
-        <Target key={target.id} target={target} register={registerTarget(target.id)} />
+        <RigidBody
+          key={target.id}
+          type="fixed"
+          colliders={false}
+          position={[...target.position]}
+        >
+          <CuboidCollider args={[...target.halfExtents]} />
+        </RigidBody>
+      ))}
+    </>
+  );
+}
+
+function TargetVisuals() {
+  return (
+    <>
+      {ARENA_TARGETS.map((target) => (
+        <TargetVisual key={target.id} target={target} />
       ))}
     </>
   );
@@ -157,8 +160,7 @@ function FireInput({ active, fire }: { active: boolean; fire: () => boolean }) {
 }
 
 export function CombatScene({ active }: { active: boolean }) {
-  const { camera } = useThree();
-  const targets = useRef<Mesh[]>([]);
+  const { camera, scene } = useThree();
   const shotIdRef = useRef(0);
   const lastShotAt = useRef(-Infinity);
 
@@ -176,19 +178,18 @@ export function CombatScene({ active }: { active: boolean }) {
         .addScaledVector(cameraUp, vertical)
         .normalize();
       raycaster.set(camera.position, pelletDirection);
-      const hit = raycaster.intersectObjects(targets.current, false)[0];
-      const onHit = hit?.object.userData.onHit as TargetHitHandler | undefined;
-      onHit?.();
+      const collisions = raycaster
+        .intersectObjects(scene.children, true)
+        .map(({ object }) => ({ target: targetHitHandler(object) }));
+      firstShotTarget(collisions)?.();
     }
     shotIdRef.current += 1;
     return true;
-  }, [camera]);
-
-  const activeTargets = useMemo(() => targets, []);
+  }, [camera, scene]);
 
   return (
     <>
-      <Targets targets={activeTargets} />
+      <TargetVisuals />
       <Shotgun shotIdRef={shotIdRef} />
       <FireInput active={active} fire={fire} />
     </>

@@ -3,6 +3,7 @@ export const SHOT_PELLET_COUNT = 9;
 export const SHOT_SPREAD_RADIANS = 0.052;
 
 export type ShotOffset = readonly [horizontal: number, vertical: number];
+export type ShotCollision<T> = Readonly<{ target: T | null }>;
 
 const PELLET_PATTERN: readonly ShotOffset[] = [
   [0, 0],
@@ -24,3 +25,6 @@ export const pelletOffsets = (): readonly ShotOffset[] =>
     horizontal * SHOT_SPREAD_RADIANS,
     vertical * SHOT_SPREAD_RADIANS,
   ]);
+
+export const firstShotTarget = <T>(collisions: readonly ShotCollision<T>[]) =>
+  collisions[0]?.target ?? null;
