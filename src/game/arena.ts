@@ -10,6 +10,13 @@ export type ArenaBlock = Readonly<{
   emissive?: string;
 }>;
 
+export type ArenaLightFixture = Readonly<{
+  id: string;
+  position: Vector3Tuple;
+  rotationY?: number;
+  kind: 'wall' | 'pillar' | 'cover' | 'landmark';
+}>;
+
 export const ARENA_RENDER_CONFIG = {
   background: '#130e0e',
   fog: true,
@@ -98,6 +105,67 @@ export const ARENA_BLOCKS: readonly ArenaBlock[] = [
     position: [-12, 1.25, -14],
     halfExtents: [2.4, 1.25, 1.6],
     color: '#4b3328',
+  },
+];
+
+const WALL_MOUNT_HEIGHT = 3.1;
+const WALL_SURFACE_OFFSET = 0.08;
+const WALL_REPEAT_OFFSETS = [-8, 8] as const;
+const INNER_WALL_FACE = ARENA_HALF_EXTENT - 0.5 - WALL_SURFACE_OFFSET;
+
+const wallFixtures = (
+  wall: 'north' | 'south' | 'west' | 'east',
+): readonly ArenaLightFixture[] =>
+  WALL_REPEAT_OFFSETS.map((offset) => {
+    if (wall === 'north') {
+      return {
+        id: `north-wall-light-${offset}`,
+        position: [offset, WALL_MOUNT_HEIGHT, -INNER_WALL_FACE],
+        kind: 'wall',
+      };
+    }
+    if (wall === 'south') {
+      return {
+        id: `south-wall-light-${offset}`,
+        position: [-offset, WALL_MOUNT_HEIGHT, INNER_WALL_FACE],
+        rotationY: Math.PI,
+        kind: 'wall',
+      };
+    }
+    if (wall === 'west') {
+      return {
+        id: `west-wall-light-${offset}`,
+        position: [-INNER_WALL_FACE, WALL_MOUNT_HEIGHT, -offset],
+        rotationY: Math.PI / 2,
+        kind: 'wall',
+      };
+    }
+    return {
+      id: `east-wall-light-${offset}`,
+      position: [INNER_WALL_FACE, WALL_MOUNT_HEIGHT, offset],
+      rotationY: -Math.PI / 2,
+      kind: 'wall',
+    };
+  });
+
+const topMountedFixtures = (kind: 'pillar' | 'cover'): readonly ArenaLightFixture[] =>
+  ARENA_BLOCKS.filter(({ id }) => id.includes(kind)).map(({ id, position, halfExtents }) => ({
+    id: `${id}-light`,
+    position: [position[0], position[1] + halfExtents[1] + 0.08, position[2]],
+    kind,
+  }));
+
+export const ARENA_LIGHT_FIXTURES: readonly ArenaLightFixture[] = [
+  ...wallFixtures('north'),
+  ...wallFixtures('south'),
+  ...wallFixtures('west'),
+  ...wallFixtures('east'),
+  ...topMountedFixtures('pillar'),
+  ...topMountedFixtures('cover'),
+  {
+    id: 'landmark-light',
+    position: [0, 5.65, -9.12],
+    kind: 'landmark',
   },
 ];
 

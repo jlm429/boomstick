@@ -225,6 +225,23 @@ h2 {
 .hud-hint {
   color: #d9ad84;
 }
+.hud-ammo {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 3rem;
+  min-width: 5.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #e5532075;
+  color: #ffd0a3;
+  background: #120b08b8;
+  text-align: center;
+  font-size: 0.88rem;
+  letter-spacing: 0.16em;
+}
+.hud-ammo.is-reloading {
+  color: #e66a32;
+  border-color: #e55320;
+}
 .crosshair {
   position: absolute;
   top: 50%;
@@ -333,6 +350,34 @@ h2 {
   font-size: 0.62rem;
   line-height: 1.35;
 }
+.controls-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1.7rem 0 0;
+}
+.controls-list div {
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #e553203d;
+  background: #150e0bbf;
+}
+.controls-list dt,
+.controls-list dd {
+  margin: 0;
+  line-height: 1.35;
+}
+.controls-list dt {
+  color: #f4c8a5;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.controls-list dd {
+  color: #aa9484;
+  font-size: 0.68rem;
+}
 .entry-controls dt {
   color: #d9fbff;
   font-weight: 800;
@@ -386,6 +431,10 @@ h2 {
   }
   .hud-hint {
     display: none;
+  }
+  .hud-ammo {
+    right: 0.8rem;
+    bottom: 2.4rem;
   }
 }
 @media (max-height: 680px) {

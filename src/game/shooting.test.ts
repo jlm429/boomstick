@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   SHOT_COOLDOWN_SECONDS,
   SHOT_PELLET_COUNT,
+  INITIAL_WEAPON_STATE,
+  MAGAZINE_CAPACITY,
   canFireShot,
+  canFireWeapon,
+  completeReload,
+  consumeRound,
   firstShotTarget,
+  isReloadInput,
   pelletOffsets,
+  startReload,
 } from './shooting';
 
 describe('shotgun firing rules', () => {
@@ -34,5 +41,33 @@ describe('shotgun firing rules', () => {
     expect(SHOT_PELLET_COUNT).toBe(9);
     expect(SHOT_COOLDOWN_SECONDS).toBe(0.32);
     expect(pelletOffsets()).toHaveLength(9);
+  });
+
+  it('consumes one round for each eligible shot and blocks empty firing', () => {
+    let weapon = INITIAL_WEAPON_STATE;
+    for (let shot = 0; shot < MAGAZINE_CAPACITY; shot += 1) {
+      expect(canFireWeapon(weapon, shot, shot + 1)).toBe(true);
+      weapon = consumeRound(weapon);
+    }
+    expect(weapon.ammunition).toBe(0);
+    expect(canFireWeapon(weapon, 10, 11)).toBe(false);
+    expect(consumeRound(weapon)).toBe(weapon);
+  });
+
+  it('starts reload only when eligible and completes with a full magazine', () => {
+    expect(startReload(INITIAL_WEAPON_STATE)).toBe(INITIAL_WEAPON_STATE);
+    const partiallyLoaded = consumeRound(INITIAL_WEAPON_STATE);
+    const reloading = startReload(partiallyLoaded);
+    expect(reloading).toEqual({ ammunition: 9, isReloading: true });
+    expect(startReload(reloading)).toBe(reloading);
+    expect(canFireWeapon(reloading, -Infinity, 1)).toBe(false);
+    expect(completeReload(reloading)).toEqual(INITIAL_WEAPON_STATE);
+    expect(completeReload(partiallyLoaded)).toBe(partiallyLoaded);
+  });
+
+  it('recognizes a non-repeating R key press as reload input', () => {
+    expect(isReloadInput('KeyR', false)).toBe(true);
+    expect(isReloadInput('KeyR', true)).toBe(false);
+    expect(isReloadInput('KeyW', false)).toBe(false);
   });
 });

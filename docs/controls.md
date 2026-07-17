@@ -14,6 +14,7 @@ select **Return to Main Menu** to return to the landing page.
 | `W` `A` `S` `D`      | Move                                  |
 | Mouse                | Look                                  |
 | Left click           | Fire the shotgun                      |
+| `R`                  | Reload the shotgun magazine           |
 | `Space`              | Jump                                  |
 | `Esc`                | Pause and release pointer lock        |
 

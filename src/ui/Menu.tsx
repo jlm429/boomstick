@@ -54,6 +54,32 @@ export function Controls({
       <section className="menu-panel about-panel" aria-labelledby="controls-title">
         <p className="eyebrow">Settings</p>
         <h1 id="controls-title">Controls</h1>
+        <dl className="controls-list">
+          <div>
+            <dt>WASD</dt>
+            <dd>Move</dd>
+          </div>
+          <div>
+            <dt>Mouse</dt>
+            <dd>Look</dd>
+          </div>
+          <div>
+            <dt>Left click</dt>
+            <dd>Fire</dd>
+          </div>
+          <div>
+            <dt>R</dt>
+            <dd>Reload</dd>
+          </div>
+          <div>
+            <dt>Space</dt>
+            <dd>Jump</dd>
+          </div>
+          <div>
+            <dt>Escape</dt>
+            <dd>Pause</dd>
+          </div>
+        </dl>
         <label className="setting-toggle">
           <input
             type="checkbox"

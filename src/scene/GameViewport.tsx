@@ -6,12 +6,14 @@ import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
+import type { WeaponState } from '../game/shooting';
 
 type GameViewportProps = {
   active: boolean;
   invertY: boolean;
   runId: number;
   onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
+  onWeaponStateChange: (state: WeaponState) => void;
 };
 
 function CanvasRegistration({ onCanvasReady }: Pick<GameViewportProps, 'onCanvasReady'>) {
@@ -79,7 +81,13 @@ function PhysicsDiagnostics() {
   return null;
 }
 
-export function GameViewport({ active, invertY, runId, onCanvasReady }: GameViewportProps) {
+export function GameViewport({
+  active,
+  invertY,
+  runId,
+  onCanvasReady,
+  onWeaponStateChange,
+}: GameViewportProps) {
   return (
     <Canvas
       aria-label="Boomstick arena. Use Enter Arena to enable mouse look."
@@ -105,7 +113,7 @@ export function GameViewport({ active, invertY, runId, onCanvasReady }: GameView
       <CanvasRegistration onCanvasReady={onCanvasReady} />
       <RenderDiagnostics />
       <ArenaVisuals />
-      <CombatScene active={active} />
+      <CombatScene key={runId} active={active} onWeaponStateChange={onWeaponStateChange} />
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
