@@ -1,6 +1,6 @@
 # Architecture
 
-Boomstick is a browser-first, single-player movement prototype.
+Boomstick is a browser-first, single-player arena combat prototype.
 
 | Area                                            | Ownership                                |
 | ----------------------------------------------- | ---------------------------------------- |
@@ -12,7 +12,7 @@ Boomstick is a browser-first, single-player movement prototype.
 
 `App` switches between React screens using one phase machine: `main-menu`, `about`, `arena-entry`, `playing`, and `paused`. The native Canvas is passed directly to `App`; Enter Arena, Resume, and Restart request pointer lock from their click handlers. The browser's `pointerlockchange` event alone confirms active play, and lock loss pauses the run. Store transitions preserve the invariant that `playing` always has pointer lock and every other phase does not.
 
-`GameViewport` keeps arena visuals outside Rapier's asynchronous boundary. The rendering-independent layout in `src/game/arena.ts` supplies every visible floor, wall, landmark, pillar, and obstacle as well as its matching collider. A Rapier startup delay therefore cannot remove the sky, lighting, or visible level. The fixed-step physics world is paused outside play. `Player` installs keyboard and mouse listeners once per mount, clears held input on pause, blur, and visibility loss, and uses refs for transient controls. The render loop guards transforms, resets escaped bodies, clamps unsafe frame transitions, and follows the rigid body at eye height.
+`GameViewport` keeps arena and combat presentation outside Rapier's asynchronous boundary. The rendering-independent layouts in `src/game/arena.ts` and `src/game/targets.ts` supply the arena geometry and fixed targets; their matching colliders mount inside Rapier. `CombatScene` renders the camera-aligned shotgun and target feedback, accepts left-click fire only during pointer-locked play, and raycasts each pellet against rendered scene geometry so the nearest collision controls hit feedback. A Rapier startup delay therefore cannot remove the sky, lighting, visible level, targets, or weapon. The fixed-step physics world is paused outside play. `Player` installs keyboard and mouse listeners once per mount, clears held input on pause, blur, and visibility loss, and uses refs for transient controls. The render loop guards transforms, resets escaped bodies, clamps unsafe frame transitions, and follows the rigid body at eye height.
 
 The reproduced black-screen report was a rendered but unreadable scene rather than a missing Canvas or a player escaping the level. Browser inspection found a nonzero native Canvas, a healthy WebGL2 context, advancing frames, initialized Rapier, and a finite player at the configured spawn. The old near-black background, fog, and low-contrast geometry looked black once the entry panel disappeared, while any pointer-lock loss correctly disabled movement. The fix uses an opaque renderer, a bright background, readable standard materials and lighting, direct pointer-lock ownership, and visible geometry that no longer depends on physics startup.
 

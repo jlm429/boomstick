@@ -13,6 +13,7 @@ select **Return to Main Menu** to return to the landing page.
 | Enter Arena / Resume | Capture pointer and enable mouse look |
 | `W` `A` `S` `D`      | Move                                  |
 | Mouse                | Look                                  |
+| Left click           | Fire the shotgun                      |
 | `Space`              | Jump                                  |
 | `Esc`                | Pause and release pointer lock        |
 

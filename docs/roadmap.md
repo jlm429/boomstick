@@ -2,8 +2,8 @@
 
 ## Current milestone
 
-- Single arena movement prototype
-- Pointer lock, movement, jump, collision, pause, menu, and HUD
+- Single arena combat prototype
+- Pointer lock, movement, jump, collision, pause, menu, HUD, and arena combat
 
 ## Next foundations
 
@@ -11,4 +11,4 @@
 - Movement tuning and accessibility options
 - More arena geometry and performance instrumentation
 
-Combat, multiplayer, accounts, cloud services, inventories, and progression are intentionally out of scope for this foundation.
+Multiplayer, accounts, cloud services, inventories, and progression are intentionally out of scope for this foundation.
