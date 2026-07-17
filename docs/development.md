@@ -7,11 +7,11 @@ npm install
 npm run dev
 ```
 
-Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena and movement mechanics.
+Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with movement and target combat.
 
 Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, floor,
-perimeter, obstacles, and orange landmark before testing pointer lock, mouse look, movement, pause,
-restart, and menu return. Development builds expose quiet live state at
+perimeter, obstacles, orange landmark, targets, and shotgun before testing pointer lock, mouse look,
+movement, firing, pause, restart, and menu return. Development builds expose quiet live state at
 `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas size, WebGL state, frame count, camera,
 Rapier readiness, player position, and pressed controls. Scene helpers and diagnostics are excluded
 from production builds. Automated or headless pointer-lock simulation is useful for state coverage,
