@@ -1,7 +1,15 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
-import { Group, MeshStandardMaterial, Object3D, Raycaster, Vector3 } from 'three';
+import {
+  Group,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  Object3D,
+  PointLight,
+  Raycaster,
+  Vector3,
+} from 'three';
 import { canFireShot, firstShotTarget, pelletOffsets } from '../game/shooting';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
 
@@ -11,6 +19,7 @@ const cameraUp = new Vector3();
 const pelletDirection = new Vector3();
 const raycaster = new Raycaster();
 const HIT_FLASH_SECONDS = 0.18;
+const MUZZLE_FLASH_SECONDS = 0.075;
 
 type TargetHitHandler = () => void;
 
@@ -92,16 +101,30 @@ function TargetVisuals() {
 
 function Shotgun({ shotIdRef }: { shotIdRef: MutableRefObject<number> }) {
   const mesh = useRef<Group>(null);
+  const muzzleFlash = useRef<Group>(null);
+  const muzzleLight = useRef<PointLight>(null);
+  const flashMaterial = useRef<MeshBasicMaterial>(null);
+  const streakMaterial = useRef<MeshBasicMaterial>(null);
   const { camera } = useThree();
   const recoil = useRef(0);
+  const flash = useRef(0);
   const renderedShotId = useRef(0);
 
   useFrame((_, delta) => {
     if (renderedShotId.current !== shotIdRef.current) {
       renderedShotId.current = shotIdRef.current;
       recoil.current = 1;
+      flash.current = 1;
     }
     recoil.current = Math.max(0, recoil.current - delta * 6);
+    flash.current = Math.max(0, flash.current - delta / MUZZLE_FLASH_SECONDS);
+    if (muzzleFlash.current) {
+      muzzleFlash.current.visible = flash.current > 0;
+      muzzleFlash.current.scale.setScalar(0.7 + flash.current * 0.55);
+    }
+    if (flashMaterial.current) flashMaterial.current.opacity = flash.current;
+    if (streakMaterial.current) streakMaterial.current.opacity = flash.current * 0.8;
+    if (muzzleLight.current) muzzleLight.current.intensity = flash.current * 8;
     if (!mesh.current) return;
     mesh.current.position.copy(camera.position);
     mesh.current.quaternion.copy(camera.quaternion);
@@ -112,7 +135,13 @@ function Shotgun({ shotIdRef }: { shotIdRef: MutableRefObject<number> }) {
 
   return (
     <group ref={mesh} scale={0.68}>
-      <pointLight position={[0, 0, -0.6]} intensity={1.2} distance={3} color="#d26a35" />
+      <pointLight
+        ref={muzzleLight}
+        position={[0, 0.16, -2.02]}
+        intensity={0}
+        distance={4}
+        color="#ff9d45"
+      />
       <mesh position={[0, -0.05, 0.06]} castShadow>
         <boxGeometry args={[0.72, 0.38, 0.7]} />
         <meshStandardMaterial
@@ -184,6 +213,32 @@ function Shotgun({ shotIdRef }: { shotIdRef: MutableRefObject<number> }) {
           roughness={0.92}
         />
       </mesh>
+      <group ref={muzzleFlash} position={[0, 0.16, -2.02]} visible={false} raycast={() => null}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.26, 0.62, 6]} />
+          <meshBasicMaterial
+            ref={flashMaterial}
+            color="#ffe1a0"
+            transparent
+            depthWrite={false}
+          />
+        </mesh>
+        {[
+          [-0.13, 0.05, -0.56, -0.08, 0.12],
+          [0.14, -0.03, -0.68, 0.06, -0.1],
+          [0.03, 0.13, -0.5, 0.13, 0.03],
+        ].map(([x, y, z, rotationX, rotationY]) => (
+          <mesh key={`${x}-${y}`} position={[x, y, z]} rotation={[rotationX, rotationY, 0]}>
+            <boxGeometry args={[0.025, 0.025, 0.9]} />
+            <meshBasicMaterial
+              ref={streakMaterial}
+              color="#ffbc63"
+              transparent
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }

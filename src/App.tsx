@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { readInvertYSetting, writeInvertYSetting } from './game/settings';
 import { useAppStore } from './game/store';
 import { GameViewport } from './scene/GameViewport';
 import { reportRuntimeDiagnostics } from './scene/runtimeDiagnostics';
 import { EntryPrompt, GameHud, PauseMenu } from './ui/GameOverlay';
-import { About, MainMenu } from './ui/Menu';
+import { About, Controls, MainMenu } from './ui/Menu';
 
 export function App() {
   const arenaCanvas = useRef<HTMLCanvasElement | null>(null);
+  const [invertY, setInvertY] = useState(readInvertYSetting);
   const {
     phase,
     hasPointerLock,
@@ -14,6 +16,7 @@ export function App() {
     runId,
     startGame,
     showAbout,
+    showControls,
     showMainMenu,
     preparePointerLockRequest,
     restart,
@@ -86,12 +89,27 @@ export function App() {
     showMainMenu();
   };
 
+  const updateInvertY = (value: boolean) => {
+    writeInvertYSetting(value);
+    setInvertY(value);
+  };
+
   if (phase === 'about') return <About onBack={showMainMenu} />;
-  if (phase === 'main-menu') return <MainMenu onPlay={startGame} onAbout={showAbout} />;
+  if (phase === 'controls') {
+    return <Controls invertY={invertY} onInvertYChange={updateInvertY} onBack={showMainMenu} />;
+  }
+  if (phase === 'main-menu') {
+    return <MainMenu onPlay={startGame} onAbout={showAbout} onControls={showControls} />;
+  }
 
   return (
     <main className="game-shell">
-      <GameViewport active={phase === 'playing'} runId={runId} onCanvasReady={setArenaCanvas} />
+      <GameViewport
+        active={phase === 'playing'}
+        invertY={invertY}
+        runId={runId}
+        onCanvasReady={setArenaCanvas}
+      />
       <GameHud playing={phase === 'playing'} />
       {phase === 'arena-entry' && (
         <EntryPrompt error={pointerLockError} onEnter={requestArenaLock} />

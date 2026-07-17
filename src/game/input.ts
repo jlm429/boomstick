@@ -29,3 +29,8 @@ export const movementInput = (pressed: PressedKeys): MovementInput => ({
 
 export const isGameControl = (code: string) =>
   GAME_CONTROL_CODES.includes(code as (typeof GAME_CONTROL_CODES)[number]);
+
+export const mouseLookDelta = (movementX: number, movementY: number, invertY: boolean) => ({
+  yaw: -movementX * 0.0022,
+  pitch: (invertY ? 1 : -1) * movementY * 0.0022,
+});
