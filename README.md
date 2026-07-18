@@ -29,7 +29,7 @@ Boomstick is an original single-player FPS prototype that explores what modern b
 
 Built with React, React Three Fiber, and Rapier Physics, the project combines responsive first-person movement, lightweight combat, and a modern web application architecture into a fast-loading browser experience.
 
-Boomstick is an exploration of AI-assisted software engineering. 
+Boomstick is an exploration of AI-assisted software engineering.
 
 ---
 
