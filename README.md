@@ -1,33 +1,107 @@
 # Boomstick
 
-Modern browser FPS built with React Three Fiber.
+> A modern browser-based first-person shooter built with React Three Fiber, Rapier, and TypeScript.
 
-**Play:** https://jlm429.github.io/boomstick/ (becomes active after deployment if GitHub Pages has not yet been enabled).
+<p align="center">
+  <a href="https://jlm429.github.io/boomstick/">
+    <img src="docs/images/new_landing_page.png" alt="Boomstick" width="900">
+  </a>
+</p>
 
-Boomstick is an original, single-player first-person arena combat prototype. It pairs a polished React interface with a compact React Three Fiber and Rapier arena.
+<p align="center">
+  <a href="https://jlm429.github.io/boomstick/"><strong>🎮 Play Boomstick</strong></a>
+</p>
 
-## What is included
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" />
+  <img src="https://img.shields.io/badge/Three.js-WebGL-black?logo=three.js" />
+  <img src="https://img.shields.io/badge/React%20Three%20Fiber-3D-orange" />
+  <img src="https://img.shields.io/badge/Rapier-Physics-success" />
+  <img src="https://img.shields.io/badge/Vite-Build-646CFF?logo=vite" />
+</p>
 
-- Full-screen menu, About screen, accessible pause menu, HUD, and pointer-lock guidance
-- Procedural, high-contrast arena with a visible sky, landmark, lighting, conservative shadows, matching collision, and gravity
-- WASD movement, mouse look, jumping, pause, restart, and an authoritative pointer-lock lifecycle
-- A retro shotgun with multi-pellet hitscan fire, fixed targets, hit feedback, and line-of-sight occlusion
-- React 19, TypeScript, Vite, Three.js, React Three Fiber, Rapier, Zustand, Vitest, ESLint, and Prettier
-- GitHub Actions validation and Pages deployment
+---
 
-## Local development
+## Overview
 
-```sh
+Boomstick is an original single-player FPS prototype that explores what modern browser games can look and feel like.
+
+Built with React, React Three Fiber, and Rapier Physics, the project combines responsive first-person movement, lightweight combat, and a modern web application architecture into a fast-loading browser experience.
+
+Boomstick is an exploration of AI-assisted software engineering. 
+
+---
+
+## Play Online
+
+**https://jlm429.github.io/boomstick/**
+
+No installation required. Open the link and enter the arena.
+
+---
+
+## Features
+
+- Modern browser-based first-person shooter
+- React Three Fiber rendering
+- Rapier physics
+- Responsive WASD movement and mouse look
+- Doom-inspired shotgun combat
+- Hitscan weapon with recoil and reload mechanics
+- Dynamic lighting and atmospheric arena
+- Pause menu, HUD, and accessibility features
+- GitHub Actions validation and GitHub Pages deployment
+
+---
+
+## Built With
+
+- React 19
+- TypeScript
+- Vite
+- Three.js
+- React Three Fiber
+- Rapier Physics
+- Zustand
+- Vitest
+- ESLint
+- Prettier
+
+---
+
+## Getting Started
+
+Clone the repository:
+
+```bash
+git clone https://github.com/jlm429/boomstick.git
+cd boomstick
+```
+
+Install dependencies:
+
+```bash
 npm install
+```
+
+Run the development server:
+
+```bash
 npm run dev
 ```
 
-Open the local address Vite prints. See [docs/controls.md](docs/controls.md) to enter the arena and
-learn the controls.
+Build for production:
 
-## Quality checks
+```bash
+npm run build
+```
 
-```sh
+---
+
+## Quality Checks
+
+```bash
 npm test
 npm run lint
 npm run typecheck
@@ -35,4 +109,34 @@ npm run format:check
 npm run build
 ```
 
-See [docs/development.md](docs/development.md), [docs/architecture.md](docs/architecture.md), and [docs/deployment.md](docs/deployment.md) for project details.
+---
+
+## Project Documentation
+
+Additional documentation can be found in the `docs` directory.
+
+- Architecture
+- Controls
+- Development Guide
+- Deployment Guide
+
+---
+
+## Roadmap
+
+Current development focuses on expanding the arena while maintaining a lightweight browser experience.
+
+Planned improvements include:
+
+- Additional arenas
+- Enemy AI
+- Improved combat effects
+- Sound and music
+- Enhanced weapon animations
+- Expanded gameplay systems
+
+---
+
+## License
+
+MIT License
