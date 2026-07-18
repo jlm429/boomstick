@@ -2,11 +2,12 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useRef } from 'react';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
+import { ARENA_RENDER_CONFIG } from '../game/arena';
+import type { WeaponState } from '../game/shooting';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
-import type { WeaponState } from '../game/shooting';
 
 type GameViewportProps = {
   active: boolean;
@@ -108,7 +109,7 @@ export function GameViewport({
         gl.autoClear = true;
         gl.outputColorSpace = SRGBColorSpace;
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = 0.9;
+        gl.toneMappingExposure = ARENA_RENDER_CONFIG.toneMappingExposure;
         gl.setClearColor('#130e0e', 1);
       }}
     >

@@ -17,6 +17,8 @@ describe('arena configuration', () => {
   });
 
   it('provides matching procedural boundaries, floor, obstacles, and visible rendering', () => {
+    expect(ARENA_RENDER_CONFIG.ambientLight).toEqual({ color: '#a56d53', intensity: 2.8 });
+    expect(ARENA_RENDER_CONFIG.toneMappingExposure).toBe(1.22);
     expect(ARENA_RENDER_CONFIG.background).not.toMatch(/^#0{3,6}$/i);
     expect(ARENA_RENDER_CONFIG.fog).toBe(true);
     expect(ARENA_RENDER_CONFIG.postprocessing).toBe(false);

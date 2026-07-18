@@ -19,9 +19,11 @@ export type ArenaLightFixture = Readonly<{
 }>;
 
 export const ARENA_RENDER_CONFIG = {
+  ambientLight: { color: '#a56d53', intensity: 2.8 },
   background: '#130e0e',
   fog: true,
   postprocessing: false,
+  toneMappingExposure: 1.22,
   landmark: [0, 3, -10] as const,
 } as const;
 

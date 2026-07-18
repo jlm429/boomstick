@@ -154,7 +154,7 @@ export function ArenaVisuals() {
     <>
       <color attach="background" args={[ARENA_RENDER_CONFIG.background]} />
       <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 15, 48]} />
-      <ambientLight intensity={0.82} color="#a56d53" />
+      <ambientLight {...ARENA_RENDER_CONFIG.ambientLight} />
       <hemisphereLight intensity={0.88} color="#81483b" groundColor="#170e0b" />
       <directionalLight
         position={[7, 13, 6]}
