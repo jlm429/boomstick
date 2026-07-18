@@ -4,7 +4,7 @@
 
 `src/scene/GameViewport.tsx` owns the persistent R3F `Canvas`, camera defaults, DPR cap, renderer configuration, diagnostics, visible arena, and paused Rapier boundary. `src/scene/Arena.tsx` renders procedural blocks from `src/game/arena.ts`. `src/scene/Player.tsx` owns runtime camera following and orientation. `App` receives the native Canvas only to request and verify pointer lock.
 
-Keep `ArenaVisuals` outside `Physics`. Physics startup must not remove the sky, lights, floor, walls, landmark, or other visual level. Preserve the current Canvas unless the task specifically requires a lifecycle change: it is configured with an opaque renderer, `dpr={[1, 1.5]}`, basic shadows, sRGB output, no tone mapping, and the arena clear color.
+Keep `ArenaVisuals` outside `Physics`. Physics startup must not remove the sky, lights, floor, walls, landmark, or other visual level. Preserve the current Canvas unless the task specifically requires a lifecycle change: it is configured with an opaque renderer, `dpr={[1, 1.5]}`, basic shadows, sRGB output, ACES filmic tone mapping from the arena render configuration, and the arena clear color.
 
 ## Frame and resource rules
 
