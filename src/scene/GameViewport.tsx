@@ -13,6 +13,7 @@ type GameViewportProps = {
   invertY: boolean;
   runId: number;
   onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
+  onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
 };
 
@@ -86,6 +87,7 @@ export function GameViewport({
   invertY,
   runId,
   onCanvasReady,
+  onEmptyFire,
   onWeaponStateChange,
 }: GameViewportProps) {
   return (
@@ -113,7 +115,12 @@ export function GameViewport({
       <CanvasRegistration onCanvasReady={onCanvasReady} />
       <RenderDiagnostics />
       <ArenaVisuals />
-      <CombatScene key={runId} active={active} onWeaponStateChange={onWeaponStateChange} />
+      <CombatScene
+        key={runId}
+        active={active}
+        onEmptyFire={onEmptyFire}
+        onWeaponStateChange={onWeaponStateChange}
+      />
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />

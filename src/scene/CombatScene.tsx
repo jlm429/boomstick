@@ -19,7 +19,9 @@ import {
   firstShotTarget,
   isReloadInput,
   pelletOffsets,
+  reloadPoseAt,
   startReload,
+  type ReloadPose,
   type WeaponState,
 } from '../game/shooting';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
@@ -128,6 +130,14 @@ function Shotgun({
   const recoil = useRef(0);
   const flash = useRef(0);
   const renderedShotId = useRef(0);
+  const reloadPoseRef = useRef<ReloadPose>({
+    phase: 'complete',
+    positionX: 0,
+    positionY: 0,
+    positionZ: 0,
+    rotationX: 0,
+    rotationZ: 0,
+  });
 
   useFrame((_, delta) => {
     if (renderedShotId.current !== shotIdRef.current) {
@@ -145,20 +155,19 @@ function Shotgun({
     if (streakMaterial.current) streakMaterial.current.opacity = flash.current * 0.8;
     if (muzzleLight.current) muzzleLight.current.intensity = flash.current * 8;
     if (!mesh.current) return;
-    const reloadProgress = weaponStateRef.current.isReloading
-      ? Math.min(
-          1,
-          Math.max(0, (performance.now() / 1000 - reloadStartedAtRef.current) / RELOAD_SECONDS),
-        )
-      : 0;
-    const reloadMotion = Math.sin(reloadProgress * Math.PI);
+    const reloadPose = reloadPoseAt(
+      weaponStateRef.current.isReloading
+        ? performance.now() / 1000 - reloadStartedAtRef.current
+        : RELOAD_SECONDS,
+      reloadPoseRef.current,
+    );
     mesh.current.position.copy(camera.position);
     mesh.current.quaternion.copy(camera.quaternion);
-    mesh.current.rotateX(-0.08 + reloadMotion * 0.52);
-    mesh.current.rotateZ(reloadMotion * -0.2);
-    mesh.current.translateX(reloadMotion * 0.28);
-    mesh.current.translateY(-0.52 - reloadMotion * 0.28 + recoil.current * 0.06);
-    mesh.current.translateZ(-1.15 + reloadMotion * 0.1 + recoil.current * 0.16);
+    mesh.current.rotateX(-0.08 + reloadPose.rotationX);
+    mesh.current.rotateZ(reloadPose.rotationZ);
+    mesh.current.translateX(reloadPose.positionX);
+    mesh.current.translateY(-0.52 + reloadPose.positionY + recoil.current * 0.06);
+    mesh.current.translateZ(-1.15 + reloadPose.positionZ + recoil.current * 0.16);
   });
 
   return (
@@ -320,9 +329,11 @@ function ReloadInput({ active, reload }: { active: boolean; reload: () => boolea
 
 export function CombatScene({
   active,
+  onEmptyFire,
   onWeaponStateChange,
 }: {
   active: boolean;
+  onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
 }) {
   const { camera, scene } = useThree();
@@ -354,7 +365,12 @@ export function CombatScene({
 
   const fire = useCallback(() => {
     const now = performance.now() / 1000;
-    if (!canFireWeapon(weaponStateRef.current, lastShotAt.current, now)) return false;
+    if (!canFireWeapon(weaponStateRef.current, lastShotAt.current, now)) {
+      if (weaponStateRef.current.ammunition === 0 && !weaponStateRef.current.isReloading) {
+        onEmptyFire();
+      }
+      return false;
+    }
     lastShotAt.current = now;
     updateWeaponState(consumeRound(weaponStateRef.current));
     camera.getWorldDirection(cameraDirection);
@@ -374,7 +390,7 @@ export function CombatScene({
     }
     shotIdRef.current += 1;
     return true;
-  }, [camera, scene, updateWeaponState]);
+  }, [camera, onEmptyFire, scene, updateWeaponState]);
 
   const reload = useCallback(() => {
     const nextState = startReload(weaponStateRef.current);

@@ -2,9 +2,11 @@ import { APP_VERSION } from '../game/constants';
 import { MAGAZINE_CAPACITY, type WeaponState } from '../game/shooting';
 
 export function GameHud({
+  emptyFirePulse,
   playing,
   weaponState,
 }: {
+  emptyFirePulse: number;
   playing: boolean;
   weaponState: WeaponState;
 }) {
@@ -18,6 +20,11 @@ export function GameHud({
       <span className={weaponState.isReloading ? 'hud-ammo is-reloading' : 'hud-ammo'}>
         {weaponState.ammunition} / {MAGAZINE_CAPACITY}
       </span>
+      {weaponState.ammunition === 0 && !weaponState.isReloading && (
+        <span key={emptyFirePulse} className="hud-reload-reminder">
+          R to Reload
+        </span>
+      )}
       <span className="hud-hint">
         {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
       </span>

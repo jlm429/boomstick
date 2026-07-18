@@ -242,6 +242,33 @@ h2 {
   color: #e66a32;
   border-color: #e55320;
 }
+.hud-reload-reminder {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 5.65rem;
+  padding: 0.4rem 0.65rem;
+  border-left: 2px solid #f05a22;
+  color: #ffd0a3;
+  background: #120b08d9;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  animation: reload-reminder-pulse 0.34s ease-out;
+}
+@keyframes reload-reminder-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 #ef642e00;
+  }
+  32% {
+    transform: scale(1.06);
+    box-shadow: 0 0 16px #ef642e70;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 #ef642e00;
+  }
+}
 .crosshair {
   position: absolute;
   top: 50%;
@@ -435,6 +462,10 @@ h2 {
   .hud-ammo {
     right: 0.8rem;
     bottom: 2.4rem;
+  }
+  .hud-reload-reminder {
+    right: 0.8rem;
+    bottom: 5rem;
   }
 }
 @media (max-height: 680px) {

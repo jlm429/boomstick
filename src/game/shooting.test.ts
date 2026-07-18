@@ -4,6 +4,8 @@ import {
   SHOT_PELLET_COUNT,
   INITIAL_WEAPON_STATE,
   MAGAZINE_CAPACITY,
+  RELOAD_PHASE_TIMINGS,
+  RELOAD_SECONDS,
   canFireShot,
   canFireWeapon,
   completeReload,
@@ -11,6 +13,7 @@ import {
   firstShotTarget,
   isReloadInput,
   pelletOffsets,
+  reloadPoseAt,
   startReload,
 } from './shooting';
 
@@ -69,5 +72,26 @@ describe('shotgun firing rules', () => {
     expect(isReloadInput('KeyR', false)).toBe(true);
     expect(isReloadInput('KeyR', true)).toBe(false);
     expect(isReloadInput('KeyW', false)).toBe(false);
+  });
+
+  it('moves through distinct reload phases and returns to an exact resting pose', () => {
+    expect(reloadPoseAt(0)).toMatchObject({
+      phase: 'lower',
+      positionX: 0,
+      positionY: 0,
+      rotationX: 0,
+      rotationZ: 0,
+    });
+    expect(reloadPoseAt(RELOAD_PHASE_TIMINGS.lowerEnd).phase).toBe('handle');
+    expect(reloadPoseAt(RELOAD_PHASE_TIMINGS.handleEnd).phase).toBe('impact');
+    expect(reloadPoseAt(RELOAD_PHASE_TIMINGS.impactEnd).phase).toBe('settle');
+    expect(reloadPoseAt(RELOAD_SECONDS)).toEqual({
+      phase: 'complete',
+      positionX: 0,
+      positionY: 0,
+      positionZ: 0,
+      rotationX: 0,
+      rotationZ: 0,
+    });
   });
 });
