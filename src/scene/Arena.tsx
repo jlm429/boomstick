@@ -112,8 +112,8 @@ function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
     return (
       <pointLight
         position={offsetWallFixture(fixture, 0.15, 0.28)}
-        intensity={isLandmark ? 18 : 3.4}
-        distance={isLandmark ? 17 : 6}
+        intensity={isLandmark ? 30 : 8.5}
+        distance={isLandmark ? 22 : 12}
         color="#e75a24"
       />
     );
@@ -123,8 +123,8 @@ function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
   return (
     <pointLight
       position={[fixture.position[0], fixture.position[1] + 0.3, fixture.position[2]]}
-      intensity={isCover ? 2.6 : 3.1}
-      distance={isCover ? 4.6 : 5.2}
+      intensity={isCover ? 6 : 7}
+      distance={isCover ? 9.5 : 10.5}
       color="#df5724"
     />
   );
@@ -154,11 +154,11 @@ export function ArenaVisuals() {
     <>
       <color attach="background" args={[ARENA_RENDER_CONFIG.background]} />
       <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 15, 48]} />
-      <ambientLight intensity={0.42} color="#9a6850" />
-      <hemisphereLight intensity={0.48} color="#754237" groundColor="#0d0908" />
+      <ambientLight intensity={0.82} color="#a56d53" />
+      <hemisphereLight intensity={0.88} color="#81483b" groundColor="#170e0b" />
       <directionalLight
         position={[7, 13, 6]}
-        intensity={2.05}
+        intensity={2.4}
         color="#ffb36c"
         castShadow
         shadow-mapSize={[512, 512]}

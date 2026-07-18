@@ -11,6 +11,7 @@ export function App() {
   const arenaCanvas = useRef<HTMLCanvasElement | null>(null);
   const [invertY, setInvertY] = useState(readInvertYSetting);
   const [weaponState, setWeaponState] = useState<WeaponState>(INITIAL_WEAPON_STATE);
+  const [emptyFirePulse, setEmptyFirePulse] = useState(0);
   const {
     phase,
     hasPointerLock,
@@ -54,6 +55,10 @@ export function App() {
 
   const setArenaCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
     arenaCanvas.current = canvas;
+  }, []);
+
+  const reinforceReloadReminder = useCallback(() => {
+    setEmptyFirePulse((pulse) => pulse + 1);
   }, []);
 
   const requestArenaLock = useCallback(() => {
@@ -111,9 +116,14 @@ export function App() {
         invertY={invertY}
         runId={runId}
         onCanvasReady={setArenaCanvas}
+        onEmptyFire={reinforceReloadReminder}
         onWeaponStateChange={setWeaponState}
       />
-      <GameHud playing={phase === 'playing'} weaponState={weaponState} />
+      <GameHud
+        emptyFirePulse={emptyFirePulse}
+        playing={phase === 'playing'}
+        weaponState={weaponState}
+      />
       {phase === 'arena-entry' && (
         <EntryPrompt error={pointerLockError} onEnter={requestArenaLock} />
       )}
