@@ -22,6 +22,9 @@ The shotgun starts each run with 10 rounds. Each valid shot consumes one round, 
 disabled while the magazine is empty or a reload is in progress. Press `R` with a partially empty
 magazine to begin a fixed 1.15-second reload that refills all 10 rounds. At zero rounds, the HUD
 shows **R to Reload** until reloading begins or ammunition is restored; firing while empty pulses
-the reminder again without adding another message.
+the reminder again without adding another message. A successful shot plays the shotgun blast once,
+and each trigger press while empty plays the empty-trigger sound once. A valid reload plays its sound
+once when reloading begins; rate-limited shots, shots during reload, and ignored reload attempts are
+silent.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.
