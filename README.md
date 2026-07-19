@@ -15,10 +15,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" />
-  <img src="https://img.shields.io/badge/Three.js-WebGL-black?logo=three.js" />
   <img src="https://img.shields.io/badge/React%20Three%20Fiber-3D-orange" />
   <img src="https://img.shields.io/badge/Rapier-Physics-success" />
-  <img src="https://img.shields.io/badge/Vite-Build-646CFF?logo=vite" />
 </p>
 
 ---
