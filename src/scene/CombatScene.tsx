@@ -356,6 +356,8 @@ export function CombatScene({
     onWeaponStateChange(weaponStateRef.current);
   }, [onWeaponStateChange]);
 
+  useEffect(() => () => weaponAudio.stop(), [weaponAudio]);
+
   useFrame(() => {
     if (
       weaponStateRef.current.isReloading &&

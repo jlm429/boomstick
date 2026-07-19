@@ -9,6 +9,11 @@ const replay = (audio: HTMLAudioElement) => {
   void audio.play().catch(() => undefined);
 };
 
+const stop = (audio: HTMLAudioElement) => {
+  audio.pause();
+  audio.currentTime = 0;
+};
+
 export class WeaponAudio {
   private readonly emptyFire: HTMLAudioElement;
   private readonly reload: HTMLAudioElement;
@@ -31,5 +36,11 @@ export class WeaponAudio {
 
   playShotgunBlast() {
     replay(this.shotgunBlast);
+  }
+
+  stop() {
+    stop(this.emptyFire);
+    stop(this.reload);
+    stop(this.shotgunBlast);
   }
 }

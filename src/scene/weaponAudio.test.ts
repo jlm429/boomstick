@@ -7,6 +7,7 @@ import { WeaponAudio } from './weaponAudio';
 type AudioStub = {
   currentTime: number;
   paused: boolean;
+  pause: ReturnType<typeof vi.fn>;
   play: ReturnType<typeof vi.fn>;
 };
 
@@ -16,6 +17,7 @@ const setup = () => {
     const audio: AudioStub = {
       currentTime: 4,
       paused: true,
+      pause: vi.fn(),
       play: vi.fn().mockResolvedValue(undefined),
     };
     audioBySource.set(source, audio);
@@ -63,5 +65,16 @@ describe('WeaponAudio', () => {
     weaponAudio.playShotgunBlast();
 
     await expect(Promise.resolve()).resolves.toBeUndefined();
+  });
+
+  it('stops and rewinds every owned audio object', () => {
+    const { audioBySource, weaponAudio } = setup();
+
+    weaponAudio.stop();
+
+    for (const audio of audioBySource.values()) {
+      expect(audio.pause).toHaveBeenCalledOnce();
+      expect(audio.currentTime).toBe(0);
+    }
   });
 });
