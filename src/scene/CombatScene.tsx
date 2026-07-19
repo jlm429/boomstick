@@ -1,6 +1,6 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import {
   Group,
   MeshBasicMaterial,
@@ -25,6 +25,7 @@ import {
   type WeaponState,
 } from '../game/shooting';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
+import { WeaponAudio } from './weaponAudio';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
@@ -341,6 +342,7 @@ export function CombatScene({
   const lastShotAt = useRef(-Infinity);
   const weaponStateRef = useRef<WeaponState>(INITIAL_WEAPON_STATE);
   const reloadStartedAtRef = useRef(-Infinity);
+  const [weaponAudio] = useState(() => new WeaponAudio());
 
   const updateWeaponState = useCallback(
     (state: WeaponState) => {
@@ -367,6 +369,7 @@ export function CombatScene({
     const now = performance.now() / 1000;
     if (!canFireWeapon(weaponStateRef.current, lastShotAt.current, now)) {
       if (weaponStateRef.current.ammunition === 0 && !weaponStateRef.current.isReloading) {
+        weaponAudio.playEmptyFire();
         onEmptyFire();
       }
       return false;
@@ -389,16 +392,18 @@ export function CombatScene({
       firstShotTarget(collisions)?.();
     }
     shotIdRef.current += 1;
+    weaponAudio.playShotgunBlast();
     return true;
-  }, [camera, onEmptyFire, scene, updateWeaponState]);
+  }, [camera, onEmptyFire, scene, updateWeaponState, weaponAudio]);
 
   const reload = useCallback(() => {
     const nextState = startReload(weaponStateRef.current);
     if (nextState === weaponStateRef.current) return false;
     reloadStartedAtRef.current = performance.now() / 1000;
     updateWeaponState(nextState);
+    weaponAudio.playReload();
     return true;
-  }, [updateWeaponState]);
+  }, [updateWeaponState, weaponAudio]);
 
   return (
     <>
