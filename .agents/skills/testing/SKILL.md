@@ -36,3 +36,9 @@ Run the smallest relevant test first, then the applicable broader suite. Run lin
 For visible behavior, inspect `npm run dev` and, when relevant, `npm run preview` in a real browser. Verify the bright arena, pointer-lock entry, mouse look, movement, pause, resume, restart, and menu return for affected flows. For scene or lifecycle changes, also test resize, tab background and return, remount, context recovery, and input clearing where relevant. Use the browser-debugging skill for cache and Chrome-versus-Firefox checks.
 
 Do not claim success from compilation, a clean console, or passing unit tests alone. Report exact commands and runtime checks performed, skipped checks, and remaining risks.
+
+## Human validation gate
+
+When a change requires manual verification, including UI, gameplay, browser behavior, graphics, interaction, or visual appearance, stop before opening a pull request and ask the user to validate it. Provide concise reproduction and validation steps, state what automated or agent-run checks have already passed, and identify the expected result.
+
+Do not assume the user has tested the change or treat agent-run automation as user confirmation. Wait for explicit confirmation before creating the pull request. If the user reports a problem, resume the work, revalidate it, and request human validation again before proceeding.

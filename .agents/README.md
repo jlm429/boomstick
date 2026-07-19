@@ -7,4 +7,5 @@
 - `rendering`: React Three Fiber, Three.js, Canvas lifecycle, and frame-loop work
 - `physics`: Rapier lifecycle, movement, colliders, and restart behavior
 - `testing`: automated and browser-runtime validation
+- `workflow`: vertical slices, CHANGELOG and handoff content, pull request gates, and resource-limit recovery
 - `deployment`: GitHub Pages and release workflow

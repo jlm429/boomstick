@@ -15,6 +15,7 @@ Read [docs/architecture.md](docs/architecture.md) for the current event and life
 
 - Work from the current repository, worktree, and affected code path. State assumptions only when they materially affect behavior, scope, or architecture.
 - Implement the smallest complete change. Do not add speculative features, abstractions, configuration, fallbacks, or unrelated refactors.
+- Prefer small, end-to-end vertical slices. Complete and validate one meaningful feature before starting another when practical.
 - Preserve user changes and architectural boundaries. Remove only artifacts made obsolete by your own change. Review the final diff so every changed line serves the task.
 - For meaningful work, define observable success before coding. Reproduce bugs when practical, trace the relevant flow, and add or identify regression coverage.
 - Before changing browser, input, WebGL, scene lifecycle, rendering, or physics code, rule out environment and stale-build causes. When Firefox works but Chrome fails, rule out Chrome graphics configuration before altering application code.
@@ -38,6 +39,7 @@ Read every skill that crosses a task boundary.
 | Canvas, React Three Fiber, Three.js, scene resources, or performance         | [.agents/skills/rendering/SKILL.md](.agents/skills/rendering/SKILL.md)                 |
 | Rapier bodies, colliders, movement, collision, restart, or simulation timing | [.agents/skills/physics/SKILL.md](.agents/skills/physics/SKILL.md)                     |
 | Tests, CI, or validation                                                     | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md)                     |
+| Planning slices, CHANGELOG, handoff, pull requests, or resource limits       | [.agents/skills/workflow/SKILL.md](.agents/skills/workflow/SKILL.md)                   |
 | Pages hosting or deployment workflow                                         | [.agents/skills/deployment/SKILL.md](.agents/skills/deployment/SKILL.md)               |
 
 ## Maintaining this file
