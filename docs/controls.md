@@ -5,8 +5,9 @@ explains mouse capture before the run starts. The browser's pointer-lock event i
 movement and mouse look begin only after capture succeeds. If pointer lock is released, the game
 pauses and clears held input. Select **Resume** to capture the pointer again from that click.
 
-From the pause dialog, select **Restart** to return to the arena spawn, restore broken lights and
-target health, and begin a fresh run, or select **Return to Main Menu** to return to the landing page.
+From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh training
+run with restored lights and targets and no zombie, or select **Return to Main Menu** to return to
+the landing page.
 
 | Input                | Action                                |
 | -------------------- | ------------------------------------- |
@@ -29,9 +30,12 @@ silent.
 
 Shots play an impact sound when their nearest pellet collisions hit arena walls, obstacles, or
 targets. Each target's visible meter updates as hits reduce its health. Pellet damage scales smoothly
-with distance from the shot origin and accuracy on the target face. A depleted target remains visible
-and solid but dims and no longer reacts to hits until Restart restores it. Arena lights hit from at
-most 18 units away visibly break, stop illuminating the arena, and play their destruction sound once.
-Later hits on the same light use the normal surface impact sound until Restart restores it.
+with distance from the shot origin and accuracy on the target face. A depleted target remains visible,
+dims, and no longer reacts to hits. Depleting every target starts one 3, 2, 1 countdown, after which
+their collision is removed and one zombie appears. The zombie pursues and faces the player, stops
+short without attacking, reacts to shotgun hits, and stops moving and colliding when killed. Arena
+lights hit from at most 18 units away visibly break, stop illuminating the arena, and play their
+destruction sound once. Later hits on the same light use the normal surface impact sound until
+Restart restores it.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.

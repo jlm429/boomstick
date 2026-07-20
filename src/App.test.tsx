@@ -9,20 +9,32 @@ vi.mock('./scene/GameViewport', () => ({
     invertY,
     runId,
     onCanvasReady,
+    onEncounterStateChange,
   }: {
     active: boolean;
     invertY: boolean;
     runId: number;
     onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
+    onEncounterStateChange: (state: {
+      phase: 'training' | 'countdown' | 'zombie';
+      elapsedSeconds?: number;
+    }) => void;
     onWeaponStateChange: (state: { ammunition: number; isReloading: boolean }) => void;
   }) => (
-    <canvas
-      data-active={active}
-      data-invert-y={invertY}
-      data-run-id={runId}
-      data-testid="game-viewport"
-      ref={onCanvasReady}
-    />
+    <>
+      <canvas
+        data-active={active}
+        data-invert-y={invertY}
+        data-run-id={runId}
+        data-testid="game-viewport"
+        ref={onCanvasReady}
+      />
+      <button
+        data-testid="complete-training"
+        hidden
+        onClick={() => onEncounterStateChange({ phase: 'countdown', elapsedSeconds: 0 })}
+      />
+    </>
   ),
 }));
 
@@ -141,6 +153,23 @@ describe('App navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
     expect(canvas).toHaveAttribute('data-run-id', '2');
     expect(requestPointerLock).toHaveBeenCalledOnce();
+  });
+
+  it('clears the countdown and remounts a fresh encounter on Restart', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    act(() => setPointerLockElement(canvas));
+    fireEvent.click(screen.getByTestId('complete-training'));
+    expect(
+      screen.getByRole('status', { name: 'Zombie encounter begins in 3' }),
+    ).toBeInTheDocument();
+
+    act(() => setPointerLockElement(null));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-run-id', '2');
   });
 
   it('returns to the main menu without stale play state', () => {

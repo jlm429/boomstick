@@ -3,32 +3,47 @@ import { MAGAZINE_CAPACITY, type WeaponState } from '../game/shooting';
 
 export function GameHud({
   emptyFirePulse,
+  encounterCountdown,
   playing,
   weaponState,
 }: {
   emptyFirePulse: number;
+  encounterCountdown: 3 | 2 | 1 | null;
   playing: boolean;
   weaponState: WeaponState;
 }) {
   return (
-    <div className="hud" aria-hidden="true">
-      <div className="crosshair">
-        <i />
-        <i />
-      </div>
-      <span>BOOMSTICK // v{APP_VERSION}</span>
-      <span className={weaponState.isReloading ? 'hud-ammo is-reloading' : 'hud-ammo'}>
-        {weaponState.ammunition} / {MAGAZINE_CAPACITY}
-      </span>
-      {weaponState.ammunition === 0 && !weaponState.isReloading && (
-        <span key={emptyFirePulse} className="hud-reload-reminder">
-          R to Reload
+    <>
+      <div className="hud" aria-hidden="true">
+        <div className="crosshair">
+          <i />
+          <i />
+        </div>
+        <span>BOOMSTICK // v{APP_VERSION}</span>
+        <span className={weaponState.isReloading ? 'hud-ammo is-reloading' : 'hud-ammo'}>
+          {weaponState.ammunition} / {MAGAZINE_CAPACITY}
         </span>
+        {weaponState.ammunition === 0 && !weaponState.isReloading && (
+          <span key={emptyFirePulse} className="hud-reload-reminder">
+            R to Reload
+          </span>
+        )}
+        <span className="hud-hint">
+          {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
+        </span>
+      </div>
+      {encounterCountdown !== null && (
+        <div
+          key={encounterCountdown}
+          className="encounter-countdown"
+          role="status"
+          aria-live="assertive"
+          aria-label={`Zombie encounter begins in ${encounterCountdown}`}
+        >
+          {encounterCountdown}
+        </div>
       )}
-      <span className="hud-hint">
-        {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
-      </span>
-    </div>
+    </>
   );
 }
 
