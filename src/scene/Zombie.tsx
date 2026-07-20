@@ -13,11 +13,6 @@ import {
   type AnimationAction,
 } from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import zombieModelUrl from '../assets/models/zombies/Zombie.fbx?url';
-import zombieDyingUrl from '../assets/models/zombies/Zombie_Dying.fbx?url';
-import zombieIdleUrl from '../assets/models/zombies/Zombie_Idle.fbx?url';
-import zombieHitUrl from '../assets/models/zombies/Zombie_Reaction_Hit.fbx?url';
-import zombieRunUrl from '../assets/models/zombies/Zombie_Run.fbx?url';
 import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactHandler } from '../game/impacts';
 import {
@@ -27,6 +22,7 @@ import {
   createZombieState,
   hitZombie,
 } from '../game/zombie';
+import { ZOMBIE_ASSET_URLS } from './zombieAssets';
 
 const ZOMBIE_SOURCE_CLIP_NAME = 'mixamo.com';
 const ANIMATION_BONE_PREFIX = 'mixamorig5';
@@ -68,12 +64,6 @@ function prepareAnimation(
   return clip;
 }
 
-export function preloadZombieAssets() {
-  for (const url of [zombieModelUrl, zombieIdleUrl, zombieRunUrl, zombieHitUrl, zombieDyingUrl]) {
-    useFBX.preload(url);
-  }
-}
-
 export function Zombie({ active }: { active: boolean }) {
   const bodyRef = useRef<RapierRigidBody>(null);
   const visualRef = useRef<Group>(null);
@@ -87,11 +77,11 @@ export function Zombie({ active }: { active: boolean }) {
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
   const [hitRevision, setHitRevision] = useState(0);
   const { camera } = useThree();
-  const modelAsset = useFBX(zombieModelUrl);
-  const idleAsset = useFBX(zombieIdleUrl);
-  const runAsset = useFBX(zombieRunUrl);
-  const hitAsset = useFBX(zombieHitUrl);
-  const dyingAsset = useFBX(zombieDyingUrl);
+  const modelAsset = useFBX(ZOMBIE_ASSET_URLS.model);
+  const idleAsset = useFBX(ZOMBIE_ASSET_URLS.idle);
+  const runAsset = useFBX(ZOMBIE_ASSET_URLS.run);
+  const hitAsset = useFBX(ZOMBIE_ASSET_URLS.hit);
+  const dyingAsset = useFBX(ZOMBIE_ASSET_URLS.dying);
   const model = useMemo(() => clone(modelAsset) as Group, [modelAsset]);
   const clips = useMemo(
     () => [

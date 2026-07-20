@@ -13,7 +13,8 @@ import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
-import { preloadZombieAssets, Zombie } from './Zombie';
+import { Zombie } from './Zombie';
+import { preloadZombieAssets } from './zombieAssets';
 
 type GameViewportProps = {
   active: boolean;

@@ -49,9 +49,7 @@ export function encounterCountdownValue(state: EncounterState): 3 | 2 | 1 | null
   return Math.max(
     1,
     Math.ceil(
-      ENCOUNTER_COUNTDOWN_SECONDS -
-        state.elapsedSeconds -
-        COUNTDOWN_BOUNDARY_EPSILON_SECONDS,
+      ENCOUNTER_COUNTDOWN_SECONDS - state.elapsedSeconds - COUNTDOWN_BOUNDARY_EPSILON_SECONDS,
     ),
   ) as 3 | 2 | 1;
 }
