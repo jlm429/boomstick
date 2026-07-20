@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createEncounterState,
+  encounterCountdownValue,
+  type EncounterState,
+} from './game/encounter';
 import { readInvertYSetting, writeInvertYSetting } from './game/settings';
 import { INITIAL_WEAPON_STATE, type WeaponState } from './game/shooting';
 import { useAppStore } from './game/store';
@@ -12,6 +17,7 @@ export function App() {
   const [invertY, setInvertY] = useState(readInvertYSetting);
   const [weaponState, setWeaponState] = useState<WeaponState>(INITIAL_WEAPON_STATE);
   const [emptyFirePulse, setEmptyFirePulse] = useState(0);
+  const [encounterState, setEncounterState] = useState<EncounterState>(createEncounterState);
   const {
     phase,
     hasPointerLock,
@@ -77,6 +83,7 @@ export function App() {
   }, [handlePointerLockError, preparePointerLockRequest]);
 
   const restartAndRequestArenaLock = useCallback(() => {
+    setEncounterState(createEncounterState());
     restart();
     const canvas = arenaCanvas.current;
     if (!canvas?.requestPointerLock) {
@@ -91,8 +98,14 @@ export function App() {
     }
   }, [handlePointerLockError, restart]);
 
+  const startTraining = useCallback(() => {
+    setEncounterState(createEncounterState());
+    startGame();
+  }, [startGame]);
+
   const returnToMainMenu = () => {
     document.exitPointerLock?.();
+    setEncounterState(createEncounterState());
     showMainMenu();
   };
 
@@ -106,7 +119,7 @@ export function App() {
     return <Controls invertY={invertY} onInvertYChange={updateInvertY} onBack={showMainMenu} />;
   }
   if (phase === 'main-menu') {
-    return <MainMenu onPlay={startGame} onAbout={showAbout} onControls={showControls} />;
+    return <MainMenu onPlay={startTraining} onAbout={showAbout} onControls={showControls} />;
   }
 
   return (
@@ -116,11 +129,13 @@ export function App() {
         invertY={invertY}
         runId={runId}
         onCanvasReady={setArenaCanvas}
+        onEncounterStateChange={setEncounterState}
         onEmptyFire={reinforceReloadReminder}
         onWeaponStateChange={setWeaponState}
       />
       <GameHud
         emptyFirePulse={emptyFirePulse}
+        encounterCountdown={encounterCountdownValue(encounterState)}
         playing={phase === 'playing'}
         weaponState={weaponState}
       />

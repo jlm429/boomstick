@@ -255,6 +255,37 @@ h2 {
   letter-spacing: 0.12em;
   animation: reload-reminder-pulse 0.34s ease-out;
 }
+.encounter-countdown {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #fff1d4;
+  background: radial-gradient(circle at center, #3a140852 0%, transparent 48%);
+  text-shadow:
+    0 0 18px #f05a22,
+    0 8px 30px #000;
+  font-size: clamp(8rem, 28vw, 16rem);
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1;
+  animation: encounter-countdown-pulse 0.9s ease-out;
+}
+@keyframes encounter-countdown-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(0.92);
+  }
+}
 @keyframes reload-reminder-pulse {
   0% {
     transform: scale(1);

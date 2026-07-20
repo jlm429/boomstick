@@ -1,19 +1,22 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
+import { createEncounterState, type EncounterState } from '../game/encounter';
 import type { WeaponState } from '../game/shooting';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
+import { Zombie } from './Zombie';
 
 type GameViewportProps = {
   active: boolean;
   invertY: boolean;
   runId: number;
   onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
+  onEncounterStateChange: (state: EncounterState) => void;
   onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
 };
@@ -83,11 +86,56 @@ function PhysicsDiagnostics() {
   return null;
 }
 
+function RunScene({
+  active,
+  invertY,
+  onEncounterStateChange,
+  onEmptyFire,
+  onWeaponStateChange,
+}: Pick<
+  GameViewportProps,
+  'active' | 'invertY' | 'onEncounterStateChange' | 'onEmptyFire' | 'onWeaponStateChange'
+>) {
+  const [encounterState, setEncounterState] = useState(createEncounterState);
+  const updateEncounterState = useCallback(
+    (state: EncounterState) => {
+      setEncounterState(state);
+      onEncounterStateChange(state);
+    },
+    [onEncounterStateChange],
+  );
+
+  return (
+    <>
+      <CombatScene
+        active={active}
+        onEncounterStateChange={updateEncounterState}
+        onEmptyFire={onEmptyFire}
+        onWeaponStateChange={onWeaponStateChange}
+      />
+      <Suspense fallback={null}>
+        <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
+          <PhysicsDiagnostics />
+          <ArenaColliders />
+          <TargetColliders />
+          <Player active={active} invertY={invertY} />
+          {encounterState.phase === 'zombie' && (
+            <Suspense fallback={null}>
+              <Zombie active={active} />
+            </Suspense>
+          )}
+        </Physics>
+      </Suspense>
+    </>
+  );
+}
+
 export function GameViewport({
   active,
   invertY,
   runId,
   onCanvasReady,
+  onEncounterStateChange,
   onEmptyFire,
   onWeaponStateChange,
 }: GameViewportProps) {
@@ -116,20 +164,14 @@ export function GameViewport({
       <CanvasRegistration onCanvasReady={onCanvasReady} />
       <RenderDiagnostics />
       <ArenaVisuals />
-      <CombatScene
+      <RunScene
         key={runId}
         active={active}
+        invertY={invertY}
+        onEncounterStateChange={onEncounterStateChange}
         onEmptyFire={onEmptyFire}
         onWeaponStateChange={onWeaponStateChange}
       />
-      <Suspense fallback={null}>
-        <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
-          <PhysicsDiagnostics />
-          <ArenaColliders />
-          <TargetColliders />
-          <Player key={runId} active={active} invertY={invertY} />
-        </Physics>
-      </Suspense>
     </Canvas>
   );
 }

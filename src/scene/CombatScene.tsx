@@ -32,6 +32,14 @@ import {
   type ShotImpactHandler,
 } from '../game/impacts';
 import {
+  advanceEncounterCountdown,
+  createEncounterState,
+  createTrainingTargetHealth,
+  hasEncounterPresentationChanged,
+  startEncounterCountdown,
+  type EncounterState,
+} from '../game/encounter';
+import {
   ARENA_TARGETS,
   TARGET_HIT_RADIUS,
   hitTarget,
@@ -66,7 +74,13 @@ function shotImpactHandler(object: Object3D): ShotImpactHandler | null {
   return null;
 }
 
-function TargetVisual({ target }: { target: TargetDefinition }) {
+function TargetVisual({
+  target,
+  onHealthChange,
+}: {
+  target: TargetDefinition;
+  onHealthChange: (targetId: string, health: number) => void;
+}) {
   const groupRef = useRef<Group>(null);
   const meterRef = useRef<Group>(null);
   const materialRef = useRef<MeshStandardMaterial>(null);
@@ -100,6 +114,7 @@ function TargetVisual({ target }: { target: TargetDefinition }) {
 
     healthRef.current = result.health;
     setHealth(result.health);
+    onHealthChange(target.id, result.health);
     hitAtRef.current = performance.now() / 1000;
     return 'wall';
   };
@@ -169,11 +184,15 @@ export function TargetColliders() {
   );
 }
 
-function TargetVisuals() {
+function TargetVisuals({
+  onHealthChange,
+}: {
+  onHealthChange: (targetId: string, health: number) => void;
+}) {
   return (
     <>
       {ARENA_TARGETS.map((target) => (
-        <TargetVisual key={target.id} target={target} />
+        <TargetVisual key={target.id} target={target} onHealthChange={onHealthChange} />
       ))}
     </>
   );
@@ -396,10 +415,12 @@ function ReloadInput({ active, reload }: { active: boolean; reload: () => boolea
 
 export function CombatScene({
   active,
+  onEncounterStateChange,
   onEmptyFire,
   onWeaponStateChange,
 }: {
   active: boolean;
+  onEncounterStateChange: (state: EncounterState) => void;
   onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
 }) {
@@ -411,6 +432,8 @@ export function CombatScene({
   const [weaponAudio] = useState(() => new WeaponAudio());
   const [impactState, setImpactState] = useState(createArenaImpactState);
   const impactStateRef = useRef(impactState);
+  const encounterStateRef = useRef(createEncounterState());
+  const trainingTargetHealthRef = useRef(createTrainingTargetHealth());
 
   const updateWeaponState = useCallback(
     (state: WeaponState) => {
@@ -435,12 +458,39 @@ export function CombatScene({
     return impact.sound;
   }, []);
 
-  useFrame(() => {
+  const updateEncounterState = useCallback(
+    (nextState: EncounterState) => {
+      const previousState = encounterStateRef.current;
+      encounterStateRef.current = nextState;
+      if (hasEncounterPresentationChanged(previousState, nextState)) {
+        onEncounterStateChange(nextState);
+      }
+    },
+    [onEncounterStateChange],
+  );
+
+  const updateTargetHealth = useCallback(
+    (targetId: string, health: number) => {
+      trainingTargetHealthRef.current = {
+        ...trainingTargetHealthRef.current,
+        [targetId]: health,
+      };
+      updateEncounterState(
+        startEncounterCountdown(encounterStateRef.current, trainingTargetHealthRef.current),
+      );
+    },
+    [updateEncounterState],
+  );
+
+  useFrame((_, delta) => {
     if (
       weaponStateRef.current.isReloading &&
       performance.now() / 1000 - reloadStartedAtRef.current >= RELOAD_SECONDS
     ) {
       updateWeaponState(completeReload(weaponStateRef.current));
+    }
+    if (active) {
+      updateEncounterState(advanceEncounterCountdown(encounterStateRef.current, delta));
     }
   });
 
@@ -503,7 +553,7 @@ export function CombatScene({
   return (
     <>
       <BreakableLights brokenLightIds={impactState.brokenLightIds} onLightHit={hitLight} />
-      <TargetVisuals />
+      <TargetVisuals onHealthChange={updateTargetHealth} />
       <Shotgun
         shotIdRef={shotIdRef}
         weaponStateRef={weaponStateRef}
