@@ -14,3 +14,4 @@ All notable changes are documented here.
 - Added breakable arena lights that reset on restart, with one-time destruction audio and distance-attenuated impact sounds for arena surfaces and targets.
 - Added target health meters and smoothly scaled shotgun damage based on range and face accuracy.
 - Added a one-time training countdown and first zombie encounter after every target is depleted, including pursuit, shotgun hit reactions, death, and full restart reset.
+- Polished the first zombie encounter with impact-point blood bursts, collider-aware obstacle steering, close-range attack animation and bite audio, hit recovery, and timed corpse cleanup.

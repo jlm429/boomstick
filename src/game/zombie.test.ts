@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { ZOMBIE_MAX_HEALTH, createZombieState, hitZombie } from './zombie';
+import {
+  ZOMBIE_ATTACK_DISTANCE,
+  ZOMBIE_CORPSE_SECONDS,
+  ZOMBIE_MAX_HEALTH,
+  advanceZombieBehavior,
+  createZombieBehaviorState,
+  createZombieState,
+  hitZombie,
+  interruptZombieBehavior,
+  isZombieCorpseExpired,
+  selectZombieSteering,
+} from './zombie';
 
 describe('zombie health', () => {
   it('starts alive at the tuneable maximum health', () => {
@@ -18,5 +29,109 @@ describe('zombie health', () => {
 
     expect(zombie).toEqual({ health: 0, dead: true });
     expect(hitZombie(zombie, 0)).toEqual({ state: zombie, damage: 0, reacted: false });
+  });
+});
+
+describe('zombie behavior', () => {
+  it('transitions between chase and attack at the configured distance', () => {
+    const chase = advanceZombieBehavior(createZombieBehaviorState(), {
+      delta: 0.016,
+      distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
+      hitDuration: 2,
+    });
+    expect(chase.mode).toBe('chase');
+
+    const attack = advanceZombieBehavior(chase, {
+      delta: 0.016,
+      distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
+      hitDuration: 2,
+    });
+    expect(attack.mode).toBe('attack');
+
+    expect(
+      advanceZombieBehavior(attack, {
+        delta: 0.016,
+        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
+        hitDuration: 2,
+      }).mode,
+    ).toBe('chase');
+  });
+
+  it('recovers from a hit into the behavior appropriate to the current range', () => {
+    const attack = { mode: 'attack', elapsed: 0 } as const;
+    const hit = interruptZombieBehavior(attack, false);
+    expect(hit.mode).toBe('hit');
+    expect(
+      advanceZombieBehavior(hit, {
+        delta: 2,
+        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
+        hitDuration: 2,
+      }).mode,
+    ).toBe('attack');
+    expect(
+      advanceZombieBehavior(hit, {
+        delta: 2,
+        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 1,
+        hitDuration: 2,
+      }).mode,
+    ).toBe('chase');
+  });
+
+  it('keeps the corpse through the death animation and five-second hold', () => {
+    const dead = interruptZombieBehavior(createZombieBehaviorState(), true);
+    const deathAnimationDuration = 3.3;
+    expect(
+      isZombieCorpseExpired(
+        { ...dead, elapsed: deathAnimationDuration + ZOMBIE_CORPSE_SECONDS - 0.01 },
+        deathAnimationDuration,
+      ),
+    ).toBe(false);
+    expect(
+      isZombieCorpseExpired(
+        { ...dead, elapsed: deathAnimationDuration + ZOMBIE_CORPSE_SECONDS },
+        deathAnimationDuration,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('zombie steering', () => {
+  it('keeps direct pursuit on a proven clear path', () => {
+    const steering = selectZombieSteering({ x: 0, z: 8 }, 8, null, () => false);
+
+    expect(steering).toEqual({
+      direction: { x: 0, z: 1 },
+      directPathClear: true,
+      side: null,
+    });
+  });
+
+  it('selects and preserves viable alternate steering while the direct path is blocked', () => {
+    const blockedDirections: number[] = [];
+    const first = selectZombieSteering({ x: 0, z: 8 }, 8, null, (direction) => {
+      blockedDirections.push(direction.x);
+      return Math.abs(direction.x) < 0.5;
+    });
+    const next = selectZombieSteering(
+      { x: 0, z: 7 },
+      7,
+      first.side,
+      (direction) => Math.abs(direction.x) < 0.5,
+    );
+
+    expect(blockedDirections[0]).toBe(0);
+    expect(first.directPathClear).toBe(false);
+    expect(first.direction.x).not.toBe(0);
+    expect(first.direction.z).toBeGreaterThan(0);
+    expect(next.side).toBe(first.side);
+    expect(Math.sign(next.direction.x)).toBe(Math.sign(first.direction.x));
+  });
+
+  it('stops instead of selecting a direction through surrounding geometry', () => {
+    expect(selectZombieSteering({ x: 0, z: 8 }, 8, 1, () => true)).toEqual({
+      direction: { x: 0, z: 0 },
+      directPathClear: false,
+      side: 1,
+    });
   });
 });
