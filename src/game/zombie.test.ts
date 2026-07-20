@@ -172,10 +172,7 @@ describe('zombie steering', () => {
       const x = origin.x + direction.x * distance;
       const z = origin.z + direction.z * distance;
       return (
-        x >= wall.minimumX &&
-        x <= wall.maximumX &&
-        z >= wall.minimumZ &&
-        z <= wall.maximumZ
+        x >= wall.minimumX && x <= wall.maximumX && z >= wall.minimumZ && z <= wall.maximumZ
       );
     });
     return distances.length > 0 ? Math.min(...distances) : null;
