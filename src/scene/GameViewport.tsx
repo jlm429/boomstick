@@ -9,7 +9,7 @@ import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
-import { Zombie } from './Zombie';
+import { preloadZombieAssets, Zombie } from './Zombie';
 
 type GameViewportProps = {
   active: boolean;
@@ -139,6 +139,10 @@ export function GameViewport({
   onEmptyFire,
   onWeaponStateChange,
 }: GameViewportProps) {
+  useEffect(() => {
+    preloadZombieAssets();
+  }, []);
+
   return (
     <Canvas
       aria-label="Boomstick arena. Use Enter Arena to enable mouse look."

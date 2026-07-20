@@ -68,8 +68,10 @@ function prepareAnimation(
   return clip;
 }
 
-for (const url of [zombieModelUrl, zombieIdleUrl, zombieRunUrl, zombieHitUrl, zombieDyingUrl]) {
-  useFBX.preload(url);
+export function preloadZombieAssets() {
+  for (const url of [zombieModelUrl, zombieIdleUrl, zombieRunUrl, zombieHitUrl, zombieDyingUrl]) {
+    useFBX.preload(url);
+  }
 }
 
 export function Zombie({ active }: { active: boolean }) {

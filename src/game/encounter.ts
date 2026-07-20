@@ -1,6 +1,8 @@
 import { ARENA_TARGETS, isTargetDepleted } from './targets';
 
 export const ENCOUNTER_COUNTDOWN_SECONDS = 3;
+const MAX_COUNTDOWN_FRAME_DELTA_SECONDS = 0.1;
+const COUNTDOWN_BOUNDARY_EPSILON_SECONDS = 1e-9;
 
 export type EncounterState =
   | Readonly<{ phase: 'training' }>
@@ -33,16 +35,23 @@ export function advanceEncounterCountdown(
 ): EncounterState {
   if (state.phase !== 'countdown') return state;
   if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return state;
-  const elapsedSeconds = state.elapsedSeconds + deltaSeconds;
-  return elapsedSeconds >= ENCOUNTER_COUNTDOWN_SECONDS
+  const elapsedSeconds =
+    state.elapsedSeconds + Math.min(deltaSeconds, MAX_COUNTDOWN_FRAME_DELTA_SECONDS);
+  return elapsedSeconds >= ENCOUNTER_COUNTDOWN_SECONDS - COUNTDOWN_BOUNDARY_EPSILON_SECONDS
     ? { phase: 'zombie' }
     : { phase: 'countdown', elapsedSeconds };
 }
 
 export function encounterCountdownValue(state: EncounterState): 3 | 2 | 1 | null {
   if (state.phase !== 'countdown') return null;
-  return Math.max(1, Math.ceil(ENCOUNTER_COUNTDOWN_SECONDS - state.elapsedSeconds)) as
-    3 | 2 | 1;
+  return Math.max(
+    1,
+    Math.ceil(
+      ENCOUNTER_COUNTDOWN_SECONDS -
+        state.elapsedSeconds -
+        COUNTDOWN_BOUNDARY_EPSILON_SECONDS,
+    ),
+  ) as 3 | 2 | 1;
 }
 
 export const hasEncounterPresentationChanged = (
