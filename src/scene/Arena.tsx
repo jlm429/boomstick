@@ -114,7 +114,7 @@ export function BreakableLights({
   onLightHit,
 }: {
   brokenLightIds: ReadonlySet<string>;
-  onLightHit: (lightId: string) => ImpactSound;
+  onLightHit: (lightId: string, distance: number) => ImpactSound;
 }) {
   return (
     <>
@@ -123,7 +123,7 @@ export function BreakableLights({
           key={fixture.id}
           broken={brokenLightIds.has(fixture.id)}
           fixture={fixture}
-          onHit={() => onLightHit(fixture.id)}
+          onHit={(distance) => onLightHit(fixture.id, distance)}
         />
       ))}
     </>

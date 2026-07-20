@@ -1,6 +1,8 @@
+import { BREAKABLE_LIGHT_MAX_DISTANCE } from './constants';
+
 export type ImpactSound = 'light' | 'wall';
 
-export type ShotImpactHandler = () => ImpactSound;
+export type ShotImpactHandler = (distance: number) => ImpactSound;
 
 export type ArenaImpactState = Readonly<{
   brokenLightIds: ReadonlySet<string>;
@@ -13,8 +15,16 @@ export const createArenaImpactState = (): ArenaImpactState => ({
 export function hitBreakableLight(
   state: ArenaImpactState,
   lightId: string,
+  distance: number,
 ): Readonly<{ state: ArenaImpactState; sound: ImpactSound }> {
-  if (state.brokenLightIds.has(lightId)) return { state, sound: 'wall' };
+  if (
+    state.brokenLightIds.has(lightId) ||
+    !Number.isFinite(distance) ||
+    distance < 0 ||
+    distance > BREAKABLE_LIGHT_MAX_DISTANCE
+  ) {
+    return { state, sound: 'wall' };
+  }
 
   return {
     state: { brokenLightIds: new Set([...state.brokenLightIds, lightId]) },

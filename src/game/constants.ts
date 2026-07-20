@@ -5,6 +5,7 @@ export const MOVE_SPEED = 8;
 export const JUMP_VELOCITY = 7.2;
 export const CAMERA_EYE_OFFSET = 0.68;
 export const MAX_FRAME_DELTA = 0.1;
+export const BREAKABLE_LIGHT_MAX_DISTANCE = 18;
 
 export function isValidSpawn([x, y, z]: readonly [number, number, number]) {
   return (

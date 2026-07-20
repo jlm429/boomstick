@@ -367,8 +367,8 @@ export function CombatScene({
 
   useEffect(() => () => weaponAudio.stop(), [weaponAudio]);
 
-  const hitLight = useCallback((lightId: string) => {
-    const impact = hitBreakableLight(impactStateRef.current, lightId);
+  const hitLight = useCallback((lightId: string, distance: number) => {
+    const impact = hitBreakableLight(impactStateRef.current, lightId, distance);
     if (impact.state !== impactStateRef.current) {
       impactStateRef.current = impact.state;
       setImpactState(impact.state);
@@ -415,7 +415,7 @@ export function CombatScene({
         });
       const collision = firstShotTarget(collisions);
       if (!collision) continue;
-      const sound = collision.handler();
+      const sound = collision.handler(collision.distance);
       const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
       if (!impact || selectedSound !== impact.sound) {
         impact = { sound: selectedSound, distance: collision.distance };
