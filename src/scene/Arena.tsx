@@ -123,7 +123,7 @@ export function BreakableLights({
           key={fixture.id}
           broken={brokenLightIds.has(fixture.id)}
           fixture={fixture}
-          onHit={(distance) => onLightHit(fixture.id, distance)}
+          onHit={({ distance }) => onLightHit(fixture.id, distance)}
         />
       ))}
     </>

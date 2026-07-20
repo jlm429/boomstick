@@ -12,3 +12,4 @@ All notable changes are documented here.
 - Stabilized player input, camera following, restart behavior, invalid transform recovery, and large frame-delta handling.
 - Added development-only runtime diagnostics for Canvas, WebGL, Rapier, camera, player, input, and frame-loop inspection.
 - Added breakable arena lights that reset on restart, with one-time destruction audio and distance-attenuated impact sounds for arena surfaces and targets.
+- Added target health meters and smoothly scaled shotgun damage based on range and face accuracy.
