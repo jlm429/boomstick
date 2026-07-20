@@ -18,6 +18,7 @@ export type ZombieBehaviorUpdate = Readonly<{
   delta: number;
   directPathClear: boolean;
   distanceToPlayer: number;
+  directPathClear: boolean;
   hitDuration: number;
 }>;
 

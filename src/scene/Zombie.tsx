@@ -332,6 +332,7 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
         delta,
         directPathClear: false,
         distanceToPlayer: Infinity,
+        directPathClear: false,
         hitDuration: 0,
       });
       behaviorRef.current = nextBehavior;
