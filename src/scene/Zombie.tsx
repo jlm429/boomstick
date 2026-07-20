@@ -28,6 +28,7 @@ import {
 import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactHandler } from '../game/impacts';
 import {
+  ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_MOVE_SPEED,
   ZOMBIE_SPAWN,
   advanceZombieBehavior,
@@ -36,6 +37,7 @@ import {
   hitZombie,
   interruptZombieBehavior,
   isZombieCorpseExpired,
+  isZombieSteeringBlocked,
   selectZombieSteering,
   type PlanarDirection,
   type ZombieBehaviorMode,
@@ -51,13 +53,10 @@ const MODEL_BONE_PREFIX = 'mixamorig';
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
 const COLLIDER_HALF_HEIGHT = 0.6;
-const COLLIDER_RADIUS = 0.38;
+const COLLIDER_RADIUS = ZOMBIE_COLLIDER_RADIUS;
 const COLLIDER_CENTER_Y = COLLIDER_HALF_HEIGHT + COLLIDER_RADIUS;
 const ANIMATION_BLEND_SECONDS = 0.12;
 const TURN_SPEED_RADIANS = 7;
-const STEERING_CLEARANCE = COLLIDER_RADIUS + 0.12;
-const RAY_HIT_TOLERANCE = 0.04;
-const STEERING_RAY_OFFSETS = [-STEERING_CLEARANCE, 0, STEERING_CLEARANCE] as const;
 
 type ZombieAnimation = 'idle' | 'run' | 'attack' | 'hit' | 'dying';
 type ZombieActions = Partial<Record<ZombieAnimation, AnimationAction>>;
@@ -345,29 +344,31 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
       z: camera.position.z - position.z,
     };
     const distance = Math.hypot(toPlayer.x, toPlayer.z);
-    const isBlocked = (direction: PlanarDirection, maximumDistance: number) => {
-      const perpendicularX = direction.z;
-      const perpendicularZ = -direction.x;
-      for (const offset of STEERING_RAY_OFFSETS) {
-        obstacleRay.origin.x = position.x + perpendicularX * offset;
-        obstacleRay.origin.y = position.y + COLLIDER_CENTER_Y;
-        obstacleRay.origin.z = position.z + perpendicularZ * offset;
-        obstacleRay.dir.x = direction.x;
-        obstacleRay.dir.y = 0;
-        obstacleRay.dir.z = direction.z;
-        const hit = world.castRay(
-          obstacleRay,
-          maximumDistance,
-          true,
-          rapier.QueryFilterFlags.EXCLUDE_DYNAMIC,
-          undefined,
-          undefined,
-          rigidBody,
-        );
-        if (hit && hit.timeOfImpact < maximumDistance - RAY_HIT_TOLERANCE) return true;
-      }
-      return false;
-    };
+    const isBlocked = (direction: PlanarDirection, maximumDistance: number) =>
+      isZombieSteeringBlocked(
+        position,
+        direction,
+        maximumDistance,
+        (origin, rayDirection, rayDistance) => {
+          obstacleRay.origin.x = origin.x;
+          obstacleRay.origin.y = position.y + COLLIDER_CENTER_Y;
+          obstacleRay.origin.z = origin.z;
+          obstacleRay.dir.x = rayDirection.x;
+          obstacleRay.dir.y = 0;
+          obstacleRay.dir.z = rayDirection.z;
+          return (
+            world.castRay(
+              obstacleRay,
+              rayDistance,
+              true,
+              rapier.QueryFilterFlags.EXCLUDE_DYNAMIC,
+              undefined,
+              undefined,
+              rigidBody,
+            )?.timeOfImpact ?? null
+          );
+        },
+      );
     const steering = selectZombieSteering(
       toPlayer,
       distance,

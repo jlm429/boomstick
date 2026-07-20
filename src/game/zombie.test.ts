@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ZOMBIE_ATTACK_DISTANCE,
+  ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_CORPSE_SECONDS,
   ZOMBIE_MAX_HEALTH,
   advanceZombieBehavior,
@@ -9,6 +10,7 @@ import {
   hitZombie,
   interruptZombieBehavior,
   isZombieCorpseExpired,
+  isZombieSteeringBlocked,
   selectZombieSteering,
 } from './zombie';
 
@@ -145,6 +147,40 @@ describe('zombie behavior', () => {
 });
 
 describe('zombie steering', () => {
+  const castAgainstWall = (
+    origin: { x: number; z: number },
+    direction: { x: number; z: number },
+    maximumDistance: number,
+  ) => {
+    const wall = { minimumX: -1, maximumX: 0, minimumZ: -10, maximumZ: 10 };
+    if (
+      origin.x >= wall.minimumX &&
+      origin.x <= wall.maximumX &&
+      origin.z >= wall.minimumZ &&
+      origin.z <= wall.maximumZ
+    ) {
+      return 0;
+    }
+
+    const distances = [
+      direction.x === 0 ? Infinity : (wall.minimumX - origin.x) / direction.x,
+      direction.x === 0 ? Infinity : (wall.maximumX - origin.x) / direction.x,
+      direction.z === 0 ? Infinity : (wall.minimumZ - origin.z) / direction.z,
+      direction.z === 0 ? Infinity : (wall.maximumZ - origin.z) / direction.z,
+    ].filter((distance) => {
+      if (distance < 0 || distance > maximumDistance) return false;
+      const x = origin.x + direction.x * distance;
+      const z = origin.z + direction.z * distance;
+      return (
+        x >= wall.minimumX &&
+        x <= wall.maximumX &&
+        z >= wall.minimumZ &&
+        z <= wall.maximumZ
+      );
+    });
+    return distances.length > 0 ? Math.min(...distances) : null;
+  };
+
   it('keeps direct pursuit on a proven clear path', () => {
     const steering = selectZombieSteering({ x: 0, z: 8 }, 8, null, () => false);
 
@@ -182,5 +218,20 @@ describe('zombie steering', () => {
       directPathClear: false,
       side: 1,
     });
+  });
+
+  it('keeps boundary steering viable when a clearance ray starts inside a wall', () => {
+    const position = { x: ZOMBIE_COLLIDER_RADIUS, z: 0 };
+    const steering = selectZombieSteering(
+      { x: -8, z: 0 },
+      8,
+      null,
+      (direction, maximumDistance) =>
+        isZombieSteeringBlocked(position, direction, maximumDistance, castAgainstWall),
+    );
+
+    expect(steering.directPathClear).toBe(false);
+    expect(Math.abs(steering.direction.x)).toBeLessThan(0.000001);
+    expect(Math.abs(steering.direction.z)).toBe(1);
   });
 });

@@ -3,8 +3,11 @@ import { targetDamageAt } from './targets';
 export const ZOMBIE_MAX_HEALTH = 300;
 export const ZOMBIE_MOVE_SPEED = 3.2;
 export const ZOMBIE_ATTACK_DISTANCE = 1.85;
+export const ZOMBIE_COLLIDER_RADIUS = 0.38;
 export const ZOMBIE_CORPSE_SECONDS = 5;
 export const ZOMBIE_STEERING_LOOKAHEAD = 3.6;
+export const ZOMBIE_STEERING_CLEARANCE = ZOMBIE_COLLIDER_RADIUS + 0.12;
+export const ZOMBIE_STEERING_HIT_TOLERANCE = 0.04;
 export const ZOMBIE_SPAWN = [7, 0.03, -14] as const;
 
 export type ZombieBehaviorMode = 'idle' | 'chase' | 'attack' | 'hit' | 'dead';
@@ -34,6 +37,12 @@ export type ZombieSteeringProbe = (
   direction: PlanarDirection,
   maximumDistance: number,
 ) => boolean;
+
+export type ZombieObstacleRaycast = (
+  origin: PlanarDirection,
+  direction: PlanarDirection,
+  maximumDistance: number,
+) => number | null;
 
 export type ZombieState = Readonly<{
   health: number;
@@ -106,6 +115,33 @@ const rotatedDirection = (
     z: direction.x * sine + direction.z * cosine,
   };
 };
+
+export function isZombieSteeringBlocked(
+  position: PlanarDirection,
+  direction: PlanarDirection,
+  maximumDistance: number,
+  castRay: ZombieObstacleRaycast,
+) {
+  const perpendicular = { x: direction.z, z: -direction.x };
+  for (const offset of [-ZOMBIE_STEERING_CLEARANCE, 0, ZOMBIE_STEERING_CLEARANCE]) {
+    const hitDistance = castRay(
+      {
+        x: position.x + perpendicular.x * offset,
+        z: position.z + perpendicular.z * offset,
+      },
+      direction,
+      maximumDistance,
+    );
+    if (
+      hitDistance !== null &&
+      hitDistance > ZOMBIE_STEERING_HIT_TOLERANCE &&
+      hitDistance < maximumDistance - ZOMBIE_STEERING_HIT_TOLERANCE
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export function selectZombieSteering(
   toPlayer: PlanarDirection,
