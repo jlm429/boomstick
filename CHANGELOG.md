@@ -11,4 +11,4 @@ All notable changes are documented here.
 - Unified menu, entry, play, and pause transitions around authoritative pointer-lock events.
 - Stabilized player input, camera following, restart behavior, invalid transform recovery, and large frame-delta handling.
 - Added development-only runtime diagnostics for Canvas, WebGL, Rapier, camera, player, input, and frame-loop inspection.
-- Added breakable arena lights with one-time destruction audio and distance-attenuated impact sounds for arena surfaces and targets.
+- Added breakable arena lights that reset on restart, with one-time destruction audio and distance-attenuated impact sounds for arena surfaces and targets.
