@@ -36,6 +36,7 @@ describe('zombie behavior', () => {
   it('transitions between chase and attack at the configured distance', () => {
     const chase = advanceZombieBehavior(createZombieBehaviorState(), {
       delta: 0.016,
+      directPathClear: true,
       distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
       hitDuration: 2,
     });
@@ -43,6 +44,7 @@ describe('zombie behavior', () => {
 
     const attack = advanceZombieBehavior(chase, {
       delta: 0.016,
+      directPathClear: true,
       distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
       hitDuration: 2,
     });
@@ -51,7 +53,19 @@ describe('zombie behavior', () => {
     expect(
       advanceZombieBehavior(attack, {
         delta: 0.016,
+        directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
+        hitDuration: 2,
+      }).mode,
+    ).toBe('chase');
+  });
+
+  it('keeps chasing when an obstacle blocks a close player', () => {
+    expect(
+      advanceZombieBehavior(createZombieBehaviorState(), {
+        delta: 0.016,
+        directPathClear: false,
+        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
         hitDuration: 2,
       }).mode,
     ).toBe('chase');
@@ -64,6 +78,7 @@ describe('zombie behavior', () => {
     expect(
       advanceZombieBehavior(hit, {
         delta: 2,
+        directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
         hitDuration: 2,
       }).mode,
@@ -71,7 +86,16 @@ describe('zombie behavior', () => {
     expect(
       advanceZombieBehavior(hit, {
         delta: 2,
+        directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 1,
+        hitDuration: 2,
+      }).mode,
+    ).toBe('chase');
+    expect(
+      advanceZombieBehavior(hit, {
+        delta: 2,
+        directPathClear: false,
+        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
         hitDuration: 2,
       }).mode,
     ).toBe('chase');

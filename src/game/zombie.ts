@@ -16,6 +16,7 @@ export type ZombieBehaviorState = Readonly<{
 
 export type ZombieBehaviorUpdate = Readonly<{
   delta: number;
+  directPathClear: boolean;
   distanceToPlayer: number;
   hitDuration: number;
 }>;
@@ -55,24 +56,26 @@ export const createZombieBehaviorState = (): ZombieBehaviorState => ({
   elapsed: 0,
 });
 
-const pursuitMode = (distanceToPlayer: number): ZombieBehaviorMode =>
-  Number.isFinite(distanceToPlayer) && distanceToPlayer <= ZOMBIE_ATTACK_DISTANCE
+const pursuitMode = (distanceToPlayer: number, directPathClear: boolean): ZombieBehaviorMode =>
+  directPathClear &&
+  Number.isFinite(distanceToPlayer) &&
+  distanceToPlayer <= ZOMBIE_ATTACK_DISTANCE
     ? 'attack'
     : 'chase';
 
 export function advanceZombieBehavior(
   state: ZombieBehaviorState,
-  { delta, distanceToPlayer, hitDuration }: ZombieBehaviorUpdate,
+  { delta, directPathClear, distanceToPlayer, hitDuration }: ZombieBehaviorUpdate,
 ): ZombieBehaviorState {
   const safeDelta = Number.isFinite(delta) && delta > 0 ? delta : 0;
   if (state.mode === 'dead') return { ...state, elapsed: state.elapsed + safeDelta };
   if (state.mode === 'hit') {
     const elapsed = state.elapsed + safeDelta;
     if (elapsed < Math.max(0, hitDuration)) return { ...state, elapsed };
-    return { mode: pursuitMode(distanceToPlayer), elapsed: 0 };
+    return { mode: pursuitMode(distanceToPlayer, directPathClear), elapsed: 0 };
   }
 
-  const mode = pursuitMode(distanceToPlayer);
+  const mode = pursuitMode(distanceToPlayer, directPathClear);
   return mode === state.mode ? state : { mode, elapsed: 0 };
 }
 

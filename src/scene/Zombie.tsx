@@ -330,6 +330,7 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
     if (behaviorRef.current.mode === 'dead') {
       const nextBehavior = advanceZombieBehavior(behaviorRef.current, {
         delta,
+        directPathClear: false,
         distanceToPlayer: Infinity,
         hitDuration: 0,
       });
@@ -344,28 +345,6 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
       z: camera.position.z - position.z,
     };
     const distance = Math.hypot(toPlayer.x, toPlayer.z);
-    const hitDuration = actionsRef.current.hit?.getClip().duration ?? 0;
-    applyBehavior(
-      advanceZombieBehavior(behaviorRef.current, {
-        delta,
-        distanceToPlayer: distance,
-        hitDuration,
-      }),
-    );
-
-    const velocity = rigidBody.linvel();
-    const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
-    if (!Number.isFinite(distance) || distance <= 0 || behaviorRef.current.mode !== 'chase') {
-      rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
-      if (behaviorRef.current.mode === 'attack' && visualRef.current) {
-        const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
-        const turn = normalizedAngleDelta(visualRef.current.rotation.y, targetAngle);
-        visualRef.current.rotation.y +=
-          Math.sign(turn) * Math.min(Math.abs(turn), TURN_SPEED_RADIANS * delta);
-      }
-      return;
-    }
-
     const isBlocked = (direction: PlanarDirection, maximumDistance: number) => {
       const perpendicularX = direction.z;
       const perpendicularZ = -direction.x;
@@ -396,6 +375,29 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
       isBlocked,
     );
     steeringSideRef.current = steering.side;
+    const hitDuration = actionsRef.current.hit?.getClip().duration ?? 0;
+    applyBehavior(
+      advanceZombieBehavior(behaviorRef.current, {
+        delta,
+        directPathClear: steering.directPathClear,
+        distanceToPlayer: distance,
+        hitDuration,
+      }),
+    );
+
+    const velocity = rigidBody.linvel();
+    const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
+    if (!Number.isFinite(distance) || distance <= 0 || behaviorRef.current.mode !== 'chase') {
+      rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
+      if (behaviorRef.current.mode === 'attack' && visualRef.current) {
+        const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
+        const turn = normalizedAngleDelta(visualRef.current.rotation.y, targetAngle);
+        visualRef.current.rotation.y +=
+          Math.sign(turn) * Math.min(Math.abs(turn), TURN_SPEED_RADIANS * delta);
+      }
+      return;
+    }
+
     rigidBody.setLinvel(
       {
         x: steering.direction.x * ZOMBIE_MOVE_SPEED,
