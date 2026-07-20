@@ -38,7 +38,6 @@ describe('zombie behavior', () => {
       delta: 0.016,
       directPathClear: true,
       distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
-      directPathClear: true,
       hitDuration: 2,
     });
     expect(chase.mode).toBe('chase');
@@ -47,7 +46,6 @@ describe('zombie behavior', () => {
       delta: 0.016,
       directPathClear: true,
       distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
-      directPathClear: true,
       hitDuration: 2,
     });
     expect(attack.mode).toBe('attack');
@@ -57,7 +55,6 @@ describe('zombie behavior', () => {
         delta: 0.016,
         directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
-        directPathClear: true,
         hitDuration: 2,
       }).mode,
     ).toBe('chase');
@@ -83,7 +80,6 @@ describe('zombie behavior', () => {
         delta: 2,
         directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE,
-        directPathClear: true,
         hitDuration: 2,
       }).mode,
     ).toBe('attack');
@@ -92,7 +88,6 @@ describe('zombie behavior', () => {
         delta: 2,
         directPathClear: true,
         distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 1,
-        directPathClear: true,
         hitDuration: 2,
       }).mode,
     ).toBe('chase');
