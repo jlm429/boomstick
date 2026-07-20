@@ -5,7 +5,7 @@ explains mouse capture before the run starts. The browser's pointer-lock event i
 movement and mouse look begin only after capture succeeds. If pointer lock is released, the game
 pauses and clears held input. Select **Resume** to capture the pointer again from that click.
 
-From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh run, or
+From the pause dialog, select **Restart** to return to the arena spawn, restore broken lights, and begin a fresh run, or
 select **Return to Main Menu** to return to the landing page.
 
 | Input                | Action                                |
@@ -26,5 +26,10 @@ the reminder again without adding another message. A successful shot plays the s
 and each trigger press while empty plays the empty-trigger sound once. A valid reload plays its sound
 once when reloading begins; rate-limited shots, shots during reload, and ignored reload attempts are
 silent.
+
+Shots play an impact sound when their nearest pellet collisions hit arena walls, obstacles, or
+targets. Arena lights hit from at most 18 units away visibly break, stop illuminating the arena, and
+play their destruction sound once. Later hits on the same light use the normal surface impact sound
+until Restart restores it.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.

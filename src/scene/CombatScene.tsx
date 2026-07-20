@@ -24,7 +24,15 @@ import {
   type ReloadPose,
   type WeaponState,
 } from '../game/shooting';
+import {
+  createArenaImpactState,
+  hitBreakableLight,
+  selectImpactSound,
+  type ImpactSound,
+  type ShotImpactHandler,
+} from '../game/impacts';
 import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
+import { BreakableLights } from './Arena';
 import { WeaponAudio } from './weaponAudio';
 
 const cameraDirection = new Vector3();
@@ -35,13 +43,11 @@ const raycaster = new Raycaster();
 const HIT_FLASH_SECONDS = 0.18;
 const MUZZLE_FLASH_SECONDS = 0.075;
 
-type TargetHitHandler = () => void;
-
-function targetHitHandler(object: Object3D): TargetHitHandler | null {
+function shotImpactHandler(object: Object3D): ShotImpactHandler | null {
   let current: Object3D | null = object;
   while (current) {
-    const onHit = current.userData.onHit as TargetHitHandler | undefined;
-    if (onHit) return onHit;
+    const onShotImpact = current.userData.onShotImpact as ShotImpactHandler | undefined;
+    if (onShotImpact) return onShotImpact;
     current = current.parent;
   }
   return null;
@@ -57,12 +63,13 @@ function TargetVisual({ target }: { target: TargetDefinition }) {
     if (materialRef.current) materialRef.current.emissiveIntensity = 0.25 + strength * 2.5;
   });
 
-  const onHit: TargetHitHandler = () => {
+  const onShotImpact: ShotImpactHandler = () => {
     hitAtRef.current = performance.now() / 1000;
+    return 'wall';
   };
 
   return (
-    <group position={[...target.position]} userData={{ onHit }}>
+    <group position={[...target.position]} userData={{ onShotImpact }}>
       <mesh castShadow receiveShadow>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
@@ -343,6 +350,8 @@ export function CombatScene({
   const weaponStateRef = useRef<WeaponState>(INITIAL_WEAPON_STATE);
   const reloadStartedAtRef = useRef(-Infinity);
   const [weaponAudio] = useState(() => new WeaponAudio());
+  const [impactState, setImpactState] = useState(createArenaImpactState);
+  const impactStateRef = useRef(impactState);
 
   const updateWeaponState = useCallback(
     (state: WeaponState) => {
@@ -357,6 +366,15 @@ export function CombatScene({
   }, [onWeaponStateChange]);
 
   useEffect(() => () => weaponAudio.stop(), [weaponAudio]);
+
+  const hitLight = useCallback((lightId: string, distance: number) => {
+    const impact = hitBreakableLight(impactStateRef.current, lightId, distance);
+    if (impact.state !== impactStateRef.current) {
+      impactStateRef.current = impact.state;
+      setImpactState(impact.state);
+    }
+    return impact.sound;
+  }, []);
 
   useFrame(() => {
     if (
@@ -381,6 +399,7 @@ export function CombatScene({
     camera.getWorldDirection(cameraDirection);
     cameraRight.crossVectors(cameraDirection, camera.up).normalize();
     cameraUp.crossVectors(cameraRight, cameraDirection).normalize();
+    let impact: { sound: ImpactSound; distance: number } | null = null;
     for (const [horizontal, vertical] of pelletOffsets()) {
       pelletDirection
         .copy(cameraDirection)
@@ -390,11 +409,21 @@ export function CombatScene({
       raycaster.set(camera.position, pelletDirection);
       const collisions = raycaster
         .intersectObjects(scene.children, true)
-        .map(({ object }) => ({ target: targetHitHandler(object) }));
-      firstShotTarget(collisions)?.();
+        .map(({ distance, object }) => {
+          const handler = shotImpactHandler(object);
+          return { target: handler ? { distance, handler } : null };
+        });
+      const collision = firstShotTarget(collisions);
+      if (!collision) continue;
+      const sound = collision.handler(collision.distance);
+      const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
+      if (!impact || selectedSound !== impact.sound) {
+        impact = { sound: selectedSound, distance: collision.distance };
+      }
     }
     shotIdRef.current += 1;
     weaponAudio.playShotgunBlast();
+    if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
     return true;
   }, [camera, onEmptyFire, scene, updateWeaponState, weaponAudio]);
 
@@ -409,6 +438,7 @@ export function CombatScene({
 
   return (
     <>
+      <BreakableLights brokenLightIds={impactState.brokenLightIds} onLightHit={hitLight} />
       <TargetVisuals />
       <Shotgun
         shotIdRef={shotIdRef}

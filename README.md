@@ -47,8 +47,8 @@ No installation required. Open the link and enter the arena.
 - Responsive WASD movement and mouse look
 - Doom-inspired shotgun combat
 - Hitscan weapon with recoil and reload mechanics
-- Shotgun, empty-trigger, and reload sound effects
-- Dynamic lighting and atmospheric arena
+- Shotgun, reload, empty-trigger, and impact sound effects
+- Breakable dynamic lighting and atmospheric arena
 - Pause menu, HUD, and accessibility features
 - GitHub Actions validation and GitHub Pages deployment
 
