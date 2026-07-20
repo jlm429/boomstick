@@ -121,7 +121,7 @@ function TargetVisual({
 
   return (
     <group ref={groupRef} position={[...target.position]} userData={{ onShotImpact }}>
-      <mesh castShadow receiveShadow>
+      <mesh castShadow receiveShadow raycast={depleted ? () => null : undefined}>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
         />
@@ -132,11 +132,17 @@ function TargetVisual({
           emissiveIntensity={depleted ? 0 : 0.25}
         />
       </mesh>
-      <mesh position={[0, 0, target.halfExtents[2] + 0.012]}>
+      <mesh
+        position={[0, 0, target.halfExtents[2] + 0.012]}
+        raycast={depleted ? () => null : undefined}
+      >
         <circleGeometry args={[TARGET_HIT_RADIUS, 24]} />
         <meshBasicMaterial color={depleted ? '#202321' : '#18252d'} />
       </mesh>
-      <mesh position={[0, 0, target.halfExtents[2] + 0.02]}>
+      <mesh
+        position={[0, 0, target.halfExtents[2] + 0.02]}
+        raycast={depleted ? () => null : undefined}
+      >
         <circleGeometry args={[0.23, 24]} />
         <meshBasicMaterial color={depleted ? '#665c3d' : '#ffbb45'} />
       </mesh>

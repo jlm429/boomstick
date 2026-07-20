@@ -3,7 +3,11 @@ import { Physics } from '@react-three/rapier';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
-import { createEncounterState, type EncounterState } from '../game/encounter';
+import {
+  createEncounterState,
+  trainingTargetsHaveCollision,
+  type EncounterState,
+} from '../game/encounter';
 import type { WeaponState } from '../game/shooting';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
@@ -117,7 +121,7 @@ function RunScene({
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
           <ArenaColliders />
-          <TargetColliders />
+          {trainingTargetsHaveCollision(encounterState) && <TargetColliders />}
           <Player active={active} invertY={invertY} />
           {encounterState.phase === 'zombie' && (
             <Suspense fallback={null}>

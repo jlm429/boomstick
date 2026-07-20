@@ -16,6 +16,8 @@ export const createTrainingTargetHealth = (): TrainingTargetHealth =>
 
 export const createEncounterState = (): EncounterState => ({ phase: 'training' });
 
+export const trainingTargetsHaveCollision = (state: EncounterState) => state.phase !== 'zombie';
+
 export const areAllTrainingTargetsDepleted = (targetHealth: TrainingTargetHealth) =>
   ARENA_TARGETS.every(({ id }) =>
     Object.hasOwn(targetHealth, id) ? isTargetDepleted(targetHealth[id]) : false,

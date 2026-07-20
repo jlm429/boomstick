@@ -7,6 +7,7 @@ import {
   createTrainingTargetHealth,
   encounterCountdownValue,
   startEncounterCountdown,
+  trainingTargetsHaveCollision,
   type EncounterState,
 } from './encounter';
 
@@ -79,5 +80,11 @@ describe('training encounter transition', () => {
     const restarted = createEncounterState();
     expect(restarted).toEqual({ phase: 'training' });
     expect(encounterCountdownValue(restarted)).toBeNull();
+  });
+
+  it('removes depleted target collision before the zombie starts chasing', () => {
+    expect(trainingTargetsHaveCollision({ phase: 'training' })).toBe(true);
+    expect(trainingTargetsHaveCollision({ phase: 'countdown', elapsedSeconds: 2 })).toBe(true);
+    expect(trainingTargetsHaveCollision({ phase: 'zombie' })).toBe(false);
   });
 });
