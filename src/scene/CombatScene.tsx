@@ -31,7 +31,13 @@ import {
   type ImpactSound,
   type ShotImpactHandler,
 } from '../game/impacts';
-import { ARENA_TARGETS, type TargetDefinition } from '../game/targets';
+import {
+  ARENA_TARGETS,
+  TARGET_HIT_RADIUS,
+  hitTarget,
+  isTargetDepleted,
+  type TargetDefinition,
+} from '../game/targets';
 import { BreakableLights } from './Arena';
 import { WeaponAudio } from './weaponAudio';
 
@@ -39,9 +45,16 @@ const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
 const cameraUp = new Vector3();
 const pelletDirection = new Vector3();
+const targetLocalHitPoint = new Vector3();
 const raycaster = new Raycaster();
 const HIT_FLASH_SECONDS = 0.18;
 const MUZZLE_FLASH_SECONDS = 0.075;
+const TARGET_HEALTH_METER_WIDTH = 1.04;
+const TARGET_HEALTH_METER_HEIGHT = 0.1;
+const TARGET_HEALTH_METER_FRAME_WIDTH = 1.12;
+const TARGET_HEALTH_METER_FRAME_HEIGHT = 0.18;
+const TARGET_HEALTH_METER_Y_GAP = 0.3;
+const TARGET_HEALTH_METER_Z_OFFSET = 0.08;
 
 function shotImpactHandler(object: Object3D): ShotImpactHandler | null {
   let current: Object3D | null = object;
@@ -54,41 +67,87 @@ function shotImpactHandler(object: Object3D): ShotImpactHandler | null {
 }
 
 function TargetVisual({ target }: { target: TargetDefinition }) {
+  const groupRef = useRef<Group>(null);
+  const meterRef = useRef<Group>(null);
   const materialRef = useRef<MeshStandardMaterial>(null);
   const hitAtRef = useRef<number | null>(null);
-  useFrame(() => {
+  const [health, setHealth] = useState(target.maximumHealth);
+  const healthRef = useRef(health);
+  const depleted = isTargetDepleted(health);
+  const healthRatio = health / target.maximumHealth;
+
+  useFrame(({ camera }) => {
     const elapsed =
       hitAtRef.current === null ? Infinity : performance.now() / 1000 - hitAtRef.current;
     const strength = Math.max(0, 1 - elapsed / HIT_FLASH_SECONDS);
-    if (materialRef.current) materialRef.current.emissiveIntensity = 0.25 + strength * 2.5;
+    if (materialRef.current) {
+      materialRef.current.emissiveIntensity = depleted ? strength * 2.5 : 0.25 + strength * 2.5;
+    }
+    if (meterRef.current) meterRef.current.quaternion.copy(camera.quaternion);
   });
 
-  const onShotImpact: ShotImpactHandler = () => {
+  const onShotImpact: ShotImpactHandler = ({ distance, point }) => {
+    if (!groupRef.current) return null;
+    targetLocalHitPoint.set(point.x, point.y, point.z);
+    groupRef.current.worldToLocal(targetLocalHitPoint);
+    const result = hitTarget(
+      healthRef.current,
+      distance,
+      targetLocalHitPoint,
+      target.maximumHealth,
+    );
+    if (!result.reacted) return null;
+
+    healthRef.current = result.health;
+    setHealth(result.health);
     hitAtRef.current = performance.now() / 1000;
     return 'wall';
   };
 
   return (
-    <group position={[...target.position]} userData={{ onShotImpact }}>
+    <group ref={groupRef} position={[...target.position]} userData={{ onShotImpact }}>
       <mesh castShadow receiveShadow>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
         />
         <meshStandardMaterial
           ref={materialRef}
-          color="#d9e2d5"
+          color={depleted ? '#484946' : '#d9e2d5'}
           emissive="#ff5c35"
-          emissiveIntensity={0.25}
+          emissiveIntensity={depleted ? 0 : 0.25}
         />
       </mesh>
       <mesh position={[0, 0, target.halfExtents[2] + 0.012]}>
-        <circleGeometry args={[0.48, 24]} />
-        <meshBasicMaterial color="#18252d" />
+        <circleGeometry args={[TARGET_HIT_RADIUS, 24]} />
+        <meshBasicMaterial color={depleted ? '#202321' : '#18252d'} />
       </mesh>
       <mesh position={[0, 0, target.halfExtents[2] + 0.02]}>
         <circleGeometry args={[0.23, 24]} />
-        <meshBasicMaterial color="#ffbb45" />
+        <meshBasicMaterial color={depleted ? '#665c3d' : '#ffbb45'} />
       </mesh>
+      <group
+        ref={meterRef}
+        position={[
+          0,
+          target.halfExtents[1] + TARGET_HEALTH_METER_Y_GAP,
+          target.halfExtents[2] + TARGET_HEALTH_METER_Z_OFFSET,
+        ]}
+      >
+        <mesh raycast={() => null}>
+          <planeGeometry
+            args={[TARGET_HEALTH_METER_FRAME_WIDTH, TARGET_HEALTH_METER_FRAME_HEIGHT]}
+          />
+          <meshBasicMaterial color={depleted ? '#211714' : '#351713'} />
+        </mesh>
+        <mesh
+          position={[-((1 - healthRatio) * TARGET_HEALTH_METER_WIDTH) / 2, 0, 0.006]}
+          scale={[healthRatio, 1, 1]}
+          raycast={() => null}
+        >
+          <planeGeometry args={[TARGET_HEALTH_METER_WIDTH, TARGET_HEALTH_METER_HEIGHT]} />
+          <meshBasicMaterial color={depleted ? '#3c2922' : '#e55320'} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -409,13 +468,18 @@ export function CombatScene({
       raycaster.set(camera.position, pelletDirection);
       const collisions = raycaster
         .intersectObjects(scene.children, true)
-        .map(({ distance, object }) => {
+        .map(({ object, point }) => {
           const handler = shotImpactHandler(object);
-          return { target: handler ? { distance, handler } : null };
+          return {
+            target: handler
+              ? { distance: camera.position.distanceTo(point), handler, point }
+              : null,
+          };
         });
       const collision = firstShotTarget(collisions);
       if (!collision) continue;
-      const sound = collision.handler(collision.distance);
+      const sound = collision.handler({ distance: collision.distance, point: collision.point });
+      if (!sound) continue;
       const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
       if (!impact || selectedSound !== impact.sound) {
         impact = { sound: selectedSound, distance: collision.distance };

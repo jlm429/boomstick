@@ -2,7 +2,14 @@ import { BREAKABLE_LIGHT_MAX_DISTANCE } from './constants';
 
 export type ImpactSound = 'light' | 'wall';
 
-export type ShotImpactHandler = (distance: number) => ImpactSound;
+export type ShotImpactPoint = Readonly<{ x: number; y: number; z: number }>;
+
+export type ShotImpact = Readonly<{
+  distance: number;
+  point: ShotImpactPoint;
+}>;
+
+export type ShotImpactHandler = (impact: ShotImpact) => ImpactSound | null;
 
 export type ArenaImpactState = Readonly<{
   brokenLightIds: ReadonlySet<string>;
