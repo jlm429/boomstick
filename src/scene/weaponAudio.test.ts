@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import emptyFireUrl from '../assets/audio/gun_empty_short.mp3';
+import lightHitUrl from '../assets/audio/light_hit_short.mp3';
 import reloadUrl from '../assets/audio/reload.mp3';
 import shotgunBlastUrl from '../assets/audio/shotgun_blast_short.mp3';
+import wallHitUrl from '../assets/audio/wall_hit_short.mp3';
 import { WeaponAudio } from './weaponAudio';
 
 type AudioStub = {
@@ -9,6 +11,7 @@ type AudioStub = {
   paused: boolean;
   pause: ReturnType<typeof vi.fn>;
   play: ReturnType<typeof vi.fn>;
+  volume: number;
 };
 
 const setup = () => {
@@ -19,6 +22,7 @@ const setup = () => {
       paused: true,
       pause: vi.fn(),
       play: vi.fn().mockResolvedValue(undefined),
+      volume: 1,
     };
     audioBySource.set(source, audio);
     return audio as unknown as HTMLAudioElement;
@@ -37,12 +41,27 @@ describe('WeaponAudio', () => {
     weaponAudio.playEmptyFire();
     weaponAudio.playEmptyFire();
 
-    expect(createAudio).toHaveBeenCalledTimes(3);
+    expect(createAudio).toHaveBeenCalledTimes(5);
     expect(createAudio).toHaveBeenCalledWith(emptyFireUrl);
+    expect(createAudio).toHaveBeenCalledWith(lightHitUrl);
     expect(createAudio).toHaveBeenCalledWith(reloadUrl);
     expect(createAudio).toHaveBeenCalledWith(shotgunBlastUrl);
+    expect(createAudio).toHaveBeenCalledWith(wallHitUrl);
     expect(audioBySource.get(shotgunBlastUrl)?.play).toHaveBeenCalledTimes(2);
     expect(audioBySource.get(emptyFireUrl)?.play).toHaveBeenCalledTimes(2);
+  });
+
+  it('selects and attenuates impact audio by hit type and distance', () => {
+    const { audioBySource, weaponAudio } = setup();
+
+    weaponAudio.playImpact('light', 4);
+    weaponAudio.playImpact('wall', 24);
+
+    const lightHit = audioBySource.get(lightHitUrl)!;
+    const wallHit = audioBySource.get(wallHitUrl)!;
+    expect(lightHit.play).toHaveBeenCalledOnce();
+    expect(wallHit.play).toHaveBeenCalledOnce();
+    expect(lightHit.volume).toBeGreaterThan(wallHit.volume);
   });
 
   it('starts reload audio once and does not restart it while it is playing', () => {
