@@ -10,13 +10,14 @@ vi.mock('./scene/GameViewport', () => ({
     runId,
     onCanvasReady,
     onEncounterStateChange,
+    onWeaponStateChange,
   }: {
     active: boolean;
     invertY: boolean;
     runId: number;
     onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
     onEncounterStateChange: (state: {
-      phase: 'training' | 'countdown' | 'zombie';
+      phase: 'training' | 'countdown' | 'zombie' | 'complete';
       elapsedSeconds?: number;
     }) => void;
     onWeaponStateChange: (state: { ammunition: number; isReloading: boolean }) => void;
@@ -33,6 +34,21 @@ vi.mock('./scene/GameViewport', () => ({
         data-testid="complete-training"
         hidden
         onClick={() => onEncounterStateChange({ phase: 'countdown', elapsedSeconds: 0 })}
+      />
+      <button
+        data-testid="start-zombie"
+        hidden
+        onClick={() => onEncounterStateChange({ phase: 'zombie' })}
+      />
+      <button
+        data-testid="remove-zombie"
+        hidden
+        onClick={() => onEncounterStateChange({ phase: 'complete' })}
+      />
+      <button
+        data-testid="empty-weapon"
+        hidden
+        onClick={() => onWeaponStateChange({ ammunition: 0, isReloading: false })}
       />
     </>
   ),
@@ -170,6 +186,52 @@ describe('App navigation', () => {
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(canvas).toHaveAttribute('data-run-id', '2');
+  });
+
+  it('shows completion only after zombie removal, pauses play, and hides the HUD', () => {
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    act(() => setPointerLockElement(canvas));
+
+    fireEvent.click(screen.getByTestId('start-zombie'));
+    expect(screen.queryByRole('dialog', { name: 'Congratulations!' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('remove-zombie'));
+    expect(screen.getByRole('dialog', { name: 'Congratulations!' })).toBeInTheDocument();
+    expect(screen.getByText('You have completed training.')).toBeInTheDocument();
+    expect(screen.getByText('Level 1 coming soon...')).toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(container.querySelector('.hud')).not.toBeInTheDocument();
+    expect(document.exitPointerLock).toHaveBeenCalledOnce();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'training-complete',
+      hasPointerLock: false,
+    });
+  });
+
+  it('restarts the completed encounter from a fully fresh training run', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    act(() => setPointerLockElement(canvas));
+    fireEvent.click(screen.getByTestId('complete-training'));
+    fireEvent.click(screen.getByTestId('empty-weapon'));
+    fireEvent.click(screen.getByTestId('start-zombie'));
+    fireEvent.click(screen.getByTestId('remove-zombie'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restart Training' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Congratulations!' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByText('10 / 10')).toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-run-id', '2');
+    expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(requestPointerLock).toHaveBeenCalledOnce();
+
+    act(() => setPointerLockElement(canvas));
+    expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(useAppStore.getState().phase).toBe('playing');
   });
 
   it('returns to the main menu without stale play state', () => {

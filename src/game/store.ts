@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 
 export type AppPhase =
-  'main-menu' | 'about' | 'controls' | 'arena-entry' | 'playing' | 'paused';
+  | 'main-menu'
+  | 'about'
+  | 'controls'
+  | 'arena-entry'
+  | 'playing'
+  | 'paused'
+  | 'training-complete';
 
 type AppState = {
   phase: AppPhase;
@@ -13,13 +19,17 @@ type AppState = {
   showControls: () => void;
   showMainMenu: () => void;
   preparePointerLockRequest: () => void;
+  completeTraining: () => void;
   restart: () => void;
   handlePointerLockChange: (hasPointerLock: boolean) => void;
   handlePointerLockError: () => void;
 };
 
 export const isArenaPhase = (phase: AppPhase) =>
-  phase === 'arena-entry' || phase === 'playing' || phase === 'paused';
+  phase === 'arena-entry' ||
+  phase === 'playing' ||
+  phase === 'paused' ||
+  phase === 'training-complete';
 
 export const isValidAppState = ({
   phase,
@@ -53,6 +63,16 @@ export const useAppStore = create<AppState>((set) => ({
           }
         : state,
     ),
+  completeTraining: () =>
+    set((state) =>
+      state.phase === 'playing'
+        ? {
+            phase: 'training-complete',
+            hasPointerLock: false,
+            pointerLockError: null,
+          }
+        : state,
+    ),
   restart: () =>
     set((state) =>
       isArenaPhase(state.phase)
@@ -67,6 +87,9 @@ export const useAppStore = create<AppState>((set) => ({
   handlePointerLockChange: (hasPointerLock) =>
     set((state) => {
       if (!isArenaPhase(state.phase)) {
+        return { hasPointerLock: false };
+      }
+      if (state.phase === 'training-complete') {
         return { hasPointerLock: false };
       }
       if (hasPointerLock) {

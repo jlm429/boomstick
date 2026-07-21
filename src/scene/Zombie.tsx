@@ -16,10 +16,21 @@ import {
   LoopRepeat,
   Mesh,
   PointsMaterial,
+  Vector3,
   type AnimationAction,
 } from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
+  BITE_BURST_CAMERA_DISTANCE,
+  BITE_PARTICLE_SIZE,
+  biteBurstOpacity,
+  createBiteBurst,
+  didAttackReachBiteImpact,
+  isBiteBurstComplete,
+  type BiteBurst,
+} from '../game/biteParticles';
+import {
+  BLOOD_PARTICLE_SIZE,
   bloodBurstOpacity,
   createBloodBurst,
   isBloodBurstComplete,
@@ -57,6 +68,7 @@ const COLLIDER_RADIUS = ZOMBIE_COLLIDER_RADIUS;
 const COLLIDER_CENTER_Y = COLLIDER_HALF_HEIGHT + COLLIDER_RADIUS;
 const ANIMATION_BLEND_SECONDS = 0.12;
 const TURN_SPEED_RADIANS = 7;
+const biteDirection = new Vector3();
 
 type ZombieAnimation = 'idle' | 'run' | 'attack' | 'hit' | 'dying';
 type ZombieActions = Partial<Record<ZombieAnimation, AnimationAction>>;
@@ -102,9 +114,11 @@ function prepareAnimation(
 }
 
 function BloodBurstEffect({
+  active,
   burst,
   onComplete,
 }: {
+  active: boolean;
   burst: BloodBurst;
   onComplete: () => void;
 }) {
@@ -115,7 +129,7 @@ function BloodBurstEffect({
   const positions = useMemo(() => new Float32Array(burst.particles.length * 3), [burst]);
 
   useFrame((_, delta) => {
-    if (completedRef.current || !Number.isFinite(delta) || delta <= 0) return;
+    if (!active || completedRef.current || !Number.isFinite(delta) || delta <= 0) return;
     elapsedRef.current += delta;
     if (isBloodBurstComplete(elapsedRef.current)) {
       completedRef.current = true;
@@ -148,9 +162,67 @@ function BloodBurstEffect({
         ref={materialRef}
         color="#d51f1f"
         opacity={1}
-        size={0.11}
+        size={BLOOD_PARTICLE_SIZE}
         sizeAttenuation
         transparent
+        depthWrite={false}
+      />
+    </points>
+  );
+}
+
+function BiteBurstEffect({
+  active,
+  burst,
+  onComplete,
+}: {
+  active: boolean;
+  burst: BiteBurst;
+  onComplete: () => void;
+}) {
+  const elapsedRef = useRef(0);
+  const completedRef = useRef(false);
+  const positionAttributeRef = useRef<BufferAttribute>(null);
+  const materialRef = useRef<PointsMaterial>(null);
+  const positions = useMemo(() => new Float32Array(burst.particles.length * 3), [burst]);
+
+  useFrame((_, delta) => {
+    if (!active || completedRef.current || !Number.isFinite(delta) || delta <= 0) return;
+    elapsedRef.current += delta;
+    if (isBiteBurstComplete(elapsedRef.current)) {
+      completedRef.current = true;
+      onComplete();
+      return;
+    }
+
+    const elapsed = elapsedRef.current;
+    burst.particles.forEach(({ velocity }, index) => {
+      const positionIndex = index * 3;
+      positions[positionIndex] = velocity[0] * elapsed;
+      positions[positionIndex + 1] = velocity[1] * elapsed;
+      positions[positionIndex + 2] = velocity[2] * elapsed;
+    });
+    if (positionAttributeRef.current) positionAttributeRef.current.needsUpdate = true;
+    if (materialRef.current) materialRef.current.opacity = biteBurstOpacity(elapsed);
+  });
+
+  return (
+    <points position={[burst.origin.x, burst.origin.y, burst.origin.z]} raycast={() => null}>
+      <bufferGeometry>
+        <bufferAttribute
+          ref={positionAttributeRef}
+          attach="attributes-position"
+          args={[positions, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        ref={materialRef}
+        color="#c91f28"
+        opacity={0.78}
+        size={BITE_PARTICLE_SIZE}
+        sizeAttenuation
+        transparent
+        depthTest={false}
         depthWrite={false}
       />
     </points>
@@ -165,13 +237,16 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
   const currentActionRef = useRef<ZombieAnimation | null>(null);
   const animationRef = useRef<ZombieAnimation>('idle');
   const behaviorRef = useRef<ZombieBehaviorState>(createZombieBehaviorState());
+  const removedRef = useRef(false);
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
   const nextBurstIdRef = useRef(1);
+  const nextBiteBurstIdRef = useRef(1);
   const zombieRef = useRef(createZombieState());
   const [zombie, setZombie] = useState(createZombieState);
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
   const [animationRevision, setAnimationRevision] = useState(0);
   const [bloodBursts, setBloodBursts] = useState<readonly BloodBurst[]>([]);
+  const [biteBursts, setBiteBursts] = useState<readonly BiteBurst[]>([]);
   const [zombieAudio] = useState(() => new ZombieAttackAudio());
   const { camera } = useThree();
   const { rapier, world } = useRapier();
@@ -284,6 +359,10 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
     setBloodBursts((bursts) => bursts.filter((burst) => burst.id !== id));
   }, []);
 
+  const removeBiteBurst = useCallback((id: number) => {
+    setBiteBursts((bursts) => bursts.filter((burst) => burst.id !== id));
+  }, []);
+
   const onShotImpact: ShotImpactHandler = ({ distance, point }) => {
     const result = hitZombie(zombieRef.current, distance);
     if (!result.reacted) return null;
@@ -304,15 +383,6 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
     const attackAction = actionsRef.current.attack;
     const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) mixerRef.current?.update(delta);
-    if (
-      active &&
-      safeFrame &&
-      behaviorRef.current.mode === 'attack' &&
-      attackAction &&
-      attackAction.time < previousAttackTime
-    ) {
-      zombieAudio.synchronizeAttackCycle();
-    }
 
     const rigidBody = bodyRef.current;
     if (!rigidBody || !active) return;
@@ -334,7 +404,10 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
         hitDuration: 0,
       });
       behaviorRef.current = nextBehavior;
-      if (isZombieCorpseExpired(nextBehavior, deathDuration)) onRemoved();
+      if (isZombieCorpseExpired(nextBehavior, deathDuration) && !removedRef.current) {
+        removedRef.current = true;
+        onRemoved();
+      }
       return;
     }
 
@@ -385,6 +458,27 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
         hitDuration,
       }),
     );
+
+    if (behaviorRef.current.mode === 'attack' && attackAction) {
+      if (attackAction.time < previousAttackTime) zombieAudio.synchronizeAttackCycle();
+      if (
+        didAttackReachBiteImpact(
+          previousAttackTime,
+          attackAction.time,
+          attackAction.getClip().duration,
+        )
+      ) {
+        camera.getWorldDirection(biteDirection);
+        setBiteBursts((bursts) => [
+          ...bursts,
+          createBiteBurst(nextBiteBurstIdRef.current++, {
+            x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
+            y: camera.position.y + biteDirection.y * BITE_BURST_CAMERA_DISTANCE,
+            z: camera.position.z + biteDirection.z * BITE_BURST_CAMERA_DISTANCE,
+          }),
+        ]);
+      }
+    }
 
     const velocity = rigidBody.linvel();
     const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
@@ -447,16 +541,28 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
       {bloodBursts.map((burst) => (
         <BloodBurstEffect
           key={burst.id}
+          active={active}
           burst={burst}
           onComplete={() => removeBloodBurst(burst.id)}
+        />
+      ))}
+      {biteBursts.map((burst) => (
+        <BiteBurstEffect
+          key={burst.id}
+          active={active}
+          burst={burst}
+          onComplete={() => removeBiteBurst(burst.id)}
         />
       ))}
     </>
   );
 }
 
-export function Zombie({ active }: { active: boolean }) {
+export function Zombie({ active, onRemoved }: { active: boolean; onRemoved: () => void }) {
   const [present, setPresent] = useState(true);
-  const remove = useCallback(() => setPresent(false), []);
+  const remove = useCallback(() => {
+    setPresent(false);
+    onRemoved();
+  }, [onRemoved]);
   return present ? <ZombieActor active={active} onRemoved={remove} /> : null;
 }

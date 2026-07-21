@@ -2,7 +2,7 @@ import { targetDamageAt } from './targets';
 
 export const ZOMBIE_MAX_HEALTH = 300;
 export const ZOMBIE_MOVE_SPEED = 3.2;
-export const ZOMBIE_ATTACK_DISTANCE = 1.85;
+export const ZOMBIE_ATTACK_DISTANCE = 1.1;
 export const ZOMBIE_COLLIDER_RADIUS = 0.38;
 export const ZOMBIE_CORPSE_SECONDS = 5;
 export const ZOMBIE_STEERING_LOOKAHEAD = 3.6;

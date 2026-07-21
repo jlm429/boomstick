@@ -357,6 +357,53 @@ h2 {
   font-size: 0.78rem;
   line-height: 1.5;
 }
+.completion-layer {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  background: radial-gradient(circle at center, #3d1508a8 0%, #100706e8 54%, #030202f5 100%);
+  backdrop-filter: blur(10px);
+}
+.completion-panel {
+  width: min(100%, 38rem);
+  max-height: calc(100dvh - 2rem);
+  padding: clamp(2rem, 7vw, 4.5rem);
+  overflow-y: auto;
+  border: 1px solid #e55320;
+  background: #0d0a09f2;
+  box-shadow:
+    0 28px 80px #000c,
+    inset 0 0 0 5px #1c100c,
+    inset 0 0 48px #e84f1624;
+  text-align: center;
+}
+.completion-panel h2 {
+  overflow-wrap: break-word;
+  font-size: clamp(2.1rem, 9vw, 5.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  text-transform: none;
+}
+.completion-copy {
+  margin: 2rem 0 0;
+  color: #f4d3b8;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.completion-soon {
+  margin: 0.55rem 0 2.25rem;
+  color: #b9957d;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  line-height: 1.5;
+}
+.completion-panel .button {
+  width: min(100%, 20rem);
+  min-height: 3.5rem;
+}
 .entry-prompt {
   position: absolute;
   z-index: 2;

@@ -35,6 +35,10 @@ describe('zombie health', () => {
 });
 
 describe('zombie behavior', () => {
+  it('uses the reduced true biting distance', () => {
+    expect(ZOMBIE_ATTACK_DISTANCE).toBe(1.1);
+  });
+
   it('transitions between chase and attack at the configured distance', () => {
     const chase = advanceZombieBehavior(createZombieBehaviorState(), {
       delta: 0.016,

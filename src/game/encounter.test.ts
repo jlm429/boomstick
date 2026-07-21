@@ -3,6 +3,7 @@ import { ARENA_TARGETS } from './targets';
 import {
   advanceEncounterCountdown,
   areAllTrainingTargetsDepleted,
+  completeEncounter,
   createEncounterState,
   createTrainingTargetHealth,
   encounterCountdownValue,
@@ -82,9 +83,20 @@ describe('training encounter transition', () => {
     expect(encounterCountdownValue(restarted)).toBeNull();
   });
 
+  it('completes only after the active zombie has been removed', () => {
+    const training = createEncounterState();
+    expect(completeEncounter(training)).toBe(training);
+    expect(completeEncounter({ phase: 'countdown', elapsedSeconds: 2 })).toEqual({
+      phase: 'countdown',
+      elapsedSeconds: 2,
+    });
+    expect(completeEncounter({ phase: 'zombie' })).toEqual({ phase: 'complete' });
+  });
+
   it('removes depleted target collision before the zombie starts chasing', () => {
     expect(trainingTargetsHaveCollision({ phase: 'training' })).toBe(true);
     expect(trainingTargetsHaveCollision({ phase: 'countdown', elapsedSeconds: 2 })).toBe(true);
     expect(trainingTargetsHaveCollision({ phase: 'zombie' })).toBe(false);
+    expect(trainingTargetsHaveCollision({ phase: 'complete' })).toBe(false);
   });
 });
