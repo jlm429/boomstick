@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
 import {
+  completeEncounter,
   createEncounterState,
   trainingTargetsHaveCollision,
   type EncounterState,
@@ -126,7 +127,10 @@ function RunScene({
           <Player active={active} invertY={invertY} />
           {encounterState.phase === 'zombie' && (
             <Suspense fallback={null}>
-              <Zombie active={active} />
+              <Zombie
+                active={active}
+                onRemoved={() => updateEncounterState(completeEncounter(encounterState))}
+              />
             </Suspense>
           )}
         </Physics>

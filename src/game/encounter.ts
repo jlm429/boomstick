@@ -7,7 +7,8 @@ const COUNTDOWN_BOUNDARY_EPSILON_SECONDS = 1e-9;
 export type EncounterState =
   | Readonly<{ phase: 'training' }>
   | Readonly<{ phase: 'countdown'; elapsedSeconds: number }>
-  | Readonly<{ phase: 'zombie' }>;
+  | Readonly<{ phase: 'zombie' }>
+  | Readonly<{ phase: 'complete' }>;
 
 export type TrainingTargetHealth = Readonly<Record<string, number>>;
 
@@ -16,7 +17,11 @@ export const createTrainingTargetHealth = (): TrainingTargetHealth =>
 
 export const createEncounterState = (): EncounterState => ({ phase: 'training' });
 
-export const trainingTargetsHaveCollision = (state: EncounterState) => state.phase !== 'zombie';
+export const trainingTargetsHaveCollision = (state: EncounterState) =>
+  state.phase === 'training' || state.phase === 'countdown';
+
+export const completeEncounter = (state: EncounterState): EncounterState =>
+  state.phase === 'zombie' ? { phase: 'complete' } : state;
 
 export const areAllTrainingTargetsDepleted = (targetHealth: TrainingTargetHealth) =>
   ARENA_TARGETS.every(({ id }) =>

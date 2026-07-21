@@ -9,7 +9,7 @@ import { INITIAL_WEAPON_STATE, type WeaponState } from './game/shooting';
 import { useAppStore } from './game/store';
 import { GameViewport } from './scene/GameViewport';
 import { reportRuntimeDiagnostics } from './scene/runtimeDiagnostics';
-import { EntryPrompt, GameHud, PauseMenu } from './ui/GameOverlay';
+import { EntryPrompt, GameHud, PauseMenu, TrainingComplete } from './ui/GameOverlay';
 import { About, Controls, MainMenu } from './ui/Menu';
 
 export function App() {
@@ -28,6 +28,7 @@ export function App() {
     showControls,
     showMainMenu,
     preparePointerLockRequest,
+    completeTraining,
     restart,
     handlePointerLockChange,
     handlePointerLockError,
@@ -67,6 +68,16 @@ export function App() {
     setEmptyFirePulse((pulse) => pulse + 1);
   }, []);
 
+  const updateEncounterState = useCallback(
+    (state: EncounterState) => {
+      setEncounterState(state);
+      if (state.phase !== 'complete') return;
+      completeTraining();
+      if (document.pointerLockElement === arenaCanvas.current) document.exitPointerLock?.();
+    },
+    [completeTraining],
+  );
+
   const requestArenaLock = useCallback(() => {
     preparePointerLockRequest();
     const canvas = arenaCanvas.current;
@@ -84,6 +95,8 @@ export function App() {
 
   const restartAndRequestArenaLock = useCallback(() => {
     setEncounterState(createEncounterState());
+    setWeaponState(INITIAL_WEAPON_STATE);
+    setEmptyFirePulse(0);
     restart();
     const canvas = arenaCanvas.current;
     if (!canvas?.requestPointerLock) {
@@ -129,16 +142,18 @@ export function App() {
         invertY={invertY}
         runId={runId}
         onCanvasReady={setArenaCanvas}
-        onEncounterStateChange={setEncounterState}
+        onEncounterStateChange={updateEncounterState}
         onEmptyFire={reinforceReloadReminder}
         onWeaponStateChange={setWeaponState}
       />
-      <GameHud
-        emptyFirePulse={emptyFirePulse}
-        encounterCountdown={encounterCountdownValue(encounterState)}
-        playing={phase === 'playing'}
-        weaponState={weaponState}
-      />
+      {phase !== 'training-complete' && (
+        <GameHud
+          emptyFirePulse={emptyFirePulse}
+          encounterCountdown={encounterCountdownValue(encounterState)}
+          playing={phase === 'playing'}
+          weaponState={weaponState}
+        />
+      )}
       {phase === 'arena-entry' && (
         <EntryPrompt error={pointerLockError} onEnter={requestArenaLock} />
       )}
@@ -149,6 +164,9 @@ export function App() {
           onRestart={restartAndRequestArenaLock}
           onMainMenu={returnToMainMenu}
         />
+      )}
+      {phase === 'training-complete' && (
+        <TrainingComplete onRestart={restartAndRequestArenaLock} />
       )}
     </main>
   );

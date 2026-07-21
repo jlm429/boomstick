@@ -7,7 +7,9 @@ pauses and clears held input. Select **Resume** to capture the pointer again fro
 
 From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh training
 run with restored lights and targets and no zombie, or select **Return to Main Menu** to return to
-the landing page.
+the landing page. After the zombie's corpse is removed, the game pauses and shows **Training
+Complete**. Select **Restart Training** to reset the full encounter and capture the pointer for a
+fresh run.
 
 | Input                | Action                                |
 | -------------------- | ------------------------------------- |
@@ -32,10 +34,11 @@ Shots play an impact sound when their nearest pellet collisions hit arena walls,
 targets. Each target's visible meter updates as hits reduce its health. Pellet damage scales smoothly
 with distance from the shot origin and accuracy on the target face. A depleted target remains visible,
 dims, and no longer reacts to hits. Depleting every target starts one 3, 2, 1 countdown, after which
-their collision is removed and one zombie appears. The zombie pursues and faces the player, stops
-short without attacking, reacts to shotgun hits, and stops moving and colliding when killed. Arena
-lights hit from at most 18 units away visibly break, stop illuminating the arena, and play their
-destruction sound once. Later hits on the same light use the normal surface impact sound until
-Restart restores it.
+their collision is removed and one zombie appears. The zombie pursues the player, attacks while
+facing the player within the 0.80-unit bite range, and immediately resumes chasing beyond that
+range. Each bite produces a brief subtle red burst at its animation impact. The zombie reacts to
+shotgun hits and stops moving and colliding when killed. Arena lights hit from at most 18 units away
+visibly break, stop illuminating the arena, and play their destruction sound once. Later hits on the
+same light use the normal surface impact sound until Restart restores it.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.

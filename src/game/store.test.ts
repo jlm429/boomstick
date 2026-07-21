@@ -56,6 +56,28 @@ describe('application state', () => {
     });
   });
 
+  it('pauses at training completion, rejects stale lock events, and restarts cleanly', () => {
+    useAppStore.getState().startGame();
+    useAppStore.getState().handlePointerLockChange(true);
+    useAppStore.getState().completeTraining();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'training-complete',
+      hasPointerLock: false,
+      runId: 1,
+    });
+    expect(isValidAppState(useAppStore.getState())).toBe(true);
+
+    useAppStore.getState().handlePointerLockChange(true);
+    expect(useAppStore.getState().phase).toBe('training-complete');
+
+    useAppStore.getState().restart();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'arena-entry',
+      hasPointerLock: false,
+      runId: 2,
+    });
+  });
+
   it('keeps pointer-lock failure recoverable without inventing play state', () => {
     useAppStore.getState().startGame();
     useAppStore.getState().handlePointerLockError();

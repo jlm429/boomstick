@@ -12,9 +12,10 @@ Use `npm test` for the automated suite. Before a pull request, run lint, typeche
 Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, floor,
 perimeter, obstacles, orange landmark, targets, and shotgun before testing pointer lock, mouse look,
 movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
-depletion, the single 3, 2, 1 zombie transition, zombie pursuit, hit and death animations, zombie
-collision, breakable-light and surface impact audio, full encounter restoration on restart, pause,
-restart, and menu return. Development builds expose quiet live state at
+depletion, the single 3, 2, 1 zombie transition, zombie pursuit, the 0.80-unit chase-to-attack
+boundary, synchronized bite audio and impact bursts, hit and death animations, zombie collision,
+post-corpse completion, hidden completion HUD, and full encounter restoration from both restart
+actions. Also verify pause and menu return. Development builds expose quiet live state at
 `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas size, WebGL state, frame count, camera,
 Rapier readiness, player position, and pressed controls. Scene helpers and diagnostics are excluded
 from production builds. Automated or headless pointer-lock simulation is useful for state coverage,

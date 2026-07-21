@@ -112,3 +112,25 @@ export function PauseMenu({
     </div>
   );
 }
+
+export function TrainingComplete({ onRestart }: { onRestart: () => void }) {
+  return (
+    <div
+      className="completion-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="completion-title"
+      aria-describedby="completion-soon"
+    >
+      <section className="completion-panel">
+        <h2 id="completion-title">Training Complete</h2>
+        <p id="completion-soon" className="completion-soon">
+          Level 1 coming soon...
+        </p>
+        <button className="button button-primary" autoFocus onClick={onRestart}>
+          Restart Training
+        </button>
+      </section>
+    </div>
+  );
+}

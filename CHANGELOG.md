@@ -15,3 +15,4 @@ All notable changes are documented here.
 - Added target health meters and smoothly scaled shotgun damage based on range and face accuracy.
 - Added a one-time training countdown and first zombie encounter after every target is depleted, including pursuit, shotgun hit reactions, death, and full restart reset.
 - Polished the first zombie encounter with impact-point blood bursts, collider-aware obstacle steering, close-range attack animation and bite audio, hit recovery, and timed corpse cleanup.
+- Tightened the zombie's bite range, added subtle impact-timed bite feedback, and added a polished training completion screen with a full encounter restart.
