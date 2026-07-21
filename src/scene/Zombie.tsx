@@ -380,7 +380,10 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
 
   useFrame((_, delta) => {
     const safeFrame = Number.isFinite(delta) && delta > 0 && delta <= MAX_FRAME_DELTA;
-    const attackAction = actionsRef.current.attack;
+    const attackAction =
+      behaviorRef.current.mode === 'attack' && currentActionRef.current === 'attack'
+        ? actionsRef.current.attack
+        : undefined;
     const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) mixerRef.current?.update(delta);
 
