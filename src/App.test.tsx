@@ -199,7 +199,7 @@ describe('App navigation', () => {
 
     fireEvent.click(screen.getByTestId('remove-zombie'));
     expect(screen.getByRole('dialog', { name: 'Training Complete' })).toBeInTheDocument();
-    expect(screen.getByText('You have completed training.')).toBeInTheDocument();
+    expect(screen.queryByText('You have completed training.')).not.toBeInTheDocument();
     expect(screen.getByText('Level 1 coming soon...')).toBeInTheDocument();
     expect(canvas).toHaveAttribute('data-active', 'false');
     expect(container.querySelector('.hud')).not.toBeInTheDocument();
