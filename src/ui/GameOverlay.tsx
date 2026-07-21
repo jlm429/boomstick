@@ -123,7 +123,7 @@ export function TrainingComplete({ onRestart }: { onRestart: () => void }) {
       aria-describedby="completion-copy completion-soon"
     >
       <section className="completion-panel">
-        <h2 id="completion-title">Congratulations!</h2>
+        <h2 id="completion-title">Training Complete</h2>
         <p id="completion-copy" className="completion-copy">
           You have completed training.
         </p>

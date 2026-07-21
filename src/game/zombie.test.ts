@@ -36,14 +36,15 @@ describe('zombie health', () => {
 
 describe('zombie behavior', () => {
   it('uses the reduced true biting distance', () => {
-    expect(ZOMBIE_ATTACK_DISTANCE).toBe(1.1);
+    expect(ZOMBIE_ATTACK_DISTANCE).toBe(0.8);
   });
 
   it('transitions between chase and attack at the configured distance', () => {
+    const justBeyondAttackDistance = ZOMBIE_ATTACK_DISTANCE + 0.001;
     const chase = advanceZombieBehavior(createZombieBehaviorState(), {
       delta: 0.016,
       directPathClear: true,
-      distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
+      distanceToPlayer: justBeyondAttackDistance,
       hitDuration: 2,
     });
     expect(chase.mode).toBe('chase');
@@ -60,7 +61,7 @@ describe('zombie behavior', () => {
       advanceZombieBehavior(attack, {
         delta: 0.016,
         directPathClear: true,
-        distanceToPlayer: ZOMBIE_ATTACK_DISTANCE + 0.01,
+        distanceToPlayer: justBeyondAttackDistance,
         hitDuration: 2,
       }).mode,
     ).toBe('chase');

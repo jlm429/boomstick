@@ -195,10 +195,10 @@ describe('App navigation', () => {
     act(() => setPointerLockElement(canvas));
 
     fireEvent.click(screen.getByTestId('start-zombie'));
-    expect(screen.queryByRole('dialog', { name: 'Congratulations!' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Training Complete' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('remove-zombie'));
-    expect(screen.getByRole('dialog', { name: 'Congratulations!' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Training Complete' })).toBeInTheDocument();
     expect(screen.getByText('You have completed training.')).toBeInTheDocument();
     expect(screen.getByText('Level 1 coming soon...')).toBeInTheDocument();
     expect(canvas).toHaveAttribute('data-active', 'false');
@@ -222,7 +222,7 @@ describe('App navigation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Restart Training' }));
 
-    expect(screen.queryByRole('dialog', { name: 'Congratulations!' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Training Complete' })).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByText('10 / 10')).toBeInTheDocument();
     expect(canvas).toHaveAttribute('data-run-id', '2');
