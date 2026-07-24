@@ -1,5 +1,6 @@
 import { targetDamageAt } from './targets';
 import { WEAK_ZOMBIE_ATTACK } from './zombieAttack';
+import type { Vector3Tuple } from './arena';
 
 export const ZOMBIE_MAX_HEALTH = 300;
 export const ZOMBIE_MOVE_SPEED = 3.2;
@@ -9,7 +10,48 @@ export const ZOMBIE_CORPSE_SECONDS = 5;
 export const ZOMBIE_STEERING_LOOKAHEAD = 3.6;
 export const ZOMBIE_STEERING_CLEARANCE = ZOMBIE_COLLIDER_RADIUS + 0.12;
 export const ZOMBIE_STEERING_HIT_TOLERANCE = 0.04;
-export const ZOMBIE_SPAWN = [7, 0.03, -14] as const;
+
+export type TrainingZombieSpawn = Readonly<{
+  id: string;
+  position: Vector3Tuple;
+  rotation: number;
+  concealedBy: string;
+}>;
+
+export const TRAINING_ZOMBIE_SPAWNS = [
+  {
+    id: 'west-cover-zombie',
+    position: [-8, 0.03, 2.2],
+    rotation: 0.684,
+    concealedBy: 'west-cover',
+  },
+  {
+    id: 'east-cover-zombie',
+    position: [9, 0.03, 5],
+    rotation: -0.91,
+    concealedBy: 'east-cover',
+  },
+  {
+    id: 'west-pillar-zombie',
+    position: [-9, 0.03, -5.2],
+    rotation: 0.482,
+    concealedBy: 'west-pillar',
+  },
+  {
+    id: 'east-pillar-zombie',
+    position: [9, 0.03, -5.2],
+    rotation: -0.482,
+    concealedBy: 'east-pillar',
+  },
+  {
+    id: 'gateway-zombie',
+    position: [3.1, 0.03, -12.4],
+    rotation: -0.126,
+    concealedBy: 'landmark-right',
+  },
+] as const satisfies readonly TrainingZombieSpawn[];
+
+export type TrainingZombieId = (typeof TRAINING_ZOMBIE_SPAWNS)[number]['id'];
 
 export type ZombieBehaviorMode = 'idle' | 'chase' | 'attack' | 'hit' | 'dead';
 

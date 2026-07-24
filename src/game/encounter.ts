@@ -1,4 +1,5 @@
 import { ARENA_TARGETS, isTargetDepleted } from './targets';
+import { TRAINING_ZOMBIE_SPAWNS, type TrainingZombieId } from './zombie';
 
 export const ENCOUNTER_COUNTDOWN_SECONDS = 3;
 const MAX_COUNTDOWN_FRAME_DELTA_SECONDS = 0.1;
@@ -22,6 +23,17 @@ export const trainingTargetsHaveCollision = (state: EncounterState) =>
 
 export const completeEncounter = (state: EncounterState): EncounterState =>
   state.phase === 'zombie' ? { phase: 'complete' } : state;
+
+export const recordTrainingZombieRemoval = (
+  removedZombieIds: ReadonlySet<TrainingZombieId>,
+  zombieId: TrainingZombieId,
+): ReadonlySet<TrainingZombieId> => {
+  if (removedZombieIds.has(zombieId)) return removedZombieIds;
+  return new Set([...removedZombieIds, zombieId]);
+};
+
+export const areAllTrainingZombiesRemoved = (removedZombieIds: ReadonlySet<TrainingZombieId>) =>
+  TRAINING_ZOMBIE_SPAWNS.every(({ id }) => removedZombieIds.has(id));
 
 export const areAllTrainingTargetsDepleted = (targetHealth: TrainingTargetHealth) =>
   ARENA_TARGETS.every(({ id }) =>

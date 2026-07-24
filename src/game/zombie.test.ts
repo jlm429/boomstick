@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { ARENA_BLOCKS, isArenaSpawnValid, type ArenaBlock } from './arena';
+import { PLAYER_SPAWN } from './constants';
 import {
+  TRAINING_ZOMBIE_SPAWNS,
   ZOMBIE_ATTACK_DISTANCE,
   ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_CORPSE_SECONDS,
@@ -13,6 +16,84 @@ import {
   isZombieSteeringBlocked,
   selectZombieSteering,
 } from './zombie';
+
+function segmentIntersectsBlock(
+  [startX, , startZ]: readonly [number, number, number],
+  [endX, , endZ]: readonly [number, number, number],
+  block: ArenaBlock,
+) {
+  const direction = [endX - startX, endZ - startZ];
+  const minimum = [
+    block.position[0] - block.halfExtents[0],
+    block.position[2] - block.halfExtents[2],
+  ];
+  const maximum = [
+    block.position[0] + block.halfExtents[0],
+    block.position[2] + block.halfExtents[2],
+  ];
+  let entry = 0;
+  let exit = 1;
+
+  for (let axis = 0; axis < 2; axis += 1) {
+    if (direction[axis] === 0) {
+      if ([startX, startZ][axis] < minimum[axis] || [startX, startZ][axis] > maximum[axis])
+        return false;
+      continue;
+    }
+    const first = (minimum[axis] - [startX, startZ][axis]) / direction[axis];
+    const second = (maximum[axis] - [startX, startZ][axis]) / direction[axis];
+    entry = Math.max(entry, Math.min(first, second));
+    exit = Math.min(exit, Math.max(first, second));
+    if (entry > exit) return false;
+  }
+  return entry > 0 && entry < 1;
+}
+
+describe('training zombie spawns', () => {
+  it('defines five distinct, stable, walkable spawn configurations', () => {
+    expect(TRAINING_ZOMBIE_SPAWNS).toHaveLength(5);
+    expect(new Set(TRAINING_ZOMBIE_SPAWNS.map(({ id }) => id))).toHaveProperty('size', 5);
+    expect(
+      new Set(TRAINING_ZOMBIE_SPAWNS.map(({ position }) => position.join(','))),
+    ).toHaveProperty('size', 5);
+    expect(
+      TRAINING_ZOMBIE_SPAWNS.every(
+        ({ position, rotation }) => isArenaSpawnValid(position) && Number.isFinite(rotation),
+      ),
+    ).toBe(true);
+
+    for (const [index, spawn] of TRAINING_ZOMBIE_SPAWNS.entries()) {
+      const [x, , z] = spawn.position;
+      const rotationTowardPlayer = Math.atan2(PLAYER_SPAWN[0] - x, PLAYER_SPAWN[2] - z);
+      expect(Math.abs(spawn.rotation - rotationTowardPlayer)).toBeLessThan(0.001);
+      expect(Math.hypot(PLAYER_SPAWN[0] - x, PLAYER_SPAWN[2] - z)).toBeGreaterThan(8);
+      for (const otherSpawn of TRAINING_ZOMBIE_SPAWNS.slice(index + 1)) {
+        expect(
+          Math.hypot(otherSpawn.position[0] - x, otherSpawn.position[2] - z),
+        ).toBeGreaterThan(5);
+      }
+    }
+  });
+
+  it('conceals every spawn behind its configured arena obstruction from the player start', () => {
+    for (const spawn of TRAINING_ZOMBIE_SPAWNS) {
+      const obstruction = ARENA_BLOCKS.find(({ id }) => id === spawn.concealedBy);
+      expect(obstruction, `${spawn.id} obstruction`).toBeDefined();
+      expect(segmentIntersectsBlock(PLAYER_SPAWN, spawn.position, obstruction!)).toBe(true);
+    }
+  });
+
+  it('creates independent health state for every configured zombie', () => {
+    const zombies = TRAINING_ZOMBIE_SPAWNS.map(() => createZombieState());
+    const damagedFirstZombie = hitZombie(zombies[0], 0).state;
+
+    expect(new Set(zombies)).toHaveProperty('size', 5);
+    expect(damagedFirstZombie.health).toBeLessThan(ZOMBIE_MAX_HEALTH);
+    expect(
+      zombies.slice(1).every(({ health, dead }) => health === ZOMBIE_MAX_HEALTH && !dead),
+    ).toBe(true);
+  });
+});
 
 describe('zombie health', () => {
   it('starts alive at the tuneable maximum health', () => {

@@ -2,15 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { ARENA_TARGETS } from './targets';
 import {
   advanceEncounterCountdown,
+  areAllTrainingZombiesRemoved,
   areAllTrainingTargetsDepleted,
   completeEncounter,
   createEncounterState,
   createTrainingTargetHealth,
   encounterCountdownValue,
+  recordTrainingZombieRemoval,
   startEncounterCountdown,
   trainingTargetsHaveCollision,
   type EncounterState,
 } from './encounter';
+import { TRAINING_ZOMBIE_SPAWNS, type TrainingZombieId } from './zombie';
 
 function advanceFrames(state: EncounterState, frameCount: number) {
   let nextState = state;
@@ -42,7 +45,7 @@ describe('training encounter transition', () => {
     expect(startEncounterCountdown(countdown, allTargetsDepleted)).toBe(countdown);
   });
 
-  it('counts down 3, 2, 1 before spawning one zombie encounter', () => {
+  it('counts down 3, 2, 1 before spawning the zombie encounter', () => {
     const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
     let encounter = startEncounterCountdown(createEncounterState(), allTargetsDepleted);
 
@@ -91,6 +94,42 @@ describe('training encounter transition', () => {
       elapsedSeconds: 2,
     });
     expect(completeEncounter({ phase: 'zombie' })).toEqual({ phase: 'complete' });
+  });
+
+  it('completes after five distinct removals and ignores duplicate removal callbacks', () => {
+    let removedZombieIds: ReadonlySet<TrainingZombieId> = new Set();
+
+    for (const { id } of TRAINING_ZOMBIE_SPAWNS.slice(0, -1)) {
+      removedZombieIds = recordTrainingZombieRemoval(removedZombieIds, id);
+    }
+    expect(areAllTrainingZombiesRemoved(removedZombieIds)).toBe(false);
+
+    const duplicateRemoval = recordTrainingZombieRemoval(
+      removedZombieIds,
+      TRAINING_ZOMBIE_SPAWNS[0].id,
+    );
+    expect(duplicateRemoval).toBe(removedZombieIds);
+    expect(duplicateRemoval).toHaveProperty('size', 4);
+
+    removedZombieIds = recordTrainingZombieRemoval(
+      removedZombieIds,
+      TRAINING_ZOMBIE_SPAWNS.at(-1)!.id,
+    );
+    expect(areAllTrainingZombiesRemoved(removedZombieIds)).toBe(true);
+    expect(removedZombieIds).toHaveProperty('size', 5);
+  });
+
+  it('restarts with no removals so the same five configured zombies can remount once', () => {
+    let removedZombieIds: ReadonlySet<TrainingZombieId> = new Set();
+    for (const { id } of TRAINING_ZOMBIE_SPAWNS) {
+      removedZombieIds = recordTrainingZombieRemoval(removedZombieIds, id);
+    }
+    expect(areAllTrainingZombiesRemoved(removedZombieIds)).toBe(true);
+
+    const restartedZombieIds: ReadonlySet<TrainingZombieId> = new Set();
+    expect(areAllTrainingZombiesRemoved(restartedZombieIds)).toBe(false);
+    expect(TRAINING_ZOMBIE_SPAWNS).toHaveLength(5);
+    expect(new Set(TRAINING_ZOMBIE_SPAWNS.map(({ id }) => id))).toHaveProperty('size', 5);
   });
 
   it('removes depleted target collision before the zombie starts chasing', () => {

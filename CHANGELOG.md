@@ -17,3 +17,4 @@ All notable changes are documented here.
 - Polished the first zombie encounter with impact-point blood bursts, collider-aware obstacle steering, close-range attack animation and bite audio, hit recovery, and timed corpse cleanup.
 - Tightened the zombie's bite range, added subtle impact-timed bite feedback, and added a polished training completion screen with a full encounter restart.
 - Added player health, a compact industrial HUD, timed zombie bite damage, critical-health edge feedback, and a death and retry sequence.
+- Expanded the training encounter to five simultaneous concealed zombies and accelerated only their existing hit-reaction animation.

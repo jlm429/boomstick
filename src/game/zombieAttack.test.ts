@@ -81,4 +81,23 @@ describe('weak zombie attack cycle', () => {
     vi.advanceTimersByTime(WEAK_ZOMBIE_ATTACK.windupMs);
     expect(disposed.applyDamage).not.toHaveBeenCalled();
   });
+
+  it('keeps each zombie attack phase and pending timer independent', () => {
+    const attacks = Array.from({ length: 5 }, setup);
+
+    attacks[0].controller.update(true, true);
+
+    expect(attacks.map(({ controller }) => controller.getPhase())).toEqual([
+      'windup',
+      'idle',
+      'idle',
+      'idle',
+      'idle',
+    ]);
+    vi.advanceTimersByTime(WEAK_ZOMBIE_ATTACK.windupMs);
+    expect(attacks[0].applyDamage).toHaveBeenCalledOnce();
+    expect(
+      attacks.slice(1).every(({ applyDamage }) => applyDamage.mock.calls.length === 0),
+    ).toBe(true);
+  });
 });
