@@ -46,6 +46,11 @@ import {
   isTargetDepleted,
   type TargetDefinition,
 } from '../game/targets';
+import {
+  DEATH_SEQUENCE_SECONDS,
+  deathVisualAt,
+  type PlayerLifeState,
+} from '../game/playerHealth';
 import { BreakableLights } from './Arena';
 import { WeaponAudio } from './weaponAudio';
 
@@ -205,10 +210,12 @@ function TargetVisuals({
 }
 
 function Shotgun({
+  lifeState,
   shotIdRef,
   weaponStateRef,
   reloadStartedAtRef,
 }: {
+  lifeState: PlayerLifeState;
   shotIdRef: MutableRefObject<number>;
   weaponStateRef: MutableRefObject<WeaponState>;
   reloadStartedAtRef: MutableRefObject<number>;
@@ -221,6 +228,7 @@ function Shotgun({
   const { camera } = useThree();
   const recoil = useRef(0);
   const flash = useRef(0);
+  const deathElapsedRef = useRef(0);
   const renderedShotId = useRef(0);
   const reloadPoseRef = useRef<ReloadPose>({
     phase: 'complete',
@@ -232,6 +240,16 @@ function Shotgun({
   });
 
   useFrame((_, delta) => {
+    if (lifeState === 'alive') {
+      deathElapsedRef.current = 0;
+    } else if (lifeState === 'dying' && Number.isFinite(delta) && delta > 0) {
+      deathElapsedRef.current = Math.min(
+        DEATH_SEQUENCE_SECONDS,
+        deathElapsedRef.current + delta,
+      );
+    } else if (lifeState === 'dead') {
+      deathElapsedRef.current = DEATH_SEQUENCE_SECONDS;
+    }
     if (renderedShotId.current !== shotIdRef.current) {
       renderedShotId.current = shotIdRef.current;
       recoil.current = 1;
@@ -247,6 +265,8 @@ function Shotgun({
     if (streakMaterial.current) streakMaterial.current.opacity = flash.current * 0.8;
     if (muzzleLight.current) muzzleLight.current.intensity = flash.current * 8;
     if (!mesh.current) return;
+    mesh.current.visible = lifeState !== 'dead';
+    const deathVisual = deathVisualAt(deathElapsedRef.current);
     const reloadPose = reloadPoseAt(
       weaponStateRef.current.isReloading
         ? performance.now() / 1000 - reloadStartedAtRef.current
@@ -258,7 +278,9 @@ function Shotgun({
     mesh.current.rotateX(-0.08 + reloadPose.rotationX);
     mesh.current.rotateZ(reloadPose.rotationZ);
     mesh.current.translateX(reloadPose.positionX);
-    mesh.current.translateY(-0.52 + reloadPose.positionY + recoil.current * 0.06);
+    mesh.current.translateY(
+      -0.52 + reloadPose.positionY + recoil.current * 0.06 - deathVisual.cameraDrop * 0.72,
+    );
     mesh.current.translateZ(-1.15 + reloadPose.positionZ + recoil.current * 0.16);
   });
 
@@ -421,11 +443,13 @@ function ReloadInput({ active, reload }: { active: boolean; reload: () => boolea
 
 export function CombatScene({
   active,
+  playerLifeState,
   onEncounterStateChange,
   onEmptyFire,
   onWeaponStateChange,
 }: {
   active: boolean;
+  playerLifeState: PlayerLifeState;
   onEncounterStateChange: (state: EncounterState) => void;
   onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
@@ -454,6 +478,13 @@ export function CombatScene({
   }, [onWeaponStateChange]);
 
   useEffect(() => () => weaponAudio.stop(), [weaponAudio]);
+
+  useEffect(() => {
+    if (playerLifeState === 'alive' || !weaponStateRef.current.isReloading) return;
+    reloadStartedAtRef.current = -Infinity;
+    updateWeaponState({ ...weaponStateRef.current, isReloading: false });
+    weaponAudio.stop();
+  }, [playerLifeState, updateWeaponState, weaponAudio]);
 
   const hitLight = useCallback((lightId: string, distance: number) => {
     const impact = hitBreakableLight(impactStateRef.current, lightId, distance);
@@ -561,6 +592,7 @@ export function CombatScene({
       <BreakableLights brokenLightIds={impactState.brokenLightIds} onLightHit={hitLight} />
       <TargetVisuals onHealthChange={updateTargetHealth} />
       <Shotgun
+        lifeState={playerLifeState}
         shotIdRef={shotIdRef}
         weaponStateRef={weaponStateRef}
         reloadStartedAtRef={reloadStartedAtRef}

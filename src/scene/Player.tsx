@@ -21,6 +21,11 @@ import {
   type PressedKeys,
 } from '../game/input';
 import { movementVector } from '../game/movement';
+import {
+  DEATH_SEQUENCE_SECONDS,
+  deathVisualAt,
+  type PlayerLifeState,
+} from '../game/playerHealth';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 
 const UP = new Vector3(0, 1, 0);
@@ -37,13 +42,22 @@ function resetBody(rigidBody: RapierRigidBody) {
   rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
 }
 
-export function Player({ active, invertY }: { active: boolean; invertY: boolean }) {
+export function Player({
+  active,
+  invertY,
+  lifeState,
+}: {
+  active: boolean;
+  invertY: boolean;
+  lifeState: PlayerLifeState;
+}) {
   const body = useRef<RapierRigidBody>(null);
   const activeRef = useRef(active);
   const invertYRef = useRef(invertY);
   const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
+  const deathElapsed = useRef(0);
   const lastDiagnosticSample = useRef(0);
   const { camera, gl } = useThree();
 
@@ -55,6 +69,13 @@ export function Player({ active, invertY }: { active: boolean; invertY: boolean 
   useEffect(() => {
     invertYRef.current = invertY;
   }, [invertY]);
+
+  useEffect(() => {
+    clearPressedKeys(pressed.current);
+    if (lifeState === 'alive') {
+      deathElapsed.current = 0;
+    }
+  }, [lifeState]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -110,6 +131,24 @@ export function Player({ active, invertY }: { active: boolean; invertY: boolean 
         PLAYER_SPAWN[1] + CAMERA_EYE_OFFSET,
         PLAYER_SPAWN[2],
       );
+      clearPressedKeys(pressed.current);
+      return;
+    }
+
+    if (lifeState !== 'alive') {
+      if (lifeState === 'dying' && Number.isFinite(delta) && delta > 0) {
+        deathElapsed.current = Math.min(DEATH_SEQUENCE_SECONDS, deathElapsed.current + delta);
+      } else if (lifeState === 'dead') {
+        deathElapsed.current = DEATH_SEQUENCE_SECONDS;
+      }
+      const deathVisual = deathVisualAt(deathElapsed.current);
+      camera.position.set(
+        position.x,
+        position.y + CAMERA_EYE_OFFSET - deathVisual.cameraDrop,
+        position.z,
+      );
+      rotation.set(pitch.current, yaw.current, deathVisual.cameraRoll);
+      camera.quaternion.setFromEuler(rotation);
       clearPressedKeys(pressed.current);
       return;
     }

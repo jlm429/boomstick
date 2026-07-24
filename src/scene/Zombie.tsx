@@ -6,7 +6,7 @@ import {
   useRapier,
   type RapierRigidBody,
 } from '@react-three/rapier';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AnimationClip,
   AnimationMixer,
@@ -25,7 +25,6 @@ import {
   BITE_PARTICLE_SIZE,
   biteBurstOpacity,
   createBiteBurst,
-  didAttackReachBiteImpact,
   isBiteBurstComplete,
   type BiteBurst,
 } from '../game/biteParticles';
@@ -55,6 +54,7 @@ import {
   type ZombieBehaviorState,
   type ZombieSteeringSide,
 } from '../game/zombie';
+import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
 import { ZombieAttackAudio } from './zombieAudio';
 import { ZOMBIE_ASSET_URLS } from './zombieAssets';
 
@@ -229,8 +229,21 @@ function BiteBurstEffect({
   );
 }
 
-function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => void }) {
+function ZombieActor({
+  active,
+  playerAlive,
+  onPlayerDamage,
+  onRemoved,
+}: {
+  active: boolean;
+  playerAlive: boolean;
+  onPlayerDamage: (damage: number) => void;
+  onRemoved: () => void;
+}) {
   const bodyRef = useRef<RapierRigidBody>(null);
+  const attackControllerRef = useRef<ZombieAttackController>(null);
+  const activeRef = useRef(active);
+  const playerAliveRef = useRef(playerAlive);
   const visualRef = useRef<Group>(null);
   const mixerRef = useRef<AnimationMixer>(null);
   const actionsRef = useRef<ZombieActions>({});
@@ -276,6 +289,38 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
     ],
     [attackAsset, dyingAsset, hitAsset, idleAsset, modelNodeNames, runAsset],
   );
+  useEffect(() => {
+    const attackController = new ZombieAttackController(WEAK_ZOMBIE_ATTACK, {
+      isHitValid: () =>
+        activeRef.current &&
+        playerAliveRef.current &&
+        !zombieRef.current.dead &&
+        behaviorRef.current.mode === 'attack',
+      applyDamage: (damage) => {
+        onPlayerDamage(damage);
+        camera.getWorldDirection(biteDirection);
+        setBiteBursts((bursts) => [
+          ...bursts,
+          createBiteBurst(nextBiteBurstIdRef.current++, {
+            x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
+            y: camera.position.y + biteDirection.y * BITE_BURST_CAMERA_DISTANCE,
+            z: camera.position.z + biteDirection.z * BITE_BURST_CAMERA_DISTANCE,
+          }),
+        ]);
+      },
+    });
+    attackControllerRef.current = attackController;
+    return () => {
+      attackController.dispose();
+      if (attackControllerRef.current === attackController) attackControllerRef.current = null;
+    };
+  }, [camera, onPlayerDamage]);
+
+  useLayoutEffect(() => {
+    activeRef.current = active;
+    playerAliveRef.current = playerAlive;
+    if (!active || !playerAlive) attackControllerRef.current?.cancel();
+  }, [active, playerAlive]);
 
   const changeAnimation = (next: ZombieAnimation, restart = false) => {
     if (!restart && animationRef.current === next) return;
@@ -303,7 +348,7 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
   }, [model]);
 
   useEffect(() => {
-    if (active) {
+    if (active && playerAlive) {
       if (behaviorRef.current.mode === 'attack') zombieAudio.enterAttack();
       return;
     }
@@ -314,7 +359,7 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
       { x: 0, y: Number.isFinite(velocity.y) ? velocity.y : 0, z: 0 },
       true,
     );
-  }, [active, zombieAudio]);
+  }, [active, playerAlive, zombieAudio]);
 
   const playAnimation = useCallback((next: ZombieAnimation) => {
     const nextAction = actionsRef.current[next];
@@ -374,6 +419,7 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
     if (result.state.dead && rigidBody) {
       rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
+    if (result.state.dead) attackControllerRef.current?.cancel();
     applyBehavior(interruptZombieBehavior(behaviorRef.current, result.state.dead), true);
     return 'wall';
   };
@@ -461,26 +507,15 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
         hitDuration,
       }),
     );
+    attackControllerRef.current?.update(
+      behaviorRef.current.mode === 'attack' &&
+        steering.directPathClear &&
+        distance <= WEAK_ZOMBIE_ATTACK.range,
+      active && playerAlive,
+    );
 
     if (behaviorRef.current.mode === 'attack' && attackAction) {
       if (attackAction.time < previousAttackTime) zombieAudio.synchronizeAttackCycle();
-      if (
-        didAttackReachBiteImpact(
-          previousAttackTime,
-          attackAction.time,
-          attackAction.getClip().duration,
-        )
-      ) {
-        camera.getWorldDirection(biteDirection);
-        setBiteBursts((bursts) => [
-          ...bursts,
-          createBiteBurst(nextBiteBurstIdRef.current++, {
-            x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
-            y: camera.position.y + biteDirection.y * BITE_BURST_CAMERA_DISTANCE,
-            z: camera.position.z + biteDirection.z * BITE_BURST_CAMERA_DISTANCE,
-          }),
-        ]);
-      }
     }
 
     const velocity = rigidBody.linvel();
@@ -561,11 +596,28 @@ function ZombieActor({ active, onRemoved }: { active: boolean; onRemoved: () => 
   );
 }
 
-export function Zombie({ active, onRemoved }: { active: boolean; onRemoved: () => void }) {
+export function Zombie({
+  active,
+  playerAlive,
+  onPlayerDamage,
+  onRemoved,
+}: {
+  active: boolean;
+  playerAlive: boolean;
+  onPlayerDamage: (damage: number) => void;
+  onRemoved: () => void;
+}) {
   const [present, setPresent] = useState(true);
   const remove = useCallback(() => {
     setPresent(false);
     onRemoved();
   }, [onRemoved]);
-  return present ? <ZombieActor active={active} onRemoved={remove} /> : null;
+  return present ? (
+    <ZombieActor
+      active={active}
+      playerAlive={playerAlive}
+      onPlayerDamage={onPlayerDamage}
+      onRemoved={remove}
+    />
+  ) : null;
 }

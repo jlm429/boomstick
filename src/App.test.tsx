@@ -1,35 +1,42 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { DEATH_SEQUENCE_MS } from './game/playerHealth';
 import { useAppStore } from './game/store';
 
 vi.mock('./scene/GameViewport', () => ({
   GameViewport: ({
     active,
     invertY,
+    playerLifeState,
     runId,
     onCanvasReady,
     onEncounterStateChange,
+    onPlayerDamage,
     onWeaponStateChange,
   }: {
     active: boolean;
     invertY: boolean;
+    playerLifeState: 'alive' | 'dying' | 'dead';
     runId: number;
     onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
     onEncounterStateChange: (state: {
       phase: 'training' | 'countdown' | 'zombie' | 'complete';
       elapsedSeconds?: number;
     }) => void;
+    onPlayerDamage: (damage: number) => void;
     onWeaponStateChange: (state: { ammunition: number; isReloading: boolean }) => void;
   }) => (
     <>
       <canvas
         data-active={active}
         data-invert-y={invertY}
+        data-life-state={playerLifeState}
         data-run-id={runId}
         data-testid="game-viewport"
         ref={onCanvasReady}
       />
+      <button data-testid="damage-player" hidden onClick={() => onPlayerDamage(5)} />
       <button
         data-testid="complete-training"
         hidden
@@ -71,6 +78,9 @@ describe('App navigation', () => {
       hasPointerLock: false,
       pointerLockError: null,
       runId: 0,
+      health: 100,
+      lifeState: 'alive',
+      damageRevision: 0,
     });
     Object.defineProperty(HTMLCanvasElement.prototype, 'requestPointerLock', {
       configurable: true,
@@ -86,6 +96,8 @@ describe('App navigation', () => {
     });
     requestPointerLock.mockClear();
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it('navigates menu to About and back', () => {
     render(<App />);
@@ -245,6 +257,55 @@ describe('App navigation', () => {
     expect(useAppStore.getState()).toMatchObject({
       phase: 'main-menu',
       hasPointerLock: false,
+    });
+  });
+
+  it('shows critical health only at five or lower and clears it on restart', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    act(() => setPointerLockElement(canvas));
+
+    act(() => useAppStore.getState().applyDamage(94));
+    expect(screen.queryByTestId('critical-health-effect')).not.toBeInTheDocument();
+    act(() => useAppStore.getState().applyDamage(1));
+    expect(screen.getByTestId('critical-health-effect')).toBeInTheDocument();
+
+    act(() => setPointerLockElement(null));
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(screen.queryByTestId('critical-health-effect')).not.toBeInTheDocument();
+    expect(screen.getByTestId('health-module')).toHaveTextContent('100');
+    expect(useAppStore.getState()).toMatchObject({ health: 100, lifeState: 'alive' });
+  });
+
+  it('disables gameplay during death, reaches defeat, and retries cleanly', () => {
+    vi.useFakeTimers();
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    act(() => setPointerLockElement(canvas));
+
+    act(() => useAppStore.getState().applyDamage(100));
+    expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(canvas).toHaveAttribute('data-life-state', 'dying');
+    expect(screen.getByTestId('death-fade')).toBeInTheDocument();
+    expect(screen.queryByTestId('critical-health-effect')).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(DEATH_SEQUENCE_MS));
+    expect(screen.getByRole('dialog', { name: 'You Went Down' })).toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-life-state', 'dead');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.queryByRole('dialog', { name: 'You Went Down' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('death-fade')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('health-damage-pulse')).not.toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-life-state', 'alive');
+    expect(canvas).toHaveAttribute('data-run-id', '2');
+    expect(useAppStore.getState()).toMatchObject({
+      health: 100,
+      lifeState: 'alive',
+      damageRevision: 0,
+      phase: 'arena-entry',
     });
   });
 

@@ -1,8 +1,9 @@
 import { targetDamageAt } from './targets';
+import { WEAK_ZOMBIE_ATTACK } from './zombieAttack';
 
 export const ZOMBIE_MAX_HEALTH = 300;
 export const ZOMBIE_MOVE_SPEED = 3.2;
-export const ZOMBIE_ATTACK_DISTANCE = 0.8;
+export const ZOMBIE_ATTACK_DISTANCE = WEAK_ZOMBIE_ATTACK.range;
 export const ZOMBIE_COLLIDER_RADIUS = 0.38;
 export const ZOMBIE_CORPSE_SECONDS = 5;
 export const ZOMBIE_STEERING_LOOKAHEAD = 3.6;
