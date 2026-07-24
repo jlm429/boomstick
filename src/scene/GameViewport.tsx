@@ -10,6 +10,7 @@ import {
   type EncounterState,
 } from '../game/encounter';
 import type { WeaponState } from '../game/shooting';
+import type { PlayerLifeState } from '../game/playerHealth';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
@@ -20,10 +21,12 @@ import { preloadZombieAssets } from './zombieAssets';
 type GameViewportProps = {
   active: boolean;
   invertY: boolean;
+  playerLifeState: PlayerLifeState;
   runId: number;
   onCanvasReady: (canvas: HTMLCanvasElement | null) => void;
   onEncounterStateChange: (state: EncounterState) => void;
   onEmptyFire: () => void;
+  onPlayerDamage: (damage: number) => void;
   onWeaponStateChange: (state: WeaponState) => void;
 };
 
@@ -95,12 +98,20 @@ function PhysicsDiagnostics() {
 function RunScene({
   active,
   invertY,
+  playerLifeState,
   onEncounterStateChange,
   onEmptyFire,
+  onPlayerDamage,
   onWeaponStateChange,
 }: Pick<
   GameViewportProps,
-  'active' | 'invertY' | 'onEncounterStateChange' | 'onEmptyFire' | 'onWeaponStateChange'
+  | 'active'
+  | 'invertY'
+  | 'playerLifeState'
+  | 'onEncounterStateChange'
+  | 'onEmptyFire'
+  | 'onPlayerDamage'
+  | 'onWeaponStateChange'
 >) {
   const [encounterState, setEncounterState] = useState(createEncounterState);
   const updateEncounterState = useCallback(
@@ -115,6 +126,7 @@ function RunScene({
     <>
       <CombatScene
         active={active}
+        playerLifeState={playerLifeState}
         onEncounterStateChange={updateEncounterState}
         onEmptyFire={onEmptyFire}
         onWeaponStateChange={onWeaponStateChange}
@@ -124,11 +136,13 @@ function RunScene({
           <PhysicsDiagnostics />
           <ArenaColliders />
           {trainingTargetsHaveCollision(encounterState) && <TargetColliders />}
-          <Player active={active} invertY={invertY} />
+          <Player active={active} invertY={invertY} lifeState={playerLifeState} />
           {encounterState.phase === 'zombie' && (
             <Suspense fallback={null}>
               <Zombie
                 active={active}
+                playerAlive={playerLifeState === 'alive'}
+                onPlayerDamage={onPlayerDamage}
                 onRemoved={() => updateEncounterState(completeEncounter(encounterState))}
               />
             </Suspense>
@@ -142,10 +156,12 @@ function RunScene({
 export function GameViewport({
   active,
   invertY,
+  playerLifeState,
   runId,
   onCanvasReady,
   onEncounterStateChange,
   onEmptyFire,
+  onPlayerDamage,
   onWeaponStateChange,
 }: GameViewportProps) {
   useEffect(() => {
@@ -181,8 +197,10 @@ export function GameViewport({
         key={runId}
         active={active}
         invertY={invertY}
+        playerLifeState={playerLifeState}
         onEncounterStateChange={onEncounterStateChange}
         onEmptyFire={onEmptyFire}
+        onPlayerDamage={onPlayerDamage}
         onWeaponStateChange={onWeaponStateChange}
       />
     </Canvas>
