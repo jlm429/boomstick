@@ -17,7 +17,6 @@ import {
   Mesh,
   PointsMaterial,
   Vector3,
-  type AnimationAction,
 } from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
@@ -40,7 +39,6 @@ import type { ShotImpactHandler } from '../game/impacts';
 import {
   ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_MOVE_SPEED,
-  ZOMBIE_SPAWN,
   advanceZombieBehavior,
   createZombieBehaviorState,
   createZombieState,
@@ -53,8 +51,14 @@ import {
   type ZombieBehaviorMode,
   type ZombieBehaviorState,
   type ZombieSteeringSide,
+  type TrainingZombieSpawn,
 } from '../game/zombie';
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
+import {
+  applyZombieAnimationTimeScales,
+  type ZombieActions,
+  type ZombieAnimation,
+} from './zombieAnimation';
 import { ZombieAttackAudio } from './zombieAudio';
 import { ZOMBIE_ASSET_URLS } from './zombieAssets';
 
@@ -69,9 +73,6 @@ const COLLIDER_CENTER_Y = COLLIDER_HALF_HEIGHT + COLLIDER_RADIUS;
 const ANIMATION_BLEND_SECONDS = 0.12;
 const TURN_SPEED_RADIANS = 7;
 const biteDirection = new Vector3();
-
-type ZombieAnimation = 'idle' | 'run' | 'attack' | 'hit' | 'dying';
-type ZombieActions = Partial<Record<ZombieAnimation, AnimationAction>>;
 
 const animationForMode = (mode: ZombieBehaviorMode): ZombieAnimation => {
   if (mode === 'chase') return 'run';
@@ -232,11 +233,13 @@ function BiteBurstEffect({
 function ZombieActor({
   active,
   playerAlive,
+  spawn,
   onPlayerDamage,
   onRemoved,
 }: {
   active: boolean;
   playerAlive: boolean;
+  spawn: TrainingZombieSpawn;
   onPlayerDamage: (damage: number) => void;
   onRemoved: () => void;
 }) {
@@ -384,9 +387,11 @@ function ZombieActor({
   useEffect(() => {
     const mixer = new AnimationMixer(model);
     mixerRef.current = mixer;
-    actionsRef.current = Object.fromEntries(
+    const actions = Object.fromEntries(
       clips.map((clip) => [clip.name, mixer.clipAction(clip)]),
     ) as ZombieActions;
+    applyZombieAnimationTimeScales(actions);
+    actionsRef.current = actions;
     playAnimation('idle');
     return () => {
       mixer.stopAllAction();
@@ -498,7 +503,8 @@ function ZombieActor({
       isBlocked,
     );
     steeringSideRef.current = steering.side;
-    const hitDuration = actionsRef.current.hit?.getClip().duration ?? 0;
+    const hitAction = actionsRef.current.hit;
+    const hitDuration = hitAction ? hitAction.getClip().duration / hitAction.timeScale : 0;
     applyBehavior(
       advanceZombieBehavior(behaviorRef.current, {
         delta,
@@ -552,7 +558,7 @@ function ZombieActor({
       <RigidBody
         ref={bodyRef}
         type={zombie.dead ? 'fixed' : 'dynamic'}
-        position={[...ZOMBIE_SPAWN]}
+        position={[...spawn.position]}
         colliders={false}
         enabledRotations={[false, false, false]}
         canSleep={false}
@@ -569,6 +575,7 @@ function ZombieActor({
         <group
           ref={visualRef}
           position={[0, MODEL_FLOOR_OFFSET, 0]}
+          rotation={[0, spawn.rotation, 0]}
           scale={MODEL_SCALE}
           userData={{ onShotImpact }}
           dispose={null}
@@ -599,11 +606,13 @@ function ZombieActor({
 export function Zombie({
   active,
   playerAlive,
+  spawn,
   onPlayerDamage,
   onRemoved,
 }: {
   active: boolean;
   playerAlive: boolean;
+  spawn: TrainingZombieSpawn;
   onPlayerDamage: (damage: number) => void;
   onRemoved: () => void;
 }) {
@@ -616,6 +625,7 @@ export function Zombie({
     <ZombieActor
       active={active}
       playerAlive={playerAlive}
+      spawn={spawn}
       onPlayerDamage={onPlayerDamage}
       onRemoved={remove}
     />

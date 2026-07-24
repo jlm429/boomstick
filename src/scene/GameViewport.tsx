@@ -4,18 +4,21 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
 import {
+  areAllTrainingZombiesRemoved,
   completeEncounter,
   createEncounterState,
+  recordTrainingZombieRemoval,
   trainingTargetsHaveCollision,
   type EncounterState,
 } from '../game/encounter';
+import type { TrainingZombieId } from '../game/zombie';
 import type { WeaponState } from '../game/shooting';
 import type { PlayerLifeState } from '../game/playerHealth';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
-import { Zombie } from './Zombie';
+import { TrainingZombieEncounter } from './TrainingZombieEncounter';
 import { preloadZombieAssets } from './zombieAssets';
 
 type GameViewportProps = {
@@ -114,12 +117,25 @@ function RunScene({
   | 'onWeaponStateChange'
 >) {
   const [encounterState, setEncounterState] = useState(createEncounterState);
+  const removedZombieIdsRef = useRef<ReadonlySet<TrainingZombieId>>(new Set());
   const updateEncounterState = useCallback(
     (state: EncounterState) => {
       setEncounterState(state);
       onEncounterStateChange(state);
     },
     [onEncounterStateChange],
+  );
+  const removeTrainingZombie = useCallback(
+    (zombieId: TrainingZombieId) => {
+      removedZombieIdsRef.current = recordTrainingZombieRemoval(
+        removedZombieIdsRef.current,
+        zombieId,
+      );
+      if (areAllTrainingZombiesRemoved(removedZombieIdsRef.current)) {
+        updateEncounterState(completeEncounter({ phase: 'zombie' }));
+      }
+    },
+    [updateEncounterState],
   );
 
   return (
@@ -139,11 +155,11 @@ function RunScene({
           <Player active={active} invertY={invertY} lifeState={playerLifeState} />
           {encounterState.phase === 'zombie' && (
             <Suspense fallback={null}>
-              <Zombie
+              <TrainingZombieEncounter
                 active={active}
                 playerAlive={playerLifeState === 'alive'}
                 onPlayerDamage={onPlayerDamage}
-                onRemoved={() => updateEncounterState(completeEncounter(encounterState))}
+                onZombieRemoved={removeTrainingZombie}
               />
             </Suspense>
           )}

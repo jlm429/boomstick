@@ -47,7 +47,7 @@ No installation required. Open the link and enter the arena.
 - Responsive WASD movement and mouse look
 - Doom-inspired shotgun combat
 - Hitscan weapon with recoil and reload mechanics
-- Target training followed by a single pursuing zombie encounter
+- Target training followed by a five-zombie encounter
 - Shotgun, reload, empty-trigger, and impact sound effects
 - Breakable dynamic lighting and atmospheric arena
 - Pause menu, HUD, and accessibility features
