@@ -1,16 +1,19 @@
 import { type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { TRAINING_ZOMBIE_SPAWNS, type TrainingZombieSpawn } from '../game/zombie';
+import { ZombieAttackSlotCoordinator } from '../game/zombieAttackSlots';
 import { Zombie } from './Zombie';
-import { TrainingZombieEncounter } from './TrainingZombieEncounter';
+import { TrainingZombieActors } from './TrainingZombieEncounter';
 
 type ZombieElement = ReactElement<{
+  attackSlots: ZombieAttackSlotCoordinator;
   spawn: TrainingZombieSpawn;
 }>;
 
 const createEncounterElements = () => {
-  const encounter = TrainingZombieEncounter({
+  const encounter = TrainingZombieActors({
     active: true,
+    attackSlots: new ZombieAttackSlotCoordinator(),
     playerAlive: true,
     onPlayerDamage: vi.fn(),
     onZombieRemoved: vi.fn(),
@@ -26,6 +29,7 @@ describe('TrainingZombieEncounter', () => {
     expect(zombies.every(({ type }) => type === Zombie)).toBe(true);
     expect(zombies.map(({ key }) => key)).toEqual(TRAINING_ZOMBIE_SPAWNS.map(({ id }) => id));
     expect(zombies.map(({ props }) => props.spawn)).toEqual(TRAINING_ZOMBIE_SPAWNS);
+    expect(new Set(zombies.map(({ props }) => props.attackSlots))).toHaveProperty('size', 1);
     expect(new Set(zombies.map(({ props }) => props.spawn.position.join(',')))).toHaveProperty(
       'size',
       5,

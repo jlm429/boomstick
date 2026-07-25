@@ -42,12 +42,14 @@ targets. Each target's visible meter updates as hits reduce its health. Pellet d
 with distance from the shot origin and accuracy on the target face. A depleted target remains visible,
 dims, and no longer reacts to hits. Depleting every target starts one 3, 2, 1 countdown, after which
 their collision is removed and five zombies appear together from behind existing arena structures.
-Each zombie pursues the player, attacks while facing the player within the 0.80-unit bite range, and
-immediately resumes chasing beyond that range. A valid bite lands after a 240-millisecond windup,
-deals 5 damage, produces a brief subtle red burst, and begins a 1.25-second cooldown. Leaving range
-or ending active play cancels a pending hit. Each zombie independently reacts to shotgun hits and
-stops moving and colliding when killed. Arena lights hit from at most 18 units away visibly break,
-stop illuminating the arena, and play their destruction sound once. Later hits on the same light
-use the normal surface impact sound until Restart restores it.
+The zombies pursue at subtly varied, lifetime-stable speeds with staggered run cycles. Each claims
+a distinct position around the player and attacks independently while facing the player within the
+0.80-unit bite range. It resumes moving when its position or the player moves far enough apart. A
+valid bite lands after a 240-millisecond windup, deals 5 damage, produces a brief subtle red burst,
+and begins a 1.25-second cooldown. Leaving range or ending active play cancels a pending hit. Each
+zombie independently reacts to shotgun hits and stops moving and colliding when killed. Arena
+lights hit from at most 18 units away visibly break, stop illuminating the arena, and play their
+destruction sound once. Later hits on the same light use the normal surface impact sound until
+Restart restores it.
 
 The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.

@@ -100,4 +100,18 @@ describe('weak zombie attack cycle', () => {
       attacks.slice(1).every(({ applyDamage }) => applyDamage.mock.calls.length === 0),
     ).toBe(true);
   });
+
+  it('lets multiple in-range zombies wind up and deal damage independently', () => {
+    const attacks = [setup(), setup()];
+
+    attacks.forEach(({ controller }) => controller.update(true, true));
+    expect(attacks.map(({ controller }) => controller.getPhase())).toEqual([
+      'windup',
+      'windup',
+    ]);
+
+    vi.advanceTimersByTime(WEAK_ZOMBIE_ATTACK.windupMs);
+    expect(attacks.every(({ applyDamage }) => applyDamage.mock.calls.length === 1)).toBe(true);
+    expect(attacks.every(({ health }) => health() === 95)).toBe(true);
+  });
 });

@@ -38,15 +38,16 @@ import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactHandler } from '../game/impacts';
 import {
   ZOMBIE_COLLIDER_RADIUS,
-  ZOMBIE_MOVE_SPEED,
   advanceZombieBehavior,
   createZombieBehaviorState,
+  createZombieMotionVariation,
   createZombieState,
   hitZombie,
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
   selectZombieSteering,
+  zombieMovementSpeed,
   type PlanarDirection,
   type ZombieBehaviorMode,
   type ZombieBehaviorState,
@@ -55,7 +56,13 @@ import {
 } from '../game/zombie';
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
 import {
+  shouldZombieRepositionToSlot,
+  ZombieAttackSlotCoordinator,
+  updateZombieSlotSettlement,
+} from '../game/zombieAttackSlots';
+import {
   applyZombieAnimationTimeScales,
+  createInitialZombieWalkPhaseApplier,
   type ZombieActions,
   type ZombieAnimation,
 } from './zombieAnimation';
@@ -232,12 +239,14 @@ function BiteBurstEffect({
 
 function ZombieActor({
   active,
+  attackSlots,
   playerAlive,
   spawn,
   onPlayerDamage,
   onRemoved,
 }: {
   active: boolean;
+  attackSlots: ZombieAttackSlotCoordinator;
   playerAlive: boolean;
   spawn: TrainingZombieSpawn;
   onPlayerDamage: (damage: number) => void;
@@ -255,8 +264,15 @@ function ZombieActor({
   const behaviorRef = useRef<ZombieBehaviorState>(createZombieBehaviorState());
   const removedRef = useRef(false);
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
+  const slotAssignmentRef = useRef<number | null>(null);
+  const slotSettledRef = useRef(false);
   const nextBurstIdRef = useRef(1);
   const nextBiteBurstIdRef = useRef(1);
+  const [motionVariation] = useState(createZombieMotionVariation);
+  const [applyInitialWalkPhase] = useState(() =>
+    createInitialZombieWalkPhaseApplier(motionVariation.walkPhase),
+  );
+  const movementSpeed = zombieMovementSpeed(motionVariation);
   const zombieRef = useRef(createZombieState());
   const [zombie, setZombie] = useState(createZombieState);
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
@@ -322,8 +338,13 @@ function ZombieActor({
   useLayoutEffect(() => {
     activeRef.current = active;
     playerAliveRef.current = playerAlive;
-    if (!active || !playerAlive) attackControllerRef.current?.cancel();
-  }, [active, playerAlive]);
+    if (!active || !playerAlive) {
+      attackControllerRef.current?.cancel();
+      attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
+    }
+  }, [active, attackSlots, playerAlive, spawn.id]);
 
   const changeAnimation = (next: ZombieAnimation, restart = false) => {
     if (!restart && animationRef.current === next) return;
@@ -364,25 +385,29 @@ function ZombieActor({
     );
   }, [active, playerAlive, zombieAudio]);
 
-  const playAnimation = useCallback((next: ZombieAnimation) => {
-    const nextAction = actionsRef.current[next];
-    if (!nextAction) return;
-    const previousAction = currentActionRef.current
-      ? actionsRef.current[currentActionRef.current]
-      : undefined;
-    if (previousAction && previousAction !== nextAction) {
-      previousAction.fadeOut(ANIMATION_BLEND_SECONDS);
-    }
-    nextAction.reset();
-    nextAction.enabled = true;
-    nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
-    nextAction.setLoop(
-      nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
-      nextAction.clampWhenFinished ? 1 : Infinity,
-    );
-    nextAction.fadeIn(ANIMATION_BLEND_SECONDS).play();
-    currentActionRef.current = next;
-  }, []);
+  const playAnimation = useCallback(
+    (next: ZombieAnimation) => {
+      const nextAction = actionsRef.current[next];
+      if (!nextAction) return;
+      const previousAction = currentActionRef.current
+        ? actionsRef.current[currentActionRef.current]
+        : undefined;
+      if (previousAction && previousAction !== nextAction) {
+        previousAction.fadeOut(ANIMATION_BLEND_SECONDS);
+      }
+      nextAction.reset();
+      if (next === 'run') applyInitialWalkPhase(nextAction);
+      nextAction.enabled = true;
+      nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
+      nextAction.setLoop(
+        nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
+        nextAction.clampWhenFinished ? 1 : Infinity,
+      );
+      nextAction.fadeIn(ANIMATION_BLEND_SECONDS).play();
+      currentActionRef.current = next;
+    },
+    [applyInitialWalkPhase],
+  );
 
   useEffect(() => {
     const mixer = new AnimationMixer(model);
@@ -390,7 +415,7 @@ function ZombieActor({
     const actions = Object.fromEntries(
       clips.map((clip) => [clip.name, mixer.clipAction(clip)]),
     ) as ZombieActions;
-    applyZombieAnimationTimeScales(actions);
+    applyZombieAnimationTimeScales(actions, motionVariation);
     actionsRef.current = actions;
     playAnimation('idle');
     return () => {
@@ -400,10 +425,16 @@ function ZombieActor({
       actionsRef.current = {};
       currentActionRef.current = null;
     };
-  }, [clips, model, playAnimation]);
+  }, [clips, model, motionVariation, playAnimation]);
 
   useEffect(() => playAnimation(animation), [animation, animationRevision, playAnimation]);
   useEffect(() => () => zombieAudio.stop(), [zombieAudio]);
+  useEffect(
+    () => () => {
+      attackSlots.release(spawn.id);
+    },
+    [attackSlots, spawn.id],
+  );
 
   const removeBloodBurst = useCallback((id: number) => {
     setBloodBursts((bursts) => bursts.filter((burst) => burst.id !== id));
@@ -424,7 +455,12 @@ function ZombieActor({
     if (result.state.dead && rigidBody) {
       rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
-    if (result.state.dead) attackControllerRef.current?.cancel();
+    if (result.state.dead) {
+      attackControllerRef.current?.cancel();
+      attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
+    }
     applyBehavior(interruptZombieBehavior(behaviorRef.current, result.state.dead), true);
     return 'wall';
   };
@@ -496,26 +532,44 @@ function ZombieActor({
           );
         },
       );
-    const steering = selectZombieSteering(
-      toPlayer,
-      distance,
-      steeringSideRef.current,
-      isBlocked,
-    );
-    steeringSideRef.current = steering.side;
+    const directPathClear =
+      distance <= 0 ||
+      !isBlocked({ x: toPlayer.x / distance, z: toPlayer.z / distance }, distance);
     const hitAction = actionsRef.current.hit;
     const hitDuration = hitAction ? hitAction.getClip().duration / hitAction.timeScale : 0;
     applyBehavior(
       advanceZombieBehavior(behaviorRef.current, {
         delta,
-        directPathClear: steering.directPathClear,
+        directPathClear,
         distanceToPlayer: distance,
         hitDuration,
       }),
     );
+    const pursuing =
+      playerAlive &&
+      (behaviorRef.current.mode === 'chase' || behaviorRef.current.mode === 'attack');
+    const slotTarget = pursuing ? attackSlots.claim(spawn.id, position, camera.position) : null;
+    if (!pursuing) {
+      attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
+    }
+    const movementTarget = slotTarget?.position ?? camera.position;
+    const toMovementTarget = {
+      x: movementTarget.x - position.x,
+      z: movementTarget.z - position.z,
+    };
+    const movementDistance = Math.hypot(toMovementTarget.x, toMovementTarget.z);
+    const steering = selectZombieSteering(
+      toMovementTarget,
+      movementDistance,
+      steeringSideRef.current,
+      isBlocked,
+    );
+    steeringSideRef.current = steering.side;
     attackControllerRef.current?.update(
       behaviorRef.current.mode === 'attack' &&
-        steering.directPathClear &&
+        directPathClear &&
         distance <= WEAK_ZOMBIE_ATTACK.range,
       active && playerAlive,
     );
@@ -526,7 +580,22 @@ function ZombieActor({
 
     const velocity = rigidBody.linvel();
     const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
-    if (!Number.isFinite(distance) || distance <= 0 || behaviorRef.current.mode !== 'chase') {
+    if (slotTarget) {
+      const assignment =
+        slotTarget.kind === 'attack' ? slotTarget.index : -slotTarget.index - 1;
+      if (slotAssignmentRef.current !== assignment) {
+        slotAssignmentRef.current = assignment;
+        slotSettledRef.current = false;
+      }
+      slotSettledRef.current = updateZombieSlotSettlement(
+        slotSettledRef.current,
+        position,
+        slotTarget.position,
+      );
+    }
+    const settled = slotTarget !== null && slotSettledRef.current;
+    const repositioning = shouldZombieRepositionToSlot(behaviorRef.current.mode, settled);
+    if (!Number.isFinite(movementDistance) || movementDistance <= 0 || !repositioning) {
       rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
       if (behaviorRef.current.mode === 'attack' && visualRef.current) {
         const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
@@ -539,9 +608,9 @@ function ZombieActor({
 
     rigidBody.setLinvel(
       {
-        x: steering.direction.x * ZOMBIE_MOVE_SPEED,
+        x: steering.direction.x * movementSpeed,
         y: verticalVelocity,
-        z: steering.direction.z * ZOMBIE_MOVE_SPEED,
+        z: steering.direction.z * movementSpeed,
       },
       true,
     );
@@ -605,12 +674,14 @@ function ZombieActor({
 
 export function Zombie({
   active,
+  attackSlots,
   playerAlive,
   spawn,
   onPlayerDamage,
   onRemoved,
 }: {
   active: boolean;
+  attackSlots: ZombieAttackSlotCoordinator;
   playerAlive: boolean;
   spawn: TrainingZombieSpawn;
   onPlayerDamage: (damage: number) => void;
@@ -624,6 +695,7 @@ export function Zombie({
   return present ? (
     <ZombieActor
       active={active}
+      attackSlots={attackSlots}
       playerAlive={playerAlive}
       spawn={spawn}
       onPlayerDamage={onPlayerDamage}
