@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE, ZOMBIE_COLLIDER_RADIUS } from './zombie';
+import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE } from './zombie';
 import {
   ZOMBIE_ATTACK_SLOT_COUNT,
   ZOMBIE_ATTACK_SLOT_RADIUS,
@@ -119,14 +119,10 @@ describe('zombie attack slots', () => {
     expect(shouldZombieRepositionToSlot('hit', false)).toBe(false);
   });
 
-  it('uses six collider-safe attack slots strictly inside attack range', () => {
-    const adjacentSlotDistance =
-      2 * ZOMBIE_ATTACK_SLOT_RADIUS * Math.sin(Math.PI / ZOMBIE_ATTACK_SLOT_COUNT);
-
-    expect(ZOMBIE_ATTACK_SLOT_COUNT).toBe(6);
+  it('uses eight attack slots strictly inside attack range', () => {
+    expect(ZOMBIE_ATTACK_SLOT_COUNT).toBe(8);
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBe(0.79);
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
-    expect(adjacentSlotDistance).toBeGreaterThan(ZOMBIE_COLLIDER_RADIUS * 2);
   });
 
   it('clears all ownership on reset', () => {

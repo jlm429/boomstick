@@ -1,6 +1,6 @@
 import type { ZombieBehaviorMode } from './zombie';
 
-export const ZOMBIE_ATTACK_SLOT_COUNT = 6;
+export const ZOMBIE_ATTACK_SLOT_COUNT = 8;
 export const ZOMBIE_ATTACK_SLOT_RADIUS = 0.79;
 export const ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE = 0.04;
 export const ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE = 0.12;
