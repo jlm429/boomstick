@@ -99,10 +99,23 @@ describe('zombie attack slots', () => {
     expect(coordinator.getAttackSlot('settled')).toBeNull();
   });
 
-  it('resumes slot steering in attack mode only after exiting settlement tolerance', () => {
+  it('keeps a settled zombie chasing when player motion puts it outside attack range', () => {
+    const playerMove = 0.02;
+    const zombiePosition = { x: 0, z: ZOMBIE_ATTACK_SLOT_RADIUS };
+    const movedSlotPosition = {
+      x: 0,
+      z: ZOMBIE_ATTACK_SLOT_RADIUS - playerMove,
+    };
+    const settled = updateZombieSlotSettlement(true, zombiePosition, movedSlotPosition);
+
+    expect(ZOMBIE_ATTACK_SLOT_RADIUS + playerMove).toBeGreaterThan(ZOMBIE_ATTACK_DISTANCE);
+    expect(settled).toBe(true);
+    expect(shouldZombieRepositionToSlot('chase', settled)).toBe(true);
+  });
+
+  it('resumes attack-mode slot steering only after exiting settlement tolerance', () => {
     expect(shouldZombieRepositionToSlot('attack', true)).toBe(false);
     expect(shouldZombieRepositionToSlot('attack', false)).toBe(true);
-    expect(shouldZombieRepositionToSlot('chase', false)).toBe(true);
     expect(shouldZombieRepositionToSlot('hit', false)).toBe(false);
   });
 

@@ -48,7 +48,7 @@ export const updateZombieSlotSettlement = (
 };
 
 export const shouldZombieRepositionToSlot = (mode: ZombieBehaviorMode, settled: boolean) =>
-  (mode === 'chase' || mode === 'attack') && !settled;
+  mode === 'chase' || (mode === 'attack' && !settled);
 
 export class ZombieAttackSlotCoordinator {
   private readonly attackOwners = new Map<number, string>();
