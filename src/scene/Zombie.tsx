@@ -56,6 +56,7 @@ import {
 } from '../game/zombie';
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
 import {
+  shouldZombieRepositionToSlot,
   ZombieAttackSlotCoordinator,
   updateZombieSlotSettlement,
 } from '../game/zombieAttackSlots';
@@ -593,12 +594,8 @@ function ZombieActor({
       );
     }
     const settled = slotTarget !== null && slotSettledRef.current;
-    if (
-      !Number.isFinite(movementDistance) ||
-      movementDistance <= 0 ||
-      settled ||
-      behaviorRef.current.mode !== 'chase'
-    ) {
+    const repositioning = shouldZombieRepositionToSlot(behaviorRef.current.mode, settled);
+    if (!Number.isFinite(movementDistance) || movementDistance <= 0 || !repositioning) {
       rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
       if (behaviorRef.current.mode === 'attack' && visualRef.current) {
         const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);

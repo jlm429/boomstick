@@ -1,5 +1,7 @@
-export const ZOMBIE_ATTACK_SLOT_COUNT = 8;
-export const ZOMBIE_ATTACK_SLOT_RADIUS = 0.76;
+import type { ZombieBehaviorMode } from './zombie';
+
+export const ZOMBIE_ATTACK_SLOT_COUNT = 6;
+export const ZOMBIE_ATTACK_SLOT_RADIUS = 0.79;
 export const ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE = 0.04;
 export const ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE = 0.12;
 export const ZOMBIE_ATTACK_WAITING_RADIUS = 1.4;
@@ -44,6 +46,9 @@ export const updateZombieSlotSettlement = (
     : ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE;
   return squaredDistance(zombiePosition, targetPosition) <= tolerance * tolerance;
 };
+
+export const shouldZombieRepositionToSlot = (mode: ZombieBehaviorMode, settled: boolean) =>
+  (mode === 'chase' || mode === 'attack') && !settled;
 
 export class ZombieAttackSlotCoordinator {
   private readonly attackOwners = new Map<number, string>();

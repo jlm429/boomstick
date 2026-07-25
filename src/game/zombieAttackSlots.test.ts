@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE } from './zombie';
+import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE, ZOMBIE_COLLIDER_RADIUS } from './zombie';
 import {
   ZOMBIE_ATTACK_SLOT_COUNT,
   ZOMBIE_ATTACK_SLOT_RADIUS,
   ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE,
   ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE,
   ZOMBIE_ATTACK_WAITING_RADIUS,
+  shouldZombieRepositionToSlot,
   ZombieAttackSlotCoordinator,
   updateZombieSlotSettlement,
 } from './zombieAttackSlots';
@@ -98,12 +99,27 @@ describe('zombie attack slots', () => {
     expect(coordinator.getAttackSlot('settled')).toBeNull();
   });
 
-  it('clears all ownership on reset and uses the configured in-range slot radius', () => {
+  it('resumes slot steering in attack mode only after exiting settlement tolerance', () => {
+    expect(shouldZombieRepositionToSlot('attack', true)).toBe(false);
+    expect(shouldZombieRepositionToSlot('attack', false)).toBe(true);
+    expect(shouldZombieRepositionToSlot('chase', false)).toBe(true);
+    expect(shouldZombieRepositionToSlot('hit', false)).toBe(false);
+  });
+
+  it('uses six collider-safe attack slots strictly inside attack range', () => {
+    const adjacentSlotDistance =
+      2 * ZOMBIE_ATTACK_SLOT_RADIUS * Math.sin(Math.PI / ZOMBIE_ATTACK_SLOT_COUNT);
+
+    expect(ZOMBIE_ATTACK_SLOT_COUNT).toBe(6);
+    expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBe(0.79);
+    expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
+    expect(adjacentSlotDistance).toBeGreaterThan(ZOMBIE_COLLIDER_RADIUS * 2);
+  });
+
+  it('clears all ownership on reset', () => {
     const coordinator = new ZombieAttackSlotCoordinator();
     const first = coordinator.claim('first', { x: 0, z: 8 }, { x: 0, z: 0 });
     coordinator.claim('second', { x: 8, z: 0 }, { x: 0, z: 0 });
-
-    expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
 
     coordinator.reset();
     expect(coordinator.getAttackSlot('first')).toBeNull();
