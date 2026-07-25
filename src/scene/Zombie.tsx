@@ -38,15 +38,16 @@ import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactHandler } from '../game/impacts';
 import {
   ZOMBIE_COLLIDER_RADIUS,
-  ZOMBIE_MOVE_SPEED,
   advanceZombieBehavior,
   createZombieBehaviorState,
+  createZombieMotionVariation,
   createZombieState,
   hitZombie,
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
   selectZombieSteering,
+  zombieMovementSpeed,
   type PlanarDirection,
   type ZombieBehaviorMode,
   type ZombieBehaviorState,
@@ -56,6 +57,7 @@ import {
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
 import {
   applyZombieAnimationTimeScales,
+  createInitialZombieWalkPhaseApplier,
   type ZombieActions,
   type ZombieAnimation,
 } from './zombieAnimation';
@@ -257,6 +259,11 @@ function ZombieActor({
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
   const nextBurstIdRef = useRef(1);
   const nextBiteBurstIdRef = useRef(1);
+  const [motionVariation] = useState(createZombieMotionVariation);
+  const [applyInitialWalkPhase] = useState(() =>
+    createInitialZombieWalkPhaseApplier(motionVariation.walkPhase),
+  );
+  const movementSpeed = zombieMovementSpeed(motionVariation);
   const zombieRef = useRef(createZombieState());
   const [zombie, setZombie] = useState(createZombieState);
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
@@ -364,25 +371,29 @@ function ZombieActor({
     );
   }, [active, playerAlive, zombieAudio]);
 
-  const playAnimation = useCallback((next: ZombieAnimation) => {
-    const nextAction = actionsRef.current[next];
-    if (!nextAction) return;
-    const previousAction = currentActionRef.current
-      ? actionsRef.current[currentActionRef.current]
-      : undefined;
-    if (previousAction && previousAction !== nextAction) {
-      previousAction.fadeOut(ANIMATION_BLEND_SECONDS);
-    }
-    nextAction.reset();
-    nextAction.enabled = true;
-    nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
-    nextAction.setLoop(
-      nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
-      nextAction.clampWhenFinished ? 1 : Infinity,
-    );
-    nextAction.fadeIn(ANIMATION_BLEND_SECONDS).play();
-    currentActionRef.current = next;
-  }, []);
+  const playAnimation = useCallback(
+    (next: ZombieAnimation) => {
+      const nextAction = actionsRef.current[next];
+      if (!nextAction) return;
+      const previousAction = currentActionRef.current
+        ? actionsRef.current[currentActionRef.current]
+        : undefined;
+      if (previousAction && previousAction !== nextAction) {
+        previousAction.fadeOut(ANIMATION_BLEND_SECONDS);
+      }
+      nextAction.reset();
+      if (next === 'run') applyInitialWalkPhase(nextAction);
+      nextAction.enabled = true;
+      nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
+      nextAction.setLoop(
+        nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
+        nextAction.clampWhenFinished ? 1 : Infinity,
+      );
+      nextAction.fadeIn(ANIMATION_BLEND_SECONDS).play();
+      currentActionRef.current = next;
+    },
+    [applyInitialWalkPhase],
+  );
 
   useEffect(() => {
     const mixer = new AnimationMixer(model);
@@ -390,7 +401,7 @@ function ZombieActor({
     const actions = Object.fromEntries(
       clips.map((clip) => [clip.name, mixer.clipAction(clip)]),
     ) as ZombieActions;
-    applyZombieAnimationTimeScales(actions);
+    applyZombieAnimationTimeScales(actions, motionVariation);
     actionsRef.current = actions;
     playAnimation('idle');
     return () => {
@@ -400,7 +411,7 @@ function ZombieActor({
       actionsRef.current = {};
       currentActionRef.current = null;
     };
-  }, [clips, model, playAnimation]);
+  }, [clips, model, motionVariation, playAnimation]);
 
   useEffect(() => playAnimation(animation), [animation, animationRevision, playAnimation]);
   useEffect(() => () => zombieAudio.stop(), [zombieAudio]);
@@ -539,9 +550,9 @@ function ZombieActor({
 
     rigidBody.setLinvel(
       {
-        x: steering.direction.x * ZOMBIE_MOVE_SPEED,
+        x: steering.direction.x * movementSpeed,
         y: verticalVelocity,
-        z: steering.direction.z * ZOMBIE_MOVE_SPEED,
+        z: steering.direction.z * movementSpeed,
       },
       true,
     );

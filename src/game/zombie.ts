@@ -4,6 +4,8 @@ import type { Vector3Tuple } from './arena';
 
 export const ZOMBIE_MAX_HEALTH = 300;
 export const ZOMBIE_MOVE_SPEED = 3.2;
+export const ZOMBIE_SPEED_MULTIPLIER_MIN = 0.95;
+export const ZOMBIE_SPEED_MULTIPLIER_MAX = 1.05;
 export const ZOMBIE_ATTACK_DISTANCE = WEAK_ZOMBIE_ATTACK.range;
 export const ZOMBIE_COLLIDER_RADIUS = 0.38;
 export const ZOMBIE_CORPSE_SECONDS = 5;
@@ -92,6 +94,11 @@ export type ZombieState = Readonly<{
   dead: boolean;
 }>;
 
+export type ZombieMotionVariation = Readonly<{
+  walkPhase: number;
+  speedMultiplier: number;
+}>;
+
 export type ZombieHitResult = Readonly<{
   state: ZombieState;
   damage: number;
@@ -102,6 +109,18 @@ export const createZombieState = (): ZombieState => ({
   health: ZOMBIE_MAX_HEALTH,
   dead: false,
 });
+
+export const createZombieMotionVariation = (
+  random: () => number = Math.random,
+): ZombieMotionVariation => ({
+  walkPhase: random(),
+  speedMultiplier:
+    ZOMBIE_SPEED_MULTIPLIER_MIN +
+    random() * (ZOMBIE_SPEED_MULTIPLIER_MAX - ZOMBIE_SPEED_MULTIPLIER_MIN),
+});
+
+export const zombieMovementSpeed = ({ speedMultiplier }: ZombieMotionVariation) =>
+  ZOMBIE_MOVE_SPEED * speedMultiplier;
 
 export const createZombieBehaviorState = (): ZombieBehaviorState => ({
   mode: 'idle',

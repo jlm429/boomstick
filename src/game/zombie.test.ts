@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ARENA_BLOCKS, isArenaSpawnValid, type ArenaBlock } from './arena';
 import { PLAYER_SPAWN } from './constants';
 import {
@@ -7,14 +7,19 @@ import {
   ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_CORPSE_SECONDS,
   ZOMBIE_MAX_HEALTH,
+  ZOMBIE_MOVE_SPEED,
+  ZOMBIE_SPEED_MULTIPLIER_MAX,
+  ZOMBIE_SPEED_MULTIPLIER_MIN,
   advanceZombieBehavior,
   createZombieBehaviorState,
+  createZombieMotionVariation,
   createZombieState,
   hitZombie,
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
   selectZombieSteering,
+  zombieMovementSpeed,
 } from './zombie';
 
 function segmentIntersectsBlock(
@@ -112,6 +117,37 @@ describe('zombie health', () => {
 
     expect(zombie).toEqual({ health: 0, dead: true });
     expect(hitZombie(zombie, 0)).toEqual({ state: zombie, damage: 0, reacted: false });
+  });
+});
+
+describe('zombie motion variation', () => {
+  it('samples one full-cycle phase and one subtle speed multiplier exactly once', () => {
+    const random = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(0);
+    const minimum = createZombieMotionVariation(random);
+
+    expect(minimum).toEqual({
+      walkPhase: 0,
+      speedMultiplier: ZOMBIE_SPEED_MULTIPLIER_MIN,
+    });
+    expect(random).toHaveBeenCalledTimes(2);
+
+    random.mockClear();
+    random.mockReturnValueOnce(0.999).mockReturnValueOnce(1);
+    const maximum = createZombieMotionVariation(random);
+
+    expect(maximum.walkPhase).toBe(0.999);
+    expect(maximum.speedMultiplier).toBe(ZOMBIE_SPEED_MULTIPLIER_MAX);
+    expect(random).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the sampled multiplier stable for the zombie lifetime', () => {
+    const variation = createZombieMotionVariation(
+      vi.fn().mockReturnValueOnce(0.4).mockReturnValueOnce(0.75),
+    );
+
+    expect(zombieMovementSpeed(variation)).toBe(ZOMBIE_MOVE_SPEED * variation.speedMultiplier);
+    expect(zombieMovementSpeed(variation)).toBe(ZOMBIE_MOVE_SPEED * variation.speedMultiplier);
+    expect(variation.speedMultiplier).toBeCloseTo(1.025);
   });
 });
 
