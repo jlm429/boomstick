@@ -3,9 +3,11 @@ import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE } from './zombie';
 import {
   ZOMBIE_ATTACK_SLOT_COUNT,
   ZOMBIE_ATTACK_SLOT_RADIUS,
+  ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE,
+  ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE,
   ZOMBIE_ATTACK_WAITING_RADIUS,
   ZombieAttackSlotCoordinator,
-  hasZombieArrivedAtSlot,
+  updateZombieSlotSettlement,
 } from './zombieAttackSlots';
 
 const player = { x: 10, z: -4 };
@@ -67,13 +69,41 @@ describe('zombie attack slots', () => {
     expect(promoted).toMatchObject({ kind: 'attack', index: releasedSlot });
   });
 
-  it('clears all ownership on reset and uses the configured in-range arrival target', () => {
+  it('keeps a stable assignment settled through small target motion and exits beyond hysteresis', () => {
+    const coordinator = new ZombieAttackSlotCoordinator();
+    const zombiePosition = { x: 0, z: 8 };
+    const first = coordinator.claim('settled', zombiePosition, { x: 0, z: 0 });
+
+    let settled = updateZombieSlotSettlement(false, first.position, first.position);
+    expect(settled).toBe(true);
+    expect(ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE).toBeGreaterThan(
+      ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE,
+    );
+
+    const smallPlayerMove = coordinator.claim('settled', zombiePosition, { x: 0.08, z: 0 });
+    expect(smallPlayerMove.index).toBe(first.index);
+    expect(updateZombieSlotSettlement(false, first.position, smallPlayerMove.position)).toBe(
+      false,
+    );
+    settled = updateZombieSlotSettlement(settled, first.position, smallPlayerMove.position);
+    expect(settled).toBe(true);
+    expect(coordinator.getAttackSlot('settled')).toBe(first.index);
+
+    const largePlayerMove = coordinator.claim('settled', zombiePosition, { x: 0.13, z: 0 });
+    settled = updateZombieSlotSettlement(settled, first.position, largePlayerMove.position);
+    expect(settled).toBe(false);
+    expect(coordinator.getAttackSlot('settled')).toBe(first.index);
+
+    coordinator.release('settled');
+    expect(coordinator.getAttackSlot('settled')).toBeNull();
+  });
+
+  it('clears all ownership on reset and uses the configured in-range slot radius', () => {
     const coordinator = new ZombieAttackSlotCoordinator();
     const first = coordinator.claim('first', { x: 0, z: 8 }, { x: 0, z: 0 });
     coordinator.claim('second', { x: 8, z: 0 }, { x: 0, z: 0 });
 
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
-    expect(hasZombieArrivedAtSlot(first.position, first.position)).toBe(true);
 
     coordinator.reset();
     expect(coordinator.getAttackSlot('first')).toBeNull();

@@ -55,7 +55,10 @@ import {
   type TrainingZombieSpawn,
 } from '../game/zombie';
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
-import { ZombieAttackSlotCoordinator, hasZombieArrivedAtSlot } from '../game/zombieAttackSlots';
+import {
+  ZombieAttackSlotCoordinator,
+  updateZombieSlotSettlement,
+} from '../game/zombieAttackSlots';
 import {
   applyZombieAnimationTimeScales,
   createInitialZombieWalkPhaseApplier,
@@ -260,6 +263,8 @@ function ZombieActor({
   const behaviorRef = useRef<ZombieBehaviorState>(createZombieBehaviorState());
   const removedRef = useRef(false);
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
+  const slotAssignmentRef = useRef<number | null>(null);
+  const slotSettledRef = useRef(false);
   const nextBurstIdRef = useRef(1);
   const nextBiteBurstIdRef = useRef(1);
   const [motionVariation] = useState(createZombieMotionVariation);
@@ -335,6 +340,8 @@ function ZombieActor({
     if (!active || !playerAlive) {
       attackControllerRef.current?.cancel();
       attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
     }
   }, [active, attackSlots, playerAlive, spawn.id]);
 
@@ -450,6 +457,8 @@ function ZombieActor({
     if (result.state.dead) {
       attackControllerRef.current?.cancel();
       attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
     }
     applyBehavior(interruptZombieBehavior(behaviorRef.current, result.state.dead), true);
     return 'wall';
@@ -539,7 +548,11 @@ function ZombieActor({
       playerAlive &&
       (behaviorRef.current.mode === 'chase' || behaviorRef.current.mode === 'attack');
     const slotTarget = pursuing ? attackSlots.claim(spawn.id, position, camera.position) : null;
-    if (!pursuing) attackSlots.release(spawn.id);
+    if (!pursuing) {
+      attackSlots.release(spawn.id);
+      slotAssignmentRef.current = null;
+      slotSettledRef.current = false;
+    }
     const movementTarget = slotTarget?.position ?? camera.position;
     const toMovementTarget = {
       x: movementTarget.x - position.x,
@@ -566,11 +579,24 @@ function ZombieActor({
 
     const velocity = rigidBody.linvel();
     const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
-    const arrived = slotTarget ? hasZombieArrivedAtSlot(position, slotTarget.position) : false;
+    if (slotTarget) {
+      const assignment =
+        slotTarget.kind === 'attack' ? slotTarget.index : -slotTarget.index - 1;
+      if (slotAssignmentRef.current !== assignment) {
+        slotAssignmentRef.current = assignment;
+        slotSettledRef.current = false;
+      }
+      slotSettledRef.current = updateZombieSlotSettlement(
+        slotSettledRef.current,
+        position,
+        slotTarget.position,
+      );
+    }
+    const settled = slotTarget !== null && slotSettledRef.current;
     if (
       !Number.isFinite(movementDistance) ||
       movementDistance <= 0 ||
-      arrived ||
+      settled ||
       behaviorRef.current.mode !== 'chase'
     ) {
       rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
