@@ -18,6 +18,7 @@ import {
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
+  selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
 } from './zombie';
@@ -269,6 +270,33 @@ describe('zombie behavior', () => {
 });
 
 describe('zombie steering', () => {
+  it('faces the player while preparing an attack and repositioning toward a moved slot', () => {
+    const playerDirection = { x: 0, z: 0.7 };
+    const slotMovementDirection = { x: 1, z: 0 };
+
+    expect(selectZombieFacingDirection('attack', playerDirection, slotMovementDirection)).toBe(
+      playerDirection,
+    );
+  });
+
+  it('keeps the active bite facing the player while slot movement continues', () => {
+    const playerDirection = { x: -0.3, z: 0.6 };
+    const slotMovementDirection = { x: 0.8, z: -0.2 };
+
+    expect(selectZombieFacingDirection('attack', playerDirection, slotMovementDirection)).toBe(
+      playerDirection,
+    );
+  });
+
+  it('continues facing movement direction while chasing an attack slot', () => {
+    const playerDirection = { x: 0, z: 1 };
+    const slotMovementDirection = { x: 1, z: 0 };
+
+    expect(selectZombieFacingDirection('chase', playerDirection, slotMovementDirection)).toBe(
+      slotMovementDirection,
+    );
+  });
+
   const castAgainstWall = (
     origin: { x: number; z: number },
     direction: { x: number; z: number },

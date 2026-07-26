@@ -78,6 +78,12 @@ export type ZombieSteering = Readonly<{
   side: ZombieSteeringSide;
 }>;
 
+export const selectZombieFacingDirection = (
+  mode: ZombieBehaviorMode,
+  playerDirection: PlanarDirection,
+  movementDirection: PlanarDirection,
+) => (mode === 'attack' ? playerDirection : movementDirection);
+
 export type ZombieSteeringProbe = (
   direction: PlanarDirection,
   maximumDistance: number,
