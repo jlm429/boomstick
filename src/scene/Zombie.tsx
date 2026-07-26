@@ -46,6 +46,7 @@ import {
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
+  selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
   type PlanarDirection,
@@ -614,8 +615,13 @@ function ZombieActor({
       },
       true,
     );
-    if (visualRef.current && (steering.direction.x !== 0 || steering.direction.z !== 0)) {
-      const targetAngle = Math.atan2(steering.direction.x, steering.direction.z);
+    const facingDirection = selectZombieFacingDirection(
+      behaviorRef.current.mode,
+      toPlayer,
+      steering.direction,
+    );
+    if (visualRef.current && (facingDirection.x !== 0 || facingDirection.z !== 0)) {
+      const targetAngle = Math.atan2(facingDirection.x, facingDirection.z);
       const turn = normalizedAngleDelta(visualRef.current.rotation.y, targetAngle);
       visualRef.current.rotation.y +=
         Math.sign(turn) * Math.min(Math.abs(turn), TURN_SPEED_RADIANS * delta);
