@@ -2,12 +2,12 @@
 
 ## Project
 
-Boomstick is a browser-only, single-player first-person movement prototype built with React 19, TypeScript, Vite, React Three Fiber, Three.js, Rapier, and Zustand. There is no application server, API, authentication, persistent storage, or remote asset pipeline in the current codebase.
+Boomstick is a browser-only, single-player arena combat prototype built with React, TypeScript, React Three Fiber, Three.js, Rapier, and Zustand. There is no application server, API, authentication, or remote asset pipeline. The only persistent state is the Invert Y setting in browser local storage.
 
 - `src/ui` owns accessible menus, HUD, and pause UI.
-- `src/game` owns the phase store and rendering-independent arena, input, and movement rules.
-- `src/scene` owns the Canvas, Three.js presentation, Rapier world, and player runtime behavior.
-- The `playing` phase is valid only while the R3F Canvas owns pointer lock. Arena visuals stay available outside the asynchronous physics boundary.
+- `src/game` owns the phase store and rendering-independent arena, input, movement, combat, encounter, and health rules.
+- `src/scene` owns the Canvas, Three.js presentation, Rapier world, combat presentation, and entity runtime behavior.
+- The `playing` phase is valid only while the R3F Canvas owns pointer lock. Player actions also require an alive life state. Arena visuals stay available outside the asynchronous physics boundary.
 
 Read [docs/architecture.md](docs/architecture.md) for the current event and lifecycle flow.
 
@@ -15,32 +15,31 @@ Read [docs/architecture.md](docs/architecture.md) for the current event and life
 
 - Work from the current repository, worktree, and affected code path. State assumptions only when they materially affect behavior, scope, or architecture.
 - Implement the smallest complete change. Do not add speculative features, abstractions, configuration, fallbacks, or unrelated refactors.
-- Prefer small, end-to-end vertical slices. Complete and validate one meaningful feature before starting another when practical.
 - Preserve user changes and architectural boundaries. Remove only artifacts made obsolete by your own change. Review the final diff so every changed line serves the task.
 - For meaningful work, define observable success before coding. Reproduce bugs when practical, trace the relevant flow, and add or identify regression coverage.
-- Before changing browser, input, WebGL, scene lifecycle, rendering, or physics code, rule out environment and stale-build causes. When Firefox works but Chrome fails, rule out Chrome graphics configuration before altering application code.
+- For a browser-visible failure, follow the browser-debugging skill before changing code.
 - Do not make irreversible or environment-wide changes without explicit approval.
 
 ## Safety and completion
 
-- Never read, expose, summarize, or commit secrets, `.env` contents, credentials, private keys, authenticated URLs, or personal filesystem paths. If a secret is exposed, stop and notify the user.
+- Never read, expose, summarize, or commit secrets, `.env` contents, credentials, private keys, or authenticated URLs. Do not expose unnecessary absolute personal filesystem paths in public artifacts; prefer repository-relative or `~`-normalized paths when a local path is needed. If a secret is exposed, stop and notify the user.
 - Treat browser URLs, future imported data, and user-controlled text as untrusted. Do not use unsafe HTML, `dangerouslySetInnerHTML`, `eval`, generated code, or casually add dependencies. Review the relevant OWASP risks for any future network, persistence, URL, HTML, upload, or dependency change.
 - Do not commit, push, rebase, rewrite history, modify remotes, or delete Git refs unless explicitly asked. Treat workflow changes as production infrastructure.
 - A task is complete only when requested behavior, relevant tests, and applicable browser or lifecycle checks pass; the final diff contains only intended changes; and skipped validation or uncertainty is reported plainly. A build, clean console, or unit test alone does not prove a WebGL, input, scene, or physics fix.
 
 ## Skill routing
 
-Read every skill that crosses a task boundary.
+Before acting, read each row whose change area or diagnostic rule is actually in scope. Load multiple skills only when the task crosses those boundaries.
 
-| Change area                                                                  | Read first                                                                             |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| UI, Zustand phases, pointer lock, input, or game rules                       | [.agents/skills/architecture/SKILL.md](.agents/skills/architecture/SKILL.md)           |
-| Chrome, Firefox, cache, WebGL, black canvas, or runtime diagnosis            | [.agents/skills/browser-debugging/SKILL.md](.agents/skills/browser-debugging/SKILL.md) |
-| Canvas, React Three Fiber, Three.js, scene resources, or performance         | [.agents/skills/rendering/SKILL.md](.agents/skills/rendering/SKILL.md)                 |
-| Rapier bodies, colliders, movement, collision, restart, or simulation timing | [.agents/skills/physics/SKILL.md](.agents/skills/physics/SKILL.md)                     |
-| Tests, CI, or validation                                                     | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md)                     |
-| Planning slices, CHANGELOG, handoff, pull requests, or resource limits       | [.agents/skills/workflow/SKILL.md](.agents/skills/workflow/SKILL.md)                   |
-| Pages hosting or deployment workflow                                         | [.agents/skills/deployment/SKILL.md](.agents/skills/deployment/SKILL.md)               |
+| Change area                                                                                              | Read first                                                                             |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `App`, UI, game rules or state, phases, life state, pointer lock, input, settings, restart, or HUD       | [.agents/skills/architecture/SKILL.md](.agents/skills/architecture/SKILL.md)           |
+| Diagnosing stale builds, cache, browser-only failures, WebGL, blank or black Canvas, or GPU state        | [.agents/skills/browser-debugging/SKILL.md](.agents/skills/browser-debugging/SKILL.md) |
+| Canvas, R3F, Three.js, camera, materials, lights, raycasting, animation assets, frame loop, or resources | [.agents/skills/rendering/SKILL.md](.agents/skills/rendering/SKILL.md)                 |
+| Rapier world settings, bodies, colliders, physical motion, collision, physical reset, or timing          | [.agents/skills/physics/SKILL.md](.agents/skills/physics/SKILL.md)                     |
+| Tests, CI failures, validation selection, or verification evidence                                       | [.agents/skills/testing/SKILL.md](.agents/skills/testing/SKILL.md)                     |
+| Planning slices, CHANGELOG, handoff, pull requests, or resource limits                                   | [.agents/skills/workflow/SKILL.md](.agents/skills/workflow/SKILL.md)                   |
+| Vite base, CI or Pages workflow, hosting path, or deployment                                             | [.agents/skills/deployment/SKILL.md](.agents/skills/deployment/SKILL.md)               |
 
 ## Maintaining this file
 
