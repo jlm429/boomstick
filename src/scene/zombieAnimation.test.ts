@@ -19,9 +19,16 @@ describe('zombie animation time scales', () => {
     const variation = { walkPhase: 0.75, speedMultiplier: 1.04 };
     applyZombieAnimationTimeScales(actions, variation);
 
-    expect(HIT_REACTION_TIME_SCALE).toBe(1.5);
+    const hitAction = actions.hit;
+    expect(hitAction).toBeDefined();
+    if (!hitAction) throw new Error('Expected hit animation action');
+
+    expect(HIT_REACTION_TIME_SCALE).toBe(3);
     expect(actions.run?.timeScale).toBe(variation.speedMultiplier);
-    expect(actions.hit?.timeScale).toBe(HIT_REACTION_TIME_SCALE);
+    expect(hitAction.timeScale).toBe(HIT_REACTION_TIME_SCALE);
+    expect(hitAction.getClip().duration / hitAction.timeScale).toBe(
+      hitAction.getClip().duration / 1.5 / 2,
+    );
     for (const name of ['idle', 'attack', 'dying'] as const) {
       expect(actions[name]?.timeScale).toBe(1);
     }

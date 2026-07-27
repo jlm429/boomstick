@@ -1,7 +1,7 @@
 import type { AnimationAction } from 'three';
 import type { ZombieMotionVariation } from '../game/zombie';
 
-export const HIT_REACTION_TIME_SCALE = 1.5;
+export const HIT_REACTION_TIME_SCALE = 3;
 
 export type ZombieAnimation = 'idle' | 'run' | 'attack' | 'hit' | 'dying';
 export type ZombieActions = Partial<Record<ZombieAnimation, AnimationAction>>;
