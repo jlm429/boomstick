@@ -176,12 +176,16 @@ describe('App navigation', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
+    const gameShell = canvas.closest('main');
     expect(screen.getByText('Tap to begin. Drag the right side to look.')).toBeInTheDocument();
+    expect(gameShell).toHaveClass('has-touch-controls');
+    expect(gameShell).not.toHaveClass('touch-gameplay-active');
 
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
 
     expect(requestPointerLock).not.toHaveBeenCalled();
     expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(gameShell).toHaveClass('touch-gameplay-active');
     expect(screen.getByRole('group', { name: 'Touch gameplay controls' })).toBeInTheDocument();
     expect(useAppStore.getState()).toMatchObject({
       phase: 'playing',
@@ -195,6 +199,7 @@ describe('App navigation', () => {
     });
     expect(screen.getByRole('dialog', { name: 'Catch your breath.' })).toBeInTheDocument();
     expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(gameShell).not.toHaveClass('touch-gameplay-active');
     expect(
       screen.queryByRole('group', { name: 'Touch gameplay controls' }),
     ).not.toBeInTheDocument();
@@ -202,6 +207,7 @@ describe('App navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
     expect(canvas).toHaveAttribute('data-run-id', '2');
     expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(gameShell).toHaveClass('touch-gameplay-active');
     expect(screen.getByRole('group', { name: 'Touch gameplay controls' })).toBeInTheDocument();
     expect(requestPointerLock).not.toHaveBeenCalled();
   });

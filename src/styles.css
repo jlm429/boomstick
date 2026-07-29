@@ -184,7 +184,7 @@ h2 {
   inset: 0;
   background: #130e0e;
 }
-.game-shell.has-touch-controls {
+.game-shell.touch-gameplay-active {
   touch-action: none;
   overscroll-behavior: none;
   user-select: none;

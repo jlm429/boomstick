@@ -206,8 +206,16 @@ export function App() {
     return <MainMenu onPlay={startTraining} onAbout={showAbout} onControls={showControls} />;
   }
 
+  const gameShellClassName = [
+    'game-shell',
+    touchControls && 'has-touch-controls',
+    touchControls && gameplayActive && 'touch-gameplay-active',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <main className={touchControls ? 'game-shell has-touch-controls' : 'game-shell'}>
+    <main className={gameShellClassName}>
       <GameViewport
         active={gameplayActive}
         invertY={invertY}
