@@ -18,7 +18,9 @@ import {
   mouseLookDelta,
   pressKey,
   releaseKey,
+  touchLookDelta,
   type PressedKeys,
+  type TouchInputState,
 } from '../game/input';
 import { movementVector } from '../game/movement';
 import {
@@ -46,10 +48,12 @@ export function Player({
   active,
   invertY,
   lifeState,
+  touchInput,
 }: {
   active: boolean;
   invertY: boolean;
   lifeState: PlayerLifeState;
+  touchInput: TouchInputState;
 }) {
   const body = useRef<RapierRigidBody>(null);
   const activeRef = useRef(active);
@@ -63,8 +67,11 @@ export function Player({
 
   useEffect(() => {
     activeRef.current = active;
-    if (!active) clearPressedKeys(pressed.current);
-  }, [active]);
+    if (!active) {
+      clearPressedKeys(pressed.current);
+      touchInput.clear();
+    }
+  }, [active, touchInput]);
 
   useEffect(() => {
     invertYRef.current = invertY;
@@ -72,10 +79,13 @@ export function Player({
 
   useEffect(() => {
     clearPressedKeys(pressed.current);
+    touchInput.clear();
     if (lifeState === 'alive') {
       deathElapsed.current = 0;
     }
-  }, [lifeState]);
+  }, [lifeState, touchInput]);
+
+  useEffect(() => () => touchInput.clear(), [touchInput]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -114,6 +124,12 @@ export function Player({
   }, [gl]);
 
   useFrame(({ clock }, delta) => {
+    if (activeRef.current && lifeState === 'alive') {
+      const [movementX, movementY] = touchInput.consumeLook();
+      const touchDelta = touchLookDelta(movementX, movementY, invertYRef.current);
+      yaw.current += touchDelta.yaw;
+      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + touchDelta.pitch));
+    }
     if (!Number.isFinite(yaw.current) || !Number.isFinite(pitch.current)) {
       yaw.current = 0;
       pitch.current = 0;
@@ -132,6 +148,7 @@ export function Player({
         PLAYER_SPAWN[2],
       );
       clearPressedKeys(pressed.current);
+      touchInput.clear();
       return;
     }
 
@@ -150,6 +167,7 @@ export function Player({
       rotation.set(pitch.current, yaw.current, deathVisual.cameraRoll);
       camera.quaternion.setFromEuler(rotation);
       clearPressedKeys(pressed.current);
+      touchInput.clear();
       return;
     }
 
@@ -169,6 +187,7 @@ export function Player({
     if (!activeRef.current) return;
     if (!Number.isFinite(delta) || delta > MAX_FRAME_DELTA) {
       clearPressedKeys(pressed.current);
+      touchInput.clear();
       const velocity = rigidBody.linvel();
       rigidBody.setLinvel(
         { x: 0, y: Number.isFinite(velocity.y) ? velocity.y : 0, z: 0 },
@@ -177,7 +196,10 @@ export function Player({
       return;
     }
 
-    const input = movementVector(movementInput(pressed.current));
+    const keyboardInput = movementVector(movementInput(pressed.current));
+    const touchMovement = touchInput.movement();
+    const input =
+      keyboardInput[0] !== 0 || keyboardInput[1] !== 0 ? keyboardInput : touchMovement;
     camera.getWorldDirection(cameraDirection);
     cameraDirection.y = 0;
     if (
@@ -202,7 +224,10 @@ export function Player({
       },
       true,
     );
-    if (pressed.current.Space && Math.abs(safeVerticalVelocity) < 0.12) {
+    if (
+      (pressed.current.Space || touchInput.hasJumpRequest()) &&
+      Math.abs(safeVerticalVelocity) < 0.12
+    ) {
       rigidBody.setLinvel(
         {
           x: hasInput ? walkDirection.x * MOVE_SPEED : 0,
@@ -212,6 +237,7 @@ export function Player({
         true,
       );
       releaseKey(pressed.current, 'Space');
+      touchInput.consumeJump();
     }
   });
 

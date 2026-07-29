@@ -43,6 +43,7 @@ export function GameHud({
   health,
   lifeState,
   playing,
+  touchControls = false,
   weaponState,
 }: {
   damageRevision: number;
@@ -51,6 +52,7 @@ export function GameHud({
   health: number;
   lifeState: PlayerLifeState;
   playing: boolean;
+  touchControls?: boolean;
   weaponState: WeaponState;
 }) {
   const playerAlive = lifeState === 'alive';
@@ -69,11 +71,17 @@ export function GameHud({
         </span>
         {weaponState.ammunition === 0 && !weaponState.isReloading && (
           <span key={emptyFirePulse} className="hud-reload-reminder">
-            R to Reload
+            {touchControls ? 'Tap Reload' : 'R to Reload'}
           </span>
         )}
         <span className="hud-hint">
-          {playing ? 'Escape to pause' : 'Enter Arena for mouse look'}
+          {touchControls
+            ? playing
+              ? 'Pause control at top right'
+              : 'Enter Arena for touch controls'
+            : playing
+              ? 'Escape to pause'
+              : 'Enter Arena for mouse look'}
         </span>
       </div>
       {isCriticalPlayerHealth(health, lifeState) && (
@@ -142,35 +150,50 @@ export function DefeatOverlay({
   );
 }
 
-export function EntryPrompt({ error, onEnter }: { error: string | null; onEnter: () => void }) {
+export function EntryPrompt({
+  error,
+  touchControls,
+  onEnter,
+}: {
+  error: string | null;
+  touchControls: boolean;
+  onEnter: () => void;
+}) {
+  const controls = touchControls
+    ? [
+        ['Left stick', 'Move'],
+        ['Right side', 'Look'],
+        ['Fire', 'Shoot'],
+        ['Jump', 'Jump'],
+        ['Reload', 'Reload'],
+        ['Pause', 'Pause'],
+      ]
+    : [
+        ['WASD', 'Move'],
+        ['Mouse', 'Look'],
+        ['Space', 'Jump'],
+        ['Escape', 'Pause'],
+        ['R', 'Reload'],
+      ];
+
   return (
     <section className="entry-prompt" aria-labelledby="entry-title">
       <p id="entry-title">Enter Arena</p>
-      <span className="entry-instruction">Click to capture the mouse and begin.</span>
+      <span className="entry-instruction">
+        {touchControls
+          ? 'Tap to begin. Drag the right side to look.'
+          : 'Click to capture the mouse and begin.'}
+      </span>
       <button className="button button-primary" onClick={onEnter}>
         Enter Arena
       </button>
       <dl className="entry-controls" aria-label="Arena controls">
-        <div>
-          <dt>WASD</dt>
-          <dd>Move</dd>
-        </div>
-        <div>
-          <dt>Mouse</dt>
-          <dd>Look</dd>
-        </div>
-        <div>
-          <dt>Space</dt>
-          <dd>Jump</dd>
-        </div>
-        <div>
-          <dt>Escape</dt>
-          <dd>Pause</dd>
-        </div>
-        <div>
-          <dt>R</dt>
-          <dd>Reload</dd>
-        </div>
+        {controls.map(([input, action]) => (
+          <div key={input}>
+            <dt>{input}</dt>
+            <dd>{action}</dd>
+          </div>
+        ))}
       </dl>
       {error && <span className="entry-error">{error}</span>}
     </section>

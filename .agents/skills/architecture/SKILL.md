@@ -14,9 +14,9 @@ Use [docs/architecture.md](../../../docs/architecture.md) for the current compon
 
 ## Phase and input invariants
 
-`App` owns browser pointer-lock requests and listens for `pointerlockchange`. The event is authoritative: `playing` requires the registered Canvas to own pointer lock, and any other phase must not claim it. Do not mark play active merely because a lock request was made.
+`App` owns browser pointer-lock requests, explicit touch sessions, and the listeners that validate them. For desktop control mode, `pointerlockchange` is authoritative: `playing` requires the registered Canvas to own pointer lock, and any other phase must not claim it. Do not mark desktop play active merely because a lock request was made. Touch control mode may enter `playing` without pointer lock only from the touch entry or resume action.
 
-Player actions require `playing`, Canvas-owned pointer lock, and an alive life state. Lock loss pauses a live run. Held keys are cleared on pause, blur, hidden-tab transitions, and death.
+Player actions require `playing`, the active control mode, and an alive life state. Lock loss pauses a desktop run. The visible pause control pauses a touch run. Held keys and touch state are cleared on pause, blur, hidden-tab transitions, death, reset, and unmount.
 
 `runId` keys `RunScene`. Restart and retry must return to a safe entry state and remount all run-owned state, including the player body, combat state, targets, zombies, attack coordination, timers, effects, and audio. Request pointer lock only from the initiating user action.
 

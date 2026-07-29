@@ -1,15 +1,24 @@
 # Controls
 
-Select **Enter Arena** from the main menu, then select **Enter Arena** to capture the pointer. The prompt
-explains mouse capture before the run starts. The browser's pointer-lock event is authoritative:
-movement and mouse look begin only after capture succeeds. If pointer lock is released, the game
-pauses and clears held input. Select **Resume** to capture the pointer again from that click.
+Select **Enter Arena** from the main menu, then select **Enter Arena** again to begin. On desktop,
+the prompt explains mouse capture before the run starts. The browser's pointer-lock event is
+authoritative: movement and mouse look begin only after capture succeeds. If pointer lock is
+released, the game pauses and clears held input. Select **Resume** to capture the pointer again
+from that click.
+
+When the browser reports one or more touch points and a coarse primary pointer, the entry prompt
+shows touch controls instead. Touch play starts without pointer lock. Drag the left stick to move
+and drag anywhere on the right-side look area to aim. Fire, Jump, Reload, and Pause use dedicated
+labeled controls. Touch pointers and queued input clear when play pauses, the tab is hidden, the
+run resets, or the scene unmounts.
 
 From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh training
 run with full health, a restored weapon, restored lights and targets, and no zombie, or select
 **Return to Main Menu** to return to the landing page. After all five zombie corpses are removed,
 the game pauses and shows **Training Complete**. Select **Restart Training** to reset the full
-encounter and capture the pointer for a fresh run.
+encounter and resume the selected control mode for a fresh run.
+
+### Desktop
 
 | Input                | Action                                |
 | -------------------- | ------------------------------------- |
@@ -21,12 +30,24 @@ encounter and capture the pointer for a fresh run.
 | `Space`              | Jump                                  |
 | `Esc`                | Pause and release pointer lock        |
 
+### Coarse touch
+
+| Input                | Action                     |
+| -------------------- | -------------------------- |
+| Enter Arena / Resume | Start or resume touch play |
+| Left movement stick  | Move                       |
+| Drag the right side  | Look                       |
+| **Fire**             | Fire the shotgun           |
+| **Reload**           | Reload the magazine        |
+| **Jump**             | Jump                       |
+| **Pause**            | Pause and clear input      |
+
 The player starts each run with 100 health. The health module immediately left of ammunition is
 green above 60 health, amber from 31 through 60, red from 1 through 30, and disabled at zero. Damage
 briefly pulses the module. While the player is alive at 1 through 5 health, a red edge vignette warns
 of critical health. At zero health, movement, mouse look, firing, and reload stop during a roughly
 one-second camera drop and fade. The defeat screen then offers **Retry**, which restores a fresh run
-and captures the pointer, or **Return to Main Menu**.
+and resumes the selected control mode, or **Return to Main Menu**.
 
 The shotgun starts each run with 10 rounds. Each valid shot consumes one round, and firing is
 disabled while the magazine is empty or a reload is in progress. Press `R` with a partially empty
@@ -52,4 +73,5 @@ lights hit from at most 18 units away visibly break, stop illuminating the arena
 destruction sound once. Later hits on the same light use the normal surface impact sound until
 Restart restores it.
 
-The main menu and pause dialog work without pointer lock. Mouse and keyboard are recommended for this prototype.
+The main menu and pause dialog work without pointer lock. Desktop controls remain available on
+fine-pointer browsers, including touch-capable computers whose primary pointer is not coarse.

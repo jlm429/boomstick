@@ -69,12 +69,33 @@ function setPointerLockElement(element: Element | null) {
   fireEvent(document, new Event('pointerlockchange'));
 }
 
+function setTouchControls(enabled: boolean) {
+  Object.defineProperty(navigator, 'maxTouchPoints', {
+    configurable: true,
+    value: enabled ? 5 : 0,
+  });
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: enabled && query === '(pointer: coarse)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe('App navigation', () => {
   const requestPointerLock = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
   beforeEach(() => {
     useAppStore.setState({
       phase: 'main-menu',
+      controlMode: null,
       hasPointerLock: false,
       pointerLockError: null,
       runId: 0,
@@ -95,6 +116,7 @@ describe('App navigation', () => {
       value: null,
     });
     requestPointerLock.mockClear();
+    setTouchControls(false);
   });
 
   afterEach(() => vi.useRealTimers());
@@ -141,9 +163,47 @@ describe('App navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     expect(requestPointerLock).toHaveBeenCalledOnce();
     expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(
+      screen.queryByRole('group', { name: 'Touch gameplay controls' }),
+    ).not.toBeInTheDocument();
     act(() => setPointerLockElement(canvas));
     expect(canvas).toHaveAttribute('data-active', 'true');
     expect(useAppStore.getState().phase).toBe('playing');
+  });
+
+  it('uses explicit touch play without pointer lock and cleans up pause and restart', () => {
+    setTouchControls(true);
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    expect(screen.getByText('Tap to begin. Drag the right side to look.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+
+    expect(requestPointerLock).not.toHaveBeenCalled();
+    expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(screen.getByRole('group', { name: 'Touch gameplay controls' })).toBeInTheDocument();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'playing',
+      controlMode: 'touch',
+      hasPointerLock: false,
+    });
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), {
+      button: 0,
+      pointerId: 1,
+    });
+    expect(screen.getByRole('dialog', { name: 'Catch your breath.' })).toBeInTheDocument();
+    expect(canvas).toHaveAttribute('data-active', 'false');
+    expect(
+      screen.queryByRole('group', { name: 'Touch gameplay controls' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(canvas).toHaveAttribute('data-run-id', '2');
+    expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(screen.getByRole('group', { name: 'Touch gameplay controls' })).toBeInTheDocument();
+    expect(requestPointerLock).not.toHaveBeenCalled();
   });
 
   it('pauses on pointer-lock loss and resumes only after an explicit click and new lock', () => {

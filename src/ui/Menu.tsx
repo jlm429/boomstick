@@ -42,43 +42,45 @@ export function MainMenu({
 
 export function Controls({
   invertY,
+  touchControls,
   onInvertYChange,
   onBack,
 }: {
   invertY: boolean;
+  touchControls: boolean;
   onInvertYChange: (invertY: boolean) => void;
   onBack: () => void;
 }) {
+  const controls = touchControls
+    ? [
+        ['Left stick', 'Move'],
+        ['Right drag', 'Look'],
+        ['Fire', 'Shoot'],
+        ['Reload', 'Reload'],
+        ['Jump', 'Jump'],
+        ['Pause', 'Pause'],
+      ]
+    : [
+        ['WASD', 'Move'],
+        ['Mouse', 'Look'],
+        ['Left click', 'Fire'],
+        ['R', 'Reload'],
+        ['Space', 'Jump'],
+        ['Escape', 'Pause'],
+      ];
+
   return (
     <Frame>
       <section className="menu-panel about-panel" aria-labelledby="controls-title">
         <p className="eyebrow">Settings</p>
         <h1 id="controls-title">Controls</h1>
         <dl className="controls-list">
-          <div>
-            <dt>WASD</dt>
-            <dd>Move</dd>
-          </div>
-          <div>
-            <dt>Mouse</dt>
-            <dd>Look</dd>
-          </div>
-          <div>
-            <dt>Left click</dt>
-            <dd>Fire</dd>
-          </div>
-          <div>
-            <dt>R</dt>
-            <dd>Reload</dd>
-          </div>
-          <div>
-            <dt>Space</dt>
-            <dd>Jump</dd>
-          </div>
-          <div>
-            <dt>Escape</dt>
-            <dd>Pause</dd>
-          </div>
+          {controls.map(([input, action]) => (
+            <div key={input}>
+              <dt>{input}</dt>
+              <dd>{action}</dd>
+            </div>
+          ))}
         </dl>
         <label className="setting-toggle">
           <input
@@ -89,7 +91,8 @@ export function Controls({
           <span>Invert Y</span>
         </label>
         <p className="setting-copy">
-          Reverse vertical mouse look. This setting is saved in this browser.
+          {touchControls ? 'Reverse vertical drag look.' : 'Reverse vertical mouse look.'} This
+          setting is saved in this browser.
         </p>
         <button className="button" onClick={onBack}>
           Back

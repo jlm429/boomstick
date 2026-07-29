@@ -19,3 +19,4 @@ All notable changes are documented here.
 - Added player health, a compact industrial HUD, timed zombie bite damage, critical-health edge feedback, and a death and retry sequence.
 - Expanded the training encounter to five simultaneous concealed zombies and accelerated their existing hit-reaction animation.
 - Varied zombie movement and run timing while coordinating stable, exclusive attack positions around the player.
+- Added coarse-touch mobile browser controls for movement, look, fire, jump, reload, pause, and lifecycle-safe resume and reset while preserving the desktop input path.

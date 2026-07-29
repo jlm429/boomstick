@@ -7,7 +7,7 @@ Boomstick is a browser-only, single-player arena combat prototype built with Rea
 - `src/ui` owns accessible menus, HUD, and pause UI.
 - `src/game` owns the phase store and rendering-independent arena, input, movement, combat, encounter, and health rules.
 - `src/scene` owns the Canvas, Three.js presentation, Rapier world, combat presentation, and entity runtime behavior.
-- The `playing` phase is valid only while the R3F Canvas owns pointer lock. Player actions also require an alive life state. Arena visuals stay available outside the asynchronous physics boundary.
+- The `playing` phase is valid only while its selected control mode is active: Canvas-owned pointer lock for desktop or an explicit touch session on coarse touch devices. Player actions also require an alive life state. Arena visuals stay available outside the asynchronous physics boundary.
 
 Read [docs/architecture.md](docs/architecture.md) for the current event and lifecycle flow.
 
