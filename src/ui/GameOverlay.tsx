@@ -162,8 +162,8 @@ export function EntryPrompt({
   const controls = touchControls
     ? [
         ['Left stick', 'Move'],
-        ['Right side', 'Look'],
-        ['Fire', 'Shoot'],
+        ['Right tap', 'Shoot'],
+        ['Right drag', 'Look'],
         ['Jump', 'Jump'],
         ['Reload', 'Reload'],
         ['Pause', 'Pause'],
@@ -181,7 +181,7 @@ export function EntryPrompt({
       <p id="entry-title">Enter Arena</p>
       <span className="entry-instruction">
         {touchControls
-          ? 'Tap to begin. Drag the right side to look.'
+          ? 'Tap to begin. Tap the right side to shoot or drag to look.'
           : 'Click to capture the mouse and begin.'}
       </span>
       <button className="button button-primary" onClick={onEnter}>

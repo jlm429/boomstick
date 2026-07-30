@@ -54,8 +54,8 @@ export function Controls({
   const controls = touchControls
     ? [
         ['Left stick', 'Move'],
+        ['Right tap', 'Shoot'],
         ['Right drag', 'Look'],
-        ['Fire', 'Shoot'],
         ['Reload', 'Reload'],
         ['Jump', 'Jump'],
         ['Pause', 'Pause'],

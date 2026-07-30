@@ -6,7 +6,15 @@ import {
   useRapier,
   type RapierRigidBody,
 } from '@react-three/rapier';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from 'react';
 import {
   AnimationClip,
   AnimationMixer,
@@ -15,12 +23,14 @@ import {
   LoopOnce,
   LoopRepeat,
   Mesh,
+  Points,
   PointsMaterial,
   Vector3,
 } from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
   BITE_BURST_CAMERA_DISTANCE,
+  BITE_PARTICLE_COUNT,
   BITE_PARTICLE_SIZE,
   biteBurstOpacity,
   createBiteBurst,
@@ -182,25 +192,33 @@ function BloodBurstEffect({
 
 function BiteBurstEffect({
   active,
-  burst,
-  onComplete,
+  burstRef,
 }: {
   active: boolean;
-  burst: BiteBurst;
-  onComplete: () => void;
+  burstRef: MutableRefObject<BiteBurst | null>;
 }) {
   const elapsedRef = useRef(0);
-  const completedRef = useRef(false);
+  const renderedBurstIdRef = useRef<number | null>(null);
+  const pointsRef = useRef<Points>(null);
   const positionAttributeRef = useRef<BufferAttribute>(null);
   const materialRef = useRef<PointsMaterial>(null);
-  const positions = useMemo(() => new Float32Array(burst.particles.length * 3), [burst]);
+  const positions = useMemo(() => new Float32Array(BITE_PARTICLE_COUNT * 3), []);
 
   useFrame((_, delta) => {
-    if (!active || completedRef.current || !Number.isFinite(delta) || delta <= 0) return;
+    const burst = burstRef.current;
+    const points = pointsRef.current;
+    if (!burst || !points) return;
+    if (renderedBurstIdRef.current !== burst.id) {
+      renderedBurstIdRef.current = burst.id;
+      elapsedRef.current = 0;
+      points.position.set(burst.origin.x, burst.origin.y, burst.origin.z);
+      points.visible = true;
+    }
+    if (!active || !Number.isFinite(delta) || delta <= 0) return;
     elapsedRef.current += delta;
     if (isBiteBurstComplete(elapsedRef.current)) {
-      completedRef.current = true;
-      onComplete();
+      points.visible = false;
+      if (burstRef.current?.id === burst.id) burstRef.current = null;
       return;
     }
 
@@ -216,7 +234,7 @@ function BiteBurstEffect({
   });
 
   return (
-    <points position={[burst.origin.x, burst.origin.y, burst.origin.z]} raycast={() => null}>
+    <points ref={pointsRef} visible={false} raycast={() => null}>
       <bufferGeometry>
         <bufferAttribute
           ref={positionAttributeRef}
@@ -269,6 +287,7 @@ function ZombieActor({
   const slotSettledRef = useRef(false);
   const nextBurstIdRef = useRef(1);
   const nextBiteBurstIdRef = useRef(1);
+  const biteBurstRef = useRef<BiteBurst | null>(null);
   const [motionVariation] = useState(createZombieMotionVariation);
   const [applyInitialWalkPhase] = useState(() =>
     createInitialZombieWalkPhaseApplier(motionVariation.walkPhase),
@@ -279,7 +298,6 @@ function ZombieActor({
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
   const [animationRevision, setAnimationRevision] = useState(0);
   const [bloodBursts, setBloodBursts] = useState<readonly BloodBurst[]>([]);
-  const [biteBursts, setBiteBursts] = useState<readonly BiteBurst[]>([]);
   const [zombieAudio] = useState(() => new ZombieAttackAudio());
   const { camera } = useThree();
   const { rapier, world } = useRapier();
@@ -319,14 +337,11 @@ function ZombieActor({
       applyDamage: (damage) => {
         onPlayerDamage(damage);
         camera.getWorldDirection(biteDirection);
-        setBiteBursts((bursts) => [
-          ...bursts,
-          createBiteBurst(nextBiteBurstIdRef.current++, {
-            x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
-            y: camera.position.y + biteDirection.y * BITE_BURST_CAMERA_DISTANCE,
-            z: camera.position.z + biteDirection.z * BITE_BURST_CAMERA_DISTANCE,
-          }),
-        ]);
+        biteBurstRef.current = createBiteBurst(nextBiteBurstIdRef.current++, {
+          x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
+          y: camera.position.y + biteDirection.y * BITE_BURST_CAMERA_DISTANCE,
+          z: camera.position.z + biteDirection.z * BITE_BURST_CAMERA_DISTANCE,
+        });
       },
     });
     attackControllerRef.current = attackController;
@@ -439,10 +454,6 @@ function ZombieActor({
 
   const removeBloodBurst = useCallback((id: number) => {
     setBloodBursts((bursts) => bursts.filter((burst) => burst.id !== id));
-  }, []);
-
-  const removeBiteBurst = useCallback((id: number) => {
-    setBiteBursts((bursts) => bursts.filter((burst) => burst.id !== id));
   }, []);
 
   const onShotImpact: ShotImpactHandler = ({ distance, point }) => {
@@ -666,14 +677,7 @@ function ZombieActor({
           onComplete={() => removeBloodBurst(burst.id)}
         />
       ))}
-      {biteBursts.map((burst) => (
-        <BiteBurstEffect
-          key={burst.id}
-          active={active}
-          burst={burst}
-          onComplete={() => removeBiteBurst(burst.id)}
-        />
-      ))}
+      <BiteBurstEffect active={active} burstRef={biteBurstRef} />
     </>
   );
 }

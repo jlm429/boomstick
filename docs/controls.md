@@ -8,9 +8,9 @@ from that click.
 
 When the browser reports one or more touch points and a coarse primary pointer, the entry prompt
 shows touch controls instead. Touch play starts without pointer lock. Drag the left stick to move
-and drag anywhere on the right-side look area to aim. Fire, Jump, Reload, and Pause use dedicated
-labeled controls. Touch pointers and queued input clear when play pauses, the tab is hidden, the
-run resets, or the scene unmounts.
+and drag anywhere on the right-side gameplay area to aim. A short tap in that area fires once.
+Jump, Reload, and Pause use dedicated labeled controls. Touch pointers and queued input clear when
+play pauses, the tab is hidden, the run resets, or the scene unmounts.
 
 From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh training
 run with full health, a restored weapon, restored lights and targets, and no zombie, or select
@@ -36,8 +36,8 @@ encounter and resume the selected control mode for a fresh run.
 | -------------------- | -------------------------- |
 | Enter Arena / Resume | Start or resume touch play |
 | Left movement stick  | Move                       |
+| Tap the right side   | Fire the shotgun           |
 | Drag the right side  | Look                       |
-| **Fire**             | Fire the shotgun           |
 | **Reload**           | Reload the magazine        |
 | **Jump**             | Jump                       |
 | **Pause**            | Pause and clear input      |
