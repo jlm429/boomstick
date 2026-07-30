@@ -177,7 +177,10 @@ describe('App navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
     const canvas = screen.getByTestId('game-viewport');
     const gameShell = canvas.closest('main');
-    expect(screen.getByText('Tap to begin. Drag the right side to look.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Tap to begin. Tap the right side to shoot or drag to look.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Right tap')).toBeInTheDocument();
     expect(gameShell).toHaveClass('has-touch-controls');
     expect(gameShell).not.toHaveClass('touch-gameplay-active');
 

@@ -732,7 +732,7 @@ h2 {
   -webkit-tap-highlight-color: transparent;
 }
 .mobile-controls {
-  position: absolute;
+  position: fixed;
   z-index: 3;
   inset: 0;
   overflow: hidden;
@@ -749,10 +749,10 @@ h2 {
 }
 .mobile-movement {
   --movement-size: clamp(6.5rem, 25vmin, 8.5rem);
-  position: absolute;
+  position: fixed;
   z-index: 1;
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: max(16px, env(safe-area-inset-left));
   width: var(--movement-size);
   height: var(--movement-size);
   border-radius: 50%;
@@ -784,12 +784,12 @@ h2 {
   transform: translate(calc(-50% + var(--stick-x, 0px)), calc(-50% + var(--stick-y, 0px)));
 }
 .mobile-actions {
-  position: absolute;
+  position: fixed;
   z-index: 2;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  width: 10.75rem;
-  height: 9.5rem;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  width: 8.5rem;
+  height: 3.5rem;
   pointer-events: none;
 }
 .mobile-action {
@@ -818,27 +818,13 @@ h2 {
   transform: scale(0.94);
   background: #55200fd9;
 }
-.mobile-fire {
+.mobile-jump {
   right: 0;
   bottom: 0;
-  width: 4.9rem;
-  height: 4.9rem;
-  border-color: #ff956d;
-  color: #170b07;
-  background: radial-gradient(circle at 36% 28%, #ff9c69, #e55320 58%, #82230f);
-  box-shadow:
-    inset 0 1px 0 #ffe1ca99,
-    inset 0 -0.3rem 0.7rem #6e180d7d,
-    0 0.55rem 1.5rem #0009;
-  font-size: 0.72rem;
-}
-.mobile-jump {
-  top: 0;
-  right: 0.3rem;
 }
 .mobile-reload {
-  right: 5.9rem;
-  bottom: 0.4rem;
+  bottom: 0;
+  left: 0;
 }
 .mobile-pause {
   z-index: 2;
@@ -955,17 +941,6 @@ h2 {
   }
   .mobile-movement {
     --movement-size: 6rem;
-  }
-  .mobile-actions {
-    width: 9.75rem;
-    height: 8.25rem;
-  }
-  .mobile-fire {
-    width: 4.35rem;
-    height: 4.35rem;
-  }
-  .mobile-reload {
-    right: 5.3rem;
   }
 }
 @media (pointer: coarse) and (max-height: 500px) {
