@@ -112,7 +112,10 @@ describe('MobileControls', () => {
     fireEvent.pointerDown(look, { button: 0, clientX: 180, clientY: 100, pointerId: 3 });
     fireEvent.lostPointerCapture(look, { clientX: 180, clientY: 100, pointerId: 3 });
 
-    expect(fire).not.toHaveBeenCalled();
+    fireEvent.pointerDown(look, { button: 0, clientX: 180, clientY: 100, pointerId: 4 });
+    fireEvent.pointerUp(look, { button: 0, clientX: 180, clientY: 100, pointerId: 4 });
+
+    expect(fire).toHaveBeenCalledOnce();
   });
 
   it('invalidates a tap when another look pointer is added or removed', () => {
@@ -176,6 +179,29 @@ describe('MobileControls', () => {
     expect(input.movement()[0]).toBeCloseTo(1);
     expect(fire).toHaveBeenCalledOnce();
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it('preserves tap shooting when movement starts after look', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(100);
+    const input = createTouchInputState();
+    const fire = vi.fn();
+    input.subscribeAction('fire', fire);
+    render(<MobileControls input={input} onPause={vi.fn()} />);
+    const movement = screen.getByTestId('mobile-movement');
+    const look = screen.getByTestId('mobile-look-zone');
+    mockMovementBounds(movement);
+
+    fireEvent.pointerDown(look, { button: 0, clientX: 200, clientY: 100, pointerId: 1 });
+    fireEvent.pointerDown(movement, {
+      button: 0,
+      clientX: 84,
+      clientY: 50,
+      pointerId: 2,
+    });
+    fireEvent.pointerUp(look, { button: 0, clientX: 200, clientY: 100, pointerId: 1 });
+
+    expect(input.movement()[0]).toBeCloseTo(1);
+    expect(fire).toHaveBeenCalledOnce();
   });
 
   it('keeps movement and action controls from becoming look or tap input', () => {

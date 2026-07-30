@@ -67,6 +67,7 @@ export function MobileControls({
 }) {
   const activePointers = useRef(new Set<number>());
   const movementPointer = useRef<number | null>(null);
+  const movementRegion = useRef<HTMLDivElement | null>(null);
   const lookPointers = useRef(new Set<number>());
   const lookGesture = useRef<LookGesture | null>(null);
   const [stickPosition, setStickPosition] = useState({ x: 0, y: 0 });
@@ -234,10 +235,15 @@ export function MobileControls({
       onPointerDownCapture={(event) => {
         activePointers.current.add(event.pointerId);
         const gesture = lookGesture.current;
+        const startsMovement =
+          event.button === 0 &&
+          movementPointer.current === null &&
+          movementRegion.current?.contains(event.target as Node);
         if (
           gesture &&
           event.pointerId !== gesture.pointerId &&
-          event.pointerId !== gesture.movementPointerIdAtStart
+          event.pointerId !== gesture.movementPointerIdAtStart &&
+          !startsMovement
         ) {
           gesture.tapEligible = false;
         }
@@ -249,18 +255,25 @@ export function MobileControls({
         role="group"
         aria-label="Tap to shoot or drag to look"
         data-testid="mobile-look-zone"
-        onLostPointerCapture={(event) => finishLook(event, false)}
+        onLostPointerCapture={(event) => {
+          activePointers.current.delete(event.pointerId);
+          finishLook(event, false);
+        }}
         onPointerCancel={(event) => finishLook(event, false)}
         onPointerDown={startLook}
         onPointerMove={moveLook}
         onPointerUp={(event) => finishLook(event, true)}
       />
       <div
+        ref={movementRegion}
         className="mobile-movement"
         role="group"
         aria-label="Movement stick"
         data-testid="mobile-movement"
-        onLostPointerCapture={endMovement}
+        onLostPointerCapture={(event) => {
+          activePointers.current.delete(event.pointerId);
+          endMovement(event);
+        }}
         onPointerCancel={endMovement}
         onPointerDown={startMovement}
         onPointerMove={moveMovement}
