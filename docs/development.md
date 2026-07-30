@@ -15,16 +15,16 @@ movement, firing, reload, target health meters, range and face-accuracy damage s
 depletion, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
 zombie pursuit with distinct run phases and subtly varied speeds, exclusive attack positions,
 stable position settlement without steering jitter, the 0.80-unit chase-to-attack boundary, timed
-bite damage and cancellation, synchronized bite audio and impact bursts, player health HUD bands
-and damage feedback, the reduced-motion-safe critical-health vignette, player death camera and
-fade, disabled controls and weapon actions during death, Retry and menu actions, zombie hit and
-death animations, zombie collision, completion after all five corpses are removed, hidden
-completion HUD, and full encounter restoration from Restart, Restart Training, and Retry. Also
-verify pause and menu return. On a coarse touch device, also verify that entry does not request
-pointer lock; the movement stick, tap fire, look drag, Jump, Reload, and Pause controls work; held
-input clears on pause, tab return, restart, and menu return; the HUD does not overlap the controls;
-and portrait, landscape, and safe-area layouts remain usable. Repeat the desktop pointer-lock,
-keyboard, and mouse checks with touch emulation disabled.
+bite damage and cancellation, synchronized bite audio and impact bursts, stable frame pacing during
+clustered bites, player health HUD bands and damage feedback, the reduced-motion-safe
+critical-health vignette, player death camera and fade, disabled controls and weapon actions during
+death, Retry and menu actions, zombie hit and death animations, zombie collision, completion after
+all five corpses are removed, hidden completion HUD, and full encounter restoration from Restart,
+Restart Training, and Retry. Also verify pause and menu return. On a coarse touch device, also
+verify entry without pointer lock; the simultaneous and rejected touch gesture cases in
+[Controls](controls.md); held input clearing on pause, tab return, restart, and menu return; no
+overlap between the HUD and controls; and usable portrait, landscape, and safe-area layouts. Repeat
+the desktop pointer-lock, keyboard, and mouse checks with touch emulation disabled.
 Development builds expose quiet live state at `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas
 size, WebGL state, frame count, camera, Rapier readiness, player position, and pressed controls.
 Scene helpers and diagnostics are excluded from production builds. Automated or headless
