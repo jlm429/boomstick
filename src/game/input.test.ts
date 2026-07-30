@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   clearPressedKeys,
   createPressedKeys,
+  createTouchInputState,
   movementInput,
   mouseLookDelta,
   pressKey,
   releaseKey,
+  supportsTouchControls,
+  touchLookDelta,
 } from './input';
 
 describe('input lifecycle', () => {
@@ -47,5 +50,80 @@ describe('input lifecycle', () => {
     expect(inverted.yaw).toBeCloseTo(regular.yaw);
     expect(regular.pitch).toBeCloseTo(-0.0176);
     expect(inverted.pitch).toBeCloseTo(0.0176);
+  });
+
+  it('keeps desktop mouse sensitivity unchanged and gives touch look its own scale', () => {
+    const mouse = mouseLookDelta(10, 8, false);
+    const touch = touchLookDelta(10, 8, false);
+    const invertedTouch = touchLookDelta(10, 8, true);
+    expect(mouse.yaw).toBeCloseTo(-0.022);
+    expect(mouse.pitch).toBeCloseTo(-0.0176);
+    expect(touch.yaw).toBeCloseTo(-0.04);
+    expect(touch.pitch).toBeCloseTo(-0.032);
+    expect(invertedTouch.yaw).toBeCloseTo(-0.04);
+    expect(invertedTouch.pitch).toBeCloseTo(0.032);
+  });
+});
+
+describe('touch capability', () => {
+  it('requires both reported touch points and a coarse primary pointer', () => {
+    expect(supportsTouchControls({ maxTouchPoints: 5, coarsePrimaryPointer: true })).toBe(true);
+    expect(supportsTouchControls({ maxTouchPoints: 0, coarsePrimaryPointer: true })).toBe(
+      false,
+    );
+    expect(supportsTouchControls({ maxTouchPoints: 5, coarsePrimaryPointer: false })).toBe(
+      false,
+    );
+  });
+});
+
+describe('touch input state', () => {
+  it('normalizes movement and consumes accumulated look and jump input', () => {
+    const input = createTouchInputState();
+
+    input.setMovement(1, -1);
+    expect(Math.hypot(...input.movement())).toBeCloseTo(1);
+    input.addLook(4, -3);
+    input.addLook(2, 1);
+    expect(input.consumeLook()).toEqual([6, -2]);
+    expect(input.consumeLook()).toEqual([0, 0]);
+
+    input.requestJump();
+    expect(input.hasJumpRequest()).toBe(true);
+    expect(input.consumeJump()).toBe(true);
+    expect(input.consumeJump()).toBe(false);
+  });
+
+  it('dispatches gameplay actions only to current subscribers', () => {
+    const input = createTouchInputState();
+    let fireCount = 0;
+    const unsubscribe = input.subscribeAction('fire', () => {
+      fireCount += 1;
+    });
+
+    input.requestAction('fire');
+    unsubscribe();
+    input.requestAction('fire');
+
+    expect(fireCount).toBe(1);
+  });
+
+  it('clears every held or queued transient without removing action subscriptions', () => {
+    const input = createTouchInputState();
+    let reloadCount = 0;
+    input.subscribeAction('reload', () => {
+      reloadCount += 1;
+    });
+    input.setMovement(0.5, -0.75);
+    input.addLook(10, 8);
+    input.requestJump();
+
+    input.clear();
+
+    expect(input.movement()).toEqual([0, 0]);
+    expect(input.consumeLook()).toEqual([0, 0]);
+    expect(input.hasJumpRequest()).toBe(false);
+    input.requestAction('reload');
+    expect(reloadCount).toBe(1);
   });
 });

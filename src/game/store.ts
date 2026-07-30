@@ -12,8 +12,11 @@ export type AppPhase =
   | 'defeated'
   | 'training-complete';
 
+export type ControlMode = 'desktop' | 'touch' | null;
+
 type AppState = {
   phase: AppPhase;
+  controlMode: ControlMode;
   hasPointerLock: boolean;
   pointerLockError: string | null;
   runId: number;
@@ -25,6 +28,8 @@ type AppState = {
   showControls: () => void;
   showMainMenu: () => void;
   preparePointerLockRequest: () => void;
+  beginTouchPlay: () => void;
+  pauseTouchPlay: () => void;
   completeTraining: () => void;
   applyDamage: (damage: number) => void;
   restoreHealth: (health: number) => void;
@@ -45,16 +50,24 @@ export const isArenaPhase = (phase: AppPhase) =>
 
 export const isValidAppState = ({
   phase,
+  controlMode,
   hasPointerLock,
-}: Pick<AppState, 'phase' | 'hasPointerLock'>) =>
-  (phase === 'playing' && hasPointerLock) || (phase !== 'playing' && !hasPointerLock);
+}: Pick<AppState, 'phase' | 'controlMode' | 'hasPointerLock'>) =>
+  phase === 'playing'
+    ? (controlMode === 'desktop' && hasPointerLock) ||
+      (controlMode === 'touch' && !hasPointerLock)
+    : !hasPointerLock;
 
 export const canPlayerAct = ({
   phase,
+  controlMode,
   hasPointerLock,
   lifeState,
-}: Pick<AppState, 'phase' | 'hasPointerLock' | 'lifeState'>) =>
-  phase === 'playing' && hasPointerLock && lifeState === 'alive';
+}: Pick<AppState, 'phase' | 'controlMode' | 'hasPointerLock' | 'lifeState'>) =>
+  phase === 'playing' &&
+  lifeState === 'alive' &&
+  ((controlMode === 'desktop' && hasPointerLock) ||
+    (controlMode === 'touch' && !hasPointerLock));
 
 const freshPlayerState = {
   health: PLAYER_MAX_HEALTH,
@@ -64,6 +77,7 @@ const freshPlayerState = {
 
 export const useAppStore = create<AppState>((set) => ({
   phase: 'main-menu',
+  controlMode: null,
   hasPointerLock: false,
   pointerLockError: null,
   runId: 0,
@@ -71,16 +85,24 @@ export const useAppStore = create<AppState>((set) => ({
   startGame: () =>
     set((state) => ({
       phase: 'arena-entry',
+      controlMode: null,
       hasPointerLock: false,
       pointerLockError: null,
       runId: state.runId + 1,
       ...freshPlayerState,
     })),
   showAbout: () =>
-    set({ phase: 'about', hasPointerLock: false, pointerLockError: null, ...freshPlayerState }),
+    set({
+      phase: 'about',
+      controlMode: null,
+      hasPointerLock: false,
+      pointerLockError: null,
+      ...freshPlayerState,
+    }),
   showControls: () =>
     set({
       phase: 'controls',
+      controlMode: null,
       hasPointerLock: false,
       pointerLockError: null,
       ...freshPlayerState,
@@ -88,6 +110,7 @@ export const useAppStore = create<AppState>((set) => ({
   showMainMenu: () =>
     set({
       phase: 'main-menu',
+      controlMode: null,
       hasPointerLock: false,
       pointerLockError: null,
       ...freshPlayerState,
@@ -97,8 +120,31 @@ export const useAppStore = create<AppState>((set) => ({
       isArenaPhase(state.phase) && state.lifeState === 'alive'
         ? {
             phase: state.phase === 'playing' ? 'paused' : state.phase,
+            controlMode: 'desktop',
             hasPointerLock: false,
             pointerLockError: null,
+          }
+        : state,
+    ),
+  beginTouchPlay: () =>
+    set((state) =>
+      isArenaPhase(state.phase) &&
+      state.phase !== 'training-complete' &&
+      state.lifeState === 'alive'
+        ? {
+            phase: 'playing',
+            controlMode: 'touch',
+            hasPointerLock: false,
+            pointerLockError: null,
+          }
+        : state,
+    ),
+  pauseTouchPlay: () =>
+    set((state) =>
+      state.phase === 'playing' && state.controlMode === 'touch'
+        ? {
+            phase: 'paused',
+            hasPointerLock: false,
           }
         : state,
     ),
@@ -107,6 +153,7 @@ export const useAppStore = create<AppState>((set) => ({
       state.phase === 'playing' && state.lifeState === 'alive'
         ? {
             phase: 'training-complete',
+            controlMode: null,
             hasPointerLock: false,
             pointerLockError: null,
           }
@@ -128,6 +175,7 @@ export const useAppStore = create<AppState>((set) => ({
         lifeState: 'dying',
         damageRevision: state.damageRevision + 1,
         phase: isArenaPhase(state.phase) ? 'dying' : state.phase,
+        controlMode: null,
         hasPointerLock: false,
         pointerLockError: null,
       };
@@ -154,6 +202,7 @@ export const useAppStore = create<AppState>((set) => ({
       isArenaPhase(state.phase)
         ? {
             phase: 'arena-entry',
+            controlMode: null,
             hasPointerLock: false,
             pointerLockError: null,
             runId: state.runId + 1,
@@ -164,13 +213,21 @@ export const useAppStore = create<AppState>((set) => ({
   handlePointerLockChange: (hasPointerLock) =>
     set((state) => {
       if (!isArenaPhase(state.phase)) {
-        return { hasPointerLock: false };
+        return { controlMode: null, hasPointerLock: false };
       }
       if (state.phase === 'training-complete' || state.lifeState !== 'alive') {
-        return { hasPointerLock: false };
+        return { controlMode: null, hasPointerLock: false };
       }
       if (hasPointerLock) {
-        return { phase: 'playing', hasPointerLock: true, pointerLockError: null };
+        return {
+          phase: 'playing',
+          controlMode: 'desktop',
+          hasPointerLock: true,
+          pointerLockError: null,
+        };
+      }
+      if (state.phase === 'playing' && state.controlMode === 'touch') {
+        return { hasPointerLock: false };
       }
       return {
         phase: state.phase === 'playing' ? 'paused' : state.phase,
@@ -182,6 +239,7 @@ export const useAppStore = create<AppState>((set) => ({
       isArenaPhase(state.phase) && state.lifeState === 'alive'
         ? {
             phase: state.phase === 'arena-entry' ? 'arena-entry' : 'paused',
+            controlMode: 'desktop',
             hasPointerLock: false,
             pointerLockError: 'Mouse capture was not granted. Click Enter Arena to try again.',
           }

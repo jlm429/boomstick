@@ -45,6 +45,7 @@ No installation required. Open the link and enter the arena.
 - React Three Fiber rendering
 - Rapier physics
 - Responsive WASD movement and mouse look
+- Responsive mobile-browser movement, look, fire, jump, reload, and pause controls
 - Doom-inspired shotgun combat
 - Hitscan weapon with recoil and reload mechanics
 - Target training followed by a five-zombie encounter

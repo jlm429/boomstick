@@ -1,10 +1,99 @@
 import type { MovementInput } from './movement';
 
 export type PressedKeys = Record<string, boolean>;
+export type GameplayAction = 'fire' | 'reload';
+export type GameplayActionListener = () => void;
+
+export type TouchControlCapabilities = Readonly<{
+  maxTouchPoints: number;
+  coarsePrimaryPointer: boolean;
+}>;
+
+export type TouchInputState = Readonly<{
+  setMovement: (x: number, z: number) => void;
+  movement: () => readonly [x: number, z: number];
+  addLook: (x: number, y: number) => void;
+  consumeLook: () => readonly [x: number, y: number];
+  requestJump: () => void;
+  hasJumpRequest: () => boolean;
+  consumeJump: () => boolean;
+  requestAction: (action: GameplayAction) => void;
+  subscribeAction: (action: GameplayAction, listener: GameplayActionListener) => () => void;
+  clear: () => void;
+}>;
 
 export const GAME_CONTROL_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'] as const;
+export const TOUCH_LOOK_SENSITIVITY = 0.004;
+const MOUSE_LOOK_SENSITIVITY = 0.0022;
+
+export const supportsTouchControls = ({
+  maxTouchPoints,
+  coarsePrimaryPointer,
+}: TouchControlCapabilities) =>
+  Number.isFinite(maxTouchPoints) && maxTouchPoints > 0 && coarsePrimaryPointer;
 
 export const createPressedKeys = (): PressedKeys => ({});
+
+export function createTouchInputState(): TouchInputState {
+  let movementX = 0;
+  let movementZ = 0;
+  let lookX = 0;
+  let lookY = 0;
+  let jumpRequested = false;
+  const listeners: Record<GameplayAction, Set<GameplayActionListener>> = {
+    fire: new Set(),
+    reload: new Set(),
+  };
+
+  return {
+    setMovement: (x, z) => {
+      if (!Number.isFinite(x) || !Number.isFinite(z)) {
+        movementX = 0;
+        movementZ = 0;
+        return;
+      }
+      const length = Math.hypot(x, z);
+      const scale = length > 1 ? 1 / length : 1;
+      movementX = x * scale;
+      movementZ = z * scale;
+    },
+    movement: () => [movementX, movementZ],
+    addLook: (x, y) => {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      lookX += x;
+      lookY += y;
+    },
+    consumeLook: () => {
+      const delta = [lookX, lookY] as const;
+      lookX = 0;
+      lookY = 0;
+      return delta;
+    },
+    requestJump: () => {
+      jumpRequested = true;
+    },
+    hasJumpRequest: () => jumpRequested,
+    consumeJump: () => {
+      const requested = jumpRequested;
+      jumpRequested = false;
+      return requested;
+    },
+    requestAction: (action) => {
+      for (const listener of listeners[action]) listener();
+    },
+    subscribeAction: (action, listener) => {
+      listeners[action].add(listener);
+      return () => listeners[action].delete(listener);
+    },
+    clear: () => {
+      movementX = 0;
+      movementZ = 0;
+      lookX = 0;
+      lookY = 0;
+      jumpRequested = false;
+    },
+  };
+}
 
 export const pressKey = (pressed: PressedKeys, code: string, enabled: boolean) => {
   if (enabled && GAME_CONTROL_CODES.includes(code as (typeof GAME_CONTROL_CODES)[number])) {
@@ -31,6 +120,11 @@ export const isGameControl = (code: string) =>
   GAME_CONTROL_CODES.includes(code as (typeof GAME_CONTROL_CODES)[number]);
 
 export const mouseLookDelta = (movementX: number, movementY: number, invertY: boolean) => ({
-  yaw: -movementX * 0.0022,
-  pitch: (invertY ? 1 : -1) * movementY * 0.0022,
+  yaw: -movementX * MOUSE_LOOK_SENSITIVITY,
+  pitch: (invertY ? 1 : -1) * movementY * MOUSE_LOOK_SENSITIVITY,
+});
+
+export const touchLookDelta = (movementX: number, movementY: number, invertY: boolean) => ({
+  yaw: -movementX * TOUCH_LOOK_SENSITIVITY,
+  pitch: (invertY ? 1 : -1) * movementY * TOUCH_LOOK_SENSITIVITY,
 });

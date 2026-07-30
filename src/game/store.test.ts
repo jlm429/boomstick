@@ -6,6 +6,7 @@ describe('application state', () => {
   beforeEach(() => {
     useAppStore.setState({
       phase: 'main-menu',
+      controlMode: null,
       hasPointerLock: false,
       pointerLockError: null,
       runId: 0,
@@ -19,20 +20,36 @@ describe('application state', () => {
     useAppStore.getState().startGame();
     expect(useAppStore.getState().phase).toBe('arena-entry');
     useAppStore.getState().handlePointerLockChange(true);
-    expect(useAppStore.getState()).toMatchObject({ phase: 'playing', hasPointerLock: true });
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'playing',
+      controlMode: 'desktop',
+      hasPointerLock: true,
+    });
     useAppStore.getState().handlePointerLockChange(false);
     expect(useAppStore.getState()).toMatchObject({ phase: 'paused', hasPointerLock: false });
     useAppStore.getState().preparePointerLockRequest();
     expect(useAppStore.getState().phase).toBe('paused');
     useAppStore.getState().handlePointerLockChange(true);
-    expect(useAppStore.getState()).toMatchObject({ phase: 'playing', hasPointerLock: true });
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'playing',
+      controlMode: 'desktop',
+      hasPointerLock: true,
+    });
     useAppStore.getState().showMainMenu();
     expect(useAppStore.getState()).toMatchObject({ phase: 'main-menu', hasPointerLock: false });
   });
 
-  it('never enables playing without pointer lock or retains lock outside playing', () => {
-    expect(isValidAppState({ phase: 'playing', hasPointerLock: false })).toBe(false);
-    expect(isValidAppState({ phase: 'paused', hasPointerLock: true })).toBe(false);
+  it('keeps desktop play pointer-locked and rejects lock outside playing', () => {
+    expect(
+      isValidAppState({
+        phase: 'playing',
+        controlMode: 'desktop',
+        hasPointerLock: false,
+      }),
+    ).toBe(false);
+    expect(
+      isValidAppState({ phase: 'paused', controlMode: 'desktop', hasPointerLock: true }),
+    ).toBe(false);
     const assertInvariant = () => expect(isValidAppState(useAppStore.getState())).toBe(true);
     assertInvariant();
     useAppStore.getState().startGame();
@@ -61,6 +78,32 @@ describe('application state', () => {
       health: PLAYER_MAX_HEALTH,
       lifeState: 'alive',
     });
+  });
+
+  it('starts, pauses, and resumes touch play without claiming pointer lock', () => {
+    useAppStore.getState().startGame();
+    useAppStore.getState().beginTouchPlay();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'playing',
+      controlMode: 'touch',
+      hasPointerLock: false,
+    });
+    expect(isValidAppState(useAppStore.getState())).toBe(true);
+    expect(canPlayerAct(useAppStore.getState())).toBe(true);
+
+    useAppStore.getState().handlePointerLockChange(false);
+    expect(useAppStore.getState().phase).toBe('playing');
+
+    useAppStore.getState().pauseTouchPlay();
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'paused',
+      controlMode: 'touch',
+      hasPointerLock: false,
+    });
+    expect(canPlayerAct(useAppStore.getState())).toBe(false);
+
+    useAppStore.getState().beginTouchPlay();
+    expect(canPlayerAct(useAppStore.getState())).toBe(true);
   });
 
   it('pauses at training completion, rejects stale lock events, and restarts cleanly', () => {

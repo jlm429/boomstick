@@ -4,6 +4,7 @@ import {
   encounterCountdownValue,
   type EncounterState,
 } from './game/encounter';
+import { createTouchInputState } from './game/input';
 import { DEATH_SEQUENCE_MS } from './game/playerHealth';
 import { readInvertYSetting, writeInvertYSetting } from './game/settings';
 import { INITIAL_WEAPON_STATE, type WeaponState } from './game/shooting';
@@ -18,6 +19,8 @@ import {
   TrainingComplete,
 } from './ui/GameOverlay';
 import { About, Controls, MainMenu } from './ui/Menu';
+import { MobileControls } from './ui/MobileControls';
+import { useTouchControls } from './ui/useTouchControls';
 
 export function App() {
   const arenaCanvas = useRef<HTMLCanvasElement | null>(null);
@@ -25,8 +28,11 @@ export function App() {
   const [weaponState, setWeaponState] = useState<WeaponState>(INITIAL_WEAPON_STATE);
   const [emptyFirePulse, setEmptyFirePulse] = useState(0);
   const [encounterState, setEncounterState] = useState<EncounterState>(createEncounterState);
+  const [touchInput] = useState(createTouchInputState);
+  const touchControls = useTouchControls();
   const {
     phase,
+    controlMode,
     hasPointerLock,
     pointerLockError,
     runId,
@@ -38,6 +44,8 @@ export function App() {
     showControls,
     showMainMenu,
     preparePointerLockRequest,
+    beginTouchPlay,
+    pauseTouchPlay,
     completeTraining,
     applyDamage,
     finishDying,
@@ -45,11 +53,17 @@ export function App() {
     handlePointerLockChange,
     handlePointerLockError,
   } = useAppStore();
-  const gameplayActive = canPlayerAct({ phase, hasPointerLock, lifeState });
+  const gameplayActive = canPlayerAct({ phase, controlMode, hasPointerLock, lifeState });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== 'Escape' || useAppStore.getState().phase !== 'playing') return;
+      const state = useAppStore.getState();
+      if (
+        event.code !== 'Escape' ||
+        state.phase !== 'playing' ||
+        state.controlMode !== 'desktop'
+      )
+        return;
       event.preventDefault();
       document.exitPointerLock?.();
     };
@@ -72,6 +86,16 @@ export function App() {
   useEffect(() => {
     reportRuntimeDiagnostics({ phase, pointerLock: hasPointerLock });
   }, [hasPointerLock, phase]);
+
+  useEffect(() => {
+    if (!gameplayActive) touchInput.clear();
+  }, [gameplayActive, touchInput]);
+
+  useEffect(() => {
+    if (controlMode === 'touch' && !touchControls) pauseTouchPlay();
+  }, [controlMode, pauseTouchPlay, touchControls]);
+
+  useEffect(() => () => touchInput.clear(), [touchInput]);
 
   useEffect(() => {
     if (lifeState === 'alive') return;
@@ -114,11 +138,16 @@ export function App() {
     }
   }, [handlePointerLockError, preparePointerLockRequest]);
 
-  const restartAndRequestArenaLock = useCallback(() => {
+  const restartAndResume = useCallback(() => {
+    touchInput.clear();
     setEncounterState(createEncounterState());
     setWeaponState(INITIAL_WEAPON_STATE);
     setEmptyFirePulse(0);
     restart();
+    if (touchControls) {
+      beginTouchPlay();
+      return;
+    }
     const canvas = arenaCanvas.current;
     if (!canvas?.requestPointerLock) {
       handlePointerLockError();
@@ -130,7 +159,16 @@ export function App() {
     } catch {
       handlePointerLockError();
     }
-  }, [handlePointerLockError, restart]);
+  }, [beginTouchPlay, handlePointerLockError, restart, touchControls, touchInput]);
+
+  const enterOrResumeArena = useCallback(() => {
+    touchInput.clear();
+    if (touchControls) {
+      beginTouchPlay();
+      return;
+    }
+    requestArenaLock();
+  }, [beginTouchPlay, requestArenaLock, touchControls, touchInput]);
 
   const startTraining = useCallback(() => {
     setEncounterState(createEncounterState());
@@ -141,6 +179,7 @@ export function App() {
 
   const returnToMainMenu = () => {
     document.exitPointerLock?.();
+    touchInput.clear();
     setEncounterState(createEncounterState());
     setWeaponState(INITIAL_WEAPON_STATE);
     setEmptyFirePulse(0);
@@ -154,14 +193,29 @@ export function App() {
 
   if (phase === 'about') return <About onBack={showMainMenu} />;
   if (phase === 'controls') {
-    return <Controls invertY={invertY} onInvertYChange={updateInvertY} onBack={showMainMenu} />;
+    return (
+      <Controls
+        invertY={invertY}
+        touchControls={touchControls}
+        onInvertYChange={updateInvertY}
+        onBack={showMainMenu}
+      />
+    );
   }
   if (phase === 'main-menu') {
     return <MainMenu onPlay={startTraining} onAbout={showAbout} onControls={showControls} />;
   }
 
+  const gameShellClassName = [
+    'game-shell',
+    touchControls && 'has-touch-controls',
+    touchControls && gameplayActive && 'touch-gameplay-active',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <main className="game-shell">
+    <main className={gameShellClassName}>
       <GameViewport
         active={gameplayActive}
         invertY={invertY}
@@ -172,6 +226,7 @@ export function App() {
         onEmptyFire={reinforceReloadReminder}
         onPlayerDamage={applyDamage}
         onWeaponStateChange={setWeaponState}
+        touchInput={touchInput}
       />
       {phase !== 'training-complete' && phase !== 'defeated' && (
         <GameHud
@@ -181,26 +236,32 @@ export function App() {
           health={health}
           lifeState={lifeState}
           playing={gameplayActive}
+          touchControls={touchControls}
           weaponState={weaponState}
         />
       )}
+      {touchControls && controlMode === 'touch' && gameplayActive && (
+        <MobileControls input={touchInput} onPause={pauseTouchPlay} />
+      )}
       {phase === 'arena-entry' && (
-        <EntryPrompt error={pointerLockError} onEnter={requestArenaLock} />
+        <EntryPrompt
+          error={pointerLockError}
+          touchControls={touchControls}
+          onEnter={enterOrResumeArena}
+        />
       )}
       {phase === 'paused' && (
         <PauseMenu
           error={pointerLockError}
-          onResume={requestArenaLock}
-          onRestart={restartAndRequestArenaLock}
+          onResume={enterOrResumeArena}
+          onRestart={restartAndResume}
           onMainMenu={returnToMainMenu}
         />
       )}
-      {phase === 'training-complete' && (
-        <TrainingComplete onRestart={restartAndRequestArenaLock} />
-      )}
+      {phase === 'training-complete' && <TrainingComplete onRestart={restartAndResume} />}
       <DefeatOverlay
         lifeState={lifeState}
-        onRetry={restartAndRequestArenaLock}
+        onRetry={restartAndResume}
         onMainMenu={returnToMainMenu}
       />
     </main>

@@ -11,9 +11,10 @@ import {
   trainingTargetsHaveCollision,
   type EncounterState,
 } from '../game/encounter';
-import type { TrainingZombieId } from '../game/zombie';
-import type { WeaponState } from '../game/shooting';
+import type { TouchInputState } from '../game/input';
 import type { PlayerLifeState } from '../game/playerHealth';
+import type { WeaponState } from '../game/shooting';
+import type { TrainingZombieId } from '../game/zombie';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
@@ -31,6 +32,7 @@ type GameViewportProps = {
   onEmptyFire: () => void;
   onPlayerDamage: (damage: number) => void;
   onWeaponStateChange: (state: WeaponState) => void;
+  touchInput: TouchInputState;
 };
 
 function CanvasRegistration({ onCanvasReady }: Pick<GameViewportProps, 'onCanvasReady'>) {
@@ -106,6 +108,7 @@ function RunScene({
   onEmptyFire,
   onPlayerDamage,
   onWeaponStateChange,
+  touchInput,
 }: Pick<
   GameViewportProps,
   | 'active'
@@ -115,6 +118,7 @@ function RunScene({
   | 'onEmptyFire'
   | 'onPlayerDamage'
   | 'onWeaponStateChange'
+  | 'touchInput'
 >) {
   const [encounterState, setEncounterState] = useState(createEncounterState);
   const removedZombieIdsRef = useRef<ReadonlySet<TrainingZombieId>>(new Set());
@@ -146,13 +150,19 @@ function RunScene({
         onEncounterStateChange={updateEncounterState}
         onEmptyFire={onEmptyFire}
         onWeaponStateChange={onWeaponStateChange}
+        touchInput={touchInput}
       />
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
           <ArenaColliders />
           {trainingTargetsHaveCollision(encounterState) && <TargetColliders />}
-          <Player active={active} invertY={invertY} lifeState={playerLifeState} />
+          <Player
+            active={active}
+            invertY={invertY}
+            lifeState={playerLifeState}
+            touchInput={touchInput}
+          />
           {encounterState.phase === 'zombie' && (
             <Suspense fallback={null}>
               <TrainingZombieEncounter
@@ -179,6 +189,7 @@ export function GameViewport({
   onEmptyFire,
   onPlayerDamage,
   onWeaponStateChange,
+  touchInput,
 }: GameViewportProps) {
   useEffect(() => {
     preloadZombieAssets();
@@ -218,6 +229,7 @@ export function GameViewport({
         onEmptyFire={onEmptyFire}
         onPlayerDamage={onPlayerDamage}
         onWeaponStateChange={onWeaponStateChange}
+        touchInput={touchInput}
       />
     </Canvas>
   );

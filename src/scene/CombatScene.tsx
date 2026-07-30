@@ -51,6 +51,7 @@ import {
   deathVisualAt,
   type PlayerLifeState,
 } from '../game/playerHealth';
+import type { TouchInputState } from '../game/input';
 import { BreakableLights } from './Arena';
 import { WeaponAudio } from './weaponAudio';
 
@@ -394,7 +395,15 @@ function Shotgun({
   );
 }
 
-function FireInput({ active, fire }: { active: boolean; fire: () => boolean }) {
+function FireInput({
+  active,
+  fire,
+  touchInput,
+}: {
+  active: boolean;
+  fire: () => boolean;
+  touchInput: TouchInputState;
+}) {
   const { gl } = useThree();
   const activeRef = useRef(active);
 
@@ -413,10 +422,26 @@ function FireInput({ active, fire }: { active: boolean; fire: () => boolean }) {
     return () => window.removeEventListener('pointerdown', onPointerDown);
   }, [fire, gl]);
 
+  useEffect(
+    () =>
+      touchInput.subscribeAction('fire', () => {
+        if (activeRef.current) fire();
+      }),
+    [fire, touchInput],
+  );
+
   return null;
 }
 
-function ReloadInput({ active, reload }: { active: boolean; reload: () => boolean }) {
+function ReloadInput({
+  active,
+  reload,
+  touchInput,
+}: {
+  active: boolean;
+  reload: () => boolean;
+  touchInput: TouchInputState;
+}) {
   const { gl } = useThree();
   const activeRef = useRef(active);
 
@@ -438,6 +463,14 @@ function ReloadInput({ active, reload }: { active: boolean; reload: () => boolea
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [gl, reload]);
 
+  useEffect(
+    () =>
+      touchInput.subscribeAction('reload', () => {
+        if (activeRef.current) reload();
+      }),
+    [reload, touchInput],
+  );
+
   return null;
 }
 
@@ -447,12 +480,14 @@ export function CombatScene({
   onEncounterStateChange,
   onEmptyFire,
   onWeaponStateChange,
+  touchInput,
 }: {
   active: boolean;
   playerLifeState: PlayerLifeState;
   onEncounterStateChange: (state: EncounterState) => void;
   onEmptyFire: () => void;
   onWeaponStateChange: (state: WeaponState) => void;
+  touchInput: TouchInputState;
 }) {
   const { camera, scene } = useThree();
   const shotIdRef = useRef(0);
@@ -597,8 +632,8 @@ export function CombatScene({
         weaponStateRef={weaponStateRef}
         reloadStartedAtRef={reloadStartedAtRef}
       />
-      <FireInput active={active} fire={fire} />
-      <ReloadInput active={active} reload={reload} />
+      <FireInput active={active} fire={fire} touchInput={touchInput} />
+      <ReloadInput active={active} reload={reload} touchInput={touchInput} />
     </>
   );
 }

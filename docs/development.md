@@ -20,7 +20,11 @@ and damage feedback, the reduced-motion-safe critical-health vignette, player de
 fade, disabled controls and weapon actions during death, Retry and menu actions, zombie hit and
 death animations, zombie collision, completion after all five corpses are removed, hidden
 completion HUD, and full encounter restoration from Restart, Restart Training, and Retry. Also
-verify pause and menu return.
+verify pause and menu return. On a coarse touch device, also verify that entry does not request
+pointer lock; the movement stick, look drag, Fire, Jump, Reload, and Pause controls work; held input
+clears on pause, tab return, restart, and menu return; the HUD does not overlap the controls; and
+portrait, landscape, and safe-area layouts remain usable. Repeat the desktop pointer-lock,
+keyboard, and mouse checks with touch emulation disabled.
 Development builds expose quiet live state at `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas
 size, WebGL state, frame count, camera, Rapier readiness, player position, and pressed controls.
 Scene helpers and diagnostics are excluded from production builds. Automated or headless
