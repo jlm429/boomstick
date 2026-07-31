@@ -2,7 +2,11 @@ import type { MovementInput } from './movement';
 
 export type PressedKeys = Record<string, boolean>;
 export type GameplayAction = 'fire' | 'reload';
-export type GameplayActionListener = () => void;
+export type TouchFireCoordinates = Readonly<{
+  clientX: number;
+  clientY: number;
+}>;
+export type GameplayActionListener = (coordinates?: TouchFireCoordinates) => void;
 
 export type TouchControlCapabilities = Readonly<{
   maxTouchPoints: number;
@@ -17,7 +21,7 @@ export type TouchInputState = Readonly<{
   requestJump: () => void;
   hasJumpRequest: () => boolean;
   consumeJump: () => boolean;
-  requestAction: (action: GameplayAction) => void;
+  requestAction: (action: GameplayAction, coordinates?: TouchFireCoordinates) => void;
   subscribeAction: (action: GameplayAction, listener: GameplayActionListener) => () => void;
   clear: () => void;
 }>;
@@ -78,8 +82,8 @@ export function createTouchInputState(): TouchInputState {
       jumpRequested = false;
       return requested;
     },
-    requestAction: (action) => {
-      for (const listener of listeners[action]) listener();
+    requestAction: (action, coordinates) => {
+      for (const listener of listeners[action]) listener(coordinates);
     },
     subscribeAction: (action, listener) => {
       listeners[action].add(listener);

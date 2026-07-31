@@ -18,6 +18,7 @@ import type { TrainingZombieId } from '../game/zombie';
 import { ArenaColliders, ArenaVisuals } from './Arena';
 import { CombatScene, TargetColliders } from './CombatScene';
 import { Player } from './Player';
+import { canvasDprForTouchControls } from './renderQuality';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 import { TrainingZombieEncounter } from './TrainingZombieEncounter';
 import { preloadZombieAssets } from './zombieAssets';
@@ -33,6 +34,7 @@ type GameViewportProps = {
   onPlayerDamage: (damage: number) => void;
   onWeaponStateChange: (state: WeaponState) => void;
   touchInput: TouchInputState;
+  touchControls: boolean;
 };
 
 function CanvasRegistration({ onCanvasReady }: Pick<GameViewportProps, 'onCanvasReady'>) {
@@ -190,6 +192,7 @@ export function GameViewport({
   onPlayerDamage,
   onWeaponStateChange,
   touchInput,
+  touchControls,
 }: GameViewportProps) {
   useEffect(() => {
     preloadZombieAssets();
@@ -200,7 +203,7 @@ export function GameViewport({
       aria-label="Boomstick arena. Use Enter Arena to enable mouse look."
       className="game-viewport"
       camera={{ fov: 76, near: 0.1, far: 120, position: [0, 2.1, 12] }}
-      dpr={[1, 1.5]}
+      dpr={canvasDprForTouchControls(touchControls)}
       shadows="basic"
       gl={{
         alpha: false,

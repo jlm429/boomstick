@@ -51,8 +51,10 @@ import {
   deathVisualAt,
   type PlayerLifeState,
 } from '../game/playerHealth';
-import type { TouchInputState } from '../game/input';
+import type { TouchFireCoordinates, TouchInputState } from '../game/input';
 import { BreakableLights } from './Arena';
+import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
+import { shotDirectionFromClientPoint } from './shotDirection';
 import { WeaponAudio } from './weaponAudio';
 
 const cameraDirection = new Vector3();
@@ -401,7 +403,7 @@ function FireInput({
   touchInput,
 }: {
   active: boolean;
-  fire: () => boolean;
+  fire: (coordinates?: TouchFireCoordinates) => boolean;
   touchInput: TouchInputState;
 }) {
   const { gl } = useThree();
@@ -424,8 +426,8 @@ function FireInput({
 
   useEffect(
     () =>
-      touchInput.subscribeAction('fire', () => {
-        if (activeRef.current) fire();
+      touchInput.subscribeAction('fire', (coordinates) => {
+        if (activeRef.current) fire(coordinates);
       }),
     [fire, touchInput],
   );
@@ -489,7 +491,7 @@ export function CombatScene({
   onWeaponStateChange: (state: WeaponState) => void;
   touchInput: TouchInputState;
 }) {
-  const { camera, scene } = useThree();
+  const { camera, gl, scene } = useThree();
   const shotIdRef = useRef(0);
   const lastShotAt = useRef(-Infinity);
   const weaponStateRef = useRef<WeaponState>(INITIAL_WEAPON_STATE);
@@ -566,52 +568,73 @@ export function CombatScene({
     }
   });
 
-  const fire = useCallback(() => {
-    const now = performance.now() / 1000;
-    if (!canFireWeapon(weaponStateRef.current, lastShotAt.current, now)) {
-      if (weaponStateRef.current.ammunition === 0 && !weaponStateRef.current.isReloading) {
-        weaponAudio.playEmptyFire();
-        onEmptyFire();
+  const fire = useCallback(
+    (coordinates?: TouchFireCoordinates) => {
+      const now = performance.now() / 1000;
+      if (!canFireWeapon(weaponStateRef.current, lastShotAt.current, now)) {
+        if (weaponStateRef.current.ammunition === 0 && !weaponStateRef.current.isReloading) {
+          weaponAudio.playEmptyFire();
+          onEmptyFire();
+        }
+        return false;
       }
-      return false;
-    }
-    lastShotAt.current = now;
-    updateWeaponState(consumeRound(weaponStateRef.current));
-    camera.getWorldDirection(cameraDirection);
-    cameraRight.crossVectors(cameraDirection, camera.up).normalize();
-    cameraUp.crossVectors(cameraRight, cameraDirection).normalize();
-    let impact: { sound: ImpactSound; distance: number } | null = null;
-    for (const [horizontal, vertical] of pelletOffsets()) {
-      pelletDirection
-        .copy(cameraDirection)
-        .addScaledVector(cameraRight, horizontal)
-        .addScaledVector(cameraUp, vertical)
-        .normalize();
-      raycaster.set(camera.position, pelletDirection);
-      const collisions = raycaster
-        .intersectObjects(scene.children, true)
-        .map(({ object, point }) => {
-          const handler = shotImpactHandler(object);
-          return {
-            target: handler
-              ? { distance: camera.position.distanceTo(point), handler, point }
-              : null,
-          };
+      lastShotAt.current = now;
+      updateWeaponState(consumeRound(weaponStateRef.current));
+      if (coordinates) {
+        shotDirectionFromClientPoint(
+          camera,
+          gl.domElement.getBoundingClientRect(),
+          coordinates,
+          cameraDirection,
+        );
+      } else {
+        camera.getWorldDirection(cameraDirection);
+      }
+      if (DEVELOPMENT_DIAGNOSTICS.enabled) {
+        reportRuntimeDiagnostics({
+          shotCoordinates: coordinates ? [coordinates.clientX, coordinates.clientY] : null,
+          shotDirection: [cameraDirection.x, cameraDirection.y, cameraDirection.z],
         });
-      const collision = firstShotTarget(collisions);
-      if (!collision) continue;
-      const sound = collision.handler({ distance: collision.distance, point: collision.point });
-      if (!sound) continue;
-      const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
-      if (!impact || selectedSound !== impact.sound) {
-        impact = { sound: selectedSound, distance: collision.distance };
       }
-    }
-    shotIdRef.current += 1;
-    weaponAudio.playShotgunBlast();
-    if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
-    return true;
-  }, [camera, onEmptyFire, scene, updateWeaponState, weaponAudio]);
+      cameraRight.crossVectors(cameraDirection, camera.up).normalize();
+      cameraUp.crossVectors(cameraRight, cameraDirection).normalize();
+      let impact: { sound: ImpactSound; distance: number } | null = null;
+      for (const [horizontal, vertical] of pelletOffsets()) {
+        pelletDirection
+          .copy(cameraDirection)
+          .addScaledVector(cameraRight, horizontal)
+          .addScaledVector(cameraUp, vertical)
+          .normalize();
+        raycaster.set(camera.position, pelletDirection);
+        const collisions = raycaster
+          .intersectObjects(scene.children, true)
+          .map(({ object, point }) => {
+            const handler = shotImpactHandler(object);
+            return {
+              target: handler
+                ? { distance: camera.position.distanceTo(point), handler, point }
+                : null,
+            };
+          });
+        const collision = firstShotTarget(collisions);
+        if (!collision) continue;
+        const sound = collision.handler({
+          distance: collision.distance,
+          point: collision.point,
+        });
+        if (!sound) continue;
+        const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
+        if (!impact || selectedSound !== impact.sound) {
+          impact = { sound: selectedSound, distance: collision.distance };
+        }
+      }
+      shotIdRef.current += 1;
+      weaponAudio.playShotgunBlast();
+      if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
+      return true;
+    },
+    [camera, gl, onEmptyFire, scene, updateWeaponState, weaponAudio],
+  );
 
   const reload = useCallback(() => {
     const nextState = startReload(weaponStateRef.current);

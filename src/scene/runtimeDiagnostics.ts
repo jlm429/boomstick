@@ -16,6 +16,8 @@ export type RuntimeDiagnostics = {
   frameDelta?: number;
   sceneChildren?: number;
   drawCalls?: number;
+  shotCoordinates?: readonly [number, number] | null;
+  shotDirection?: readonly [number, number, number];
   webglContext?: 'ok' | 'lost';
   physics?: 'waiting' | 'ready';
   player?: readonly [number, number, number];

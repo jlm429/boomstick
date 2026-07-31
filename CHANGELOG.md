@@ -21,3 +21,4 @@ All notable changes are documented here.
 - Varied zombie movement and run timing while coordinating stable, exclusive attack positions around the player.
 - Added coarse-touch mobile browser controls for movement, look, fire, jump, reload, pause, and lifecycle-safe resume and reset while preserving the desktop input path.
 - Added tap-to-shoot to the mobile look area, kept movement and action controls within safe-area-aware viewport margins, and removed bite-effect remounts that caused intermittent frame gaps.
+- Added touch-position shotgun aiming and reduced high-density mobile rendering and joystick update work while keeping desktop aiming and quality unchanged.
