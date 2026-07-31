@@ -227,6 +227,7 @@ export function App() {
         onPlayerDamage={applyDamage}
         onWeaponStateChange={setWeaponState}
         touchInput={touchInput}
+        touchControls={touchControls}
       />
       {phase !== 'training-complete' && phase !== 'defeated' && (
         <GameHud

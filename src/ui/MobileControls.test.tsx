@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { Profiler } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTouchInputState } from '../game/input';
 import {
@@ -60,6 +61,7 @@ describe('MobileControls', () => {
     fireEvent.pointerUp(look, { button: 0, clientX: 203, clientY: 123, pointerId: 1 });
 
     expect(fire).toHaveBeenCalledOnce();
+    expect(fire).toHaveBeenCalledWith({ clientX: 203, clientY: 123 });
     expect(input.consumeLook()).toEqual([0, 0]);
   });
 
@@ -178,6 +180,7 @@ describe('MobileControls', () => {
 
     expect(input.movement()[0]).toBeCloseTo(1);
     expect(fire).toHaveBeenCalledOnce();
+    expect(fire).toHaveBeenCalledWith({ clientX: 200, clientY: 100 });
     expect(reload).toHaveBeenCalledOnce();
   });
 
@@ -202,6 +205,40 @@ describe('MobileControls', () => {
 
     expect(input.movement()[0]).toBeCloseTo(1);
     expect(fire).toHaveBeenCalledOnce();
+    expect(fire).toHaveBeenCalledWith({ clientX: 200, clientY: 100 });
+  });
+
+  it('moves the joystick knob without a React update', () => {
+    const input = createTouchInputState();
+    const onRender = vi.fn();
+    const { container } = render(
+      <Profiler id="mobile-controls" onRender={onRender}>
+        <MobileControls input={input} onPause={vi.fn()} />
+      </Profiler>,
+    );
+    const movement = screen.getByTestId('mobile-movement');
+    const knob = container.querySelector<HTMLElement>('.mobile-movement-knob')!;
+    mockMovementBounds(movement);
+    expect(onRender).toHaveBeenCalledOnce();
+
+    fireEvent.pointerDown(movement, {
+      button: 0,
+      clientX: 84,
+      clientY: 50,
+      pointerId: 1,
+    });
+
+    expect(onRender).toHaveBeenCalledOnce();
+    expect(knob).toHaveStyle('--stick-x: 34px; --stick-y: 0px');
+
+    fireEvent.pointerUp(movement, {
+      button: 0,
+      clientX: 84,
+      clientY: 50,
+      pointerId: 1,
+    });
+    expect(onRender).toHaveBeenCalledOnce();
+    expect(knob).toHaveStyle('--stick-x: 0px; --stick-y: 0px');
   });
 
   it('keeps movement and action controls from becoming look or tap input', () => {

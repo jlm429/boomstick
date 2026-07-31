@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   clearPressedKeys,
   createPressedKeys,
@@ -96,16 +96,15 @@ describe('touch input state', () => {
 
   it('dispatches gameplay actions only to current subscribers', () => {
     const input = createTouchInputState();
-    let fireCount = 0;
-    const unsubscribe = input.subscribeAction('fire', () => {
-      fireCount += 1;
-    });
+    const fire = vi.fn();
+    const unsubscribe = input.subscribeAction('fire', fire);
 
-    input.requestAction('fire');
+    input.requestAction('fire', { clientX: 320, clientY: 180 });
     unsubscribe();
-    input.requestAction('fire');
+    input.requestAction('fire', { clientX: 120, clientY: 90 });
 
-    expect(fireCount).toBe(1);
+    expect(fire).toHaveBeenCalledOnce();
+    expect(fire).toHaveBeenCalledWith({ clientX: 320, clientY: 180 });
   });
 
   it('clears every held or queued transient without removing action subscriptions', () => {

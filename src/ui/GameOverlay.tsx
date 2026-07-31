@@ -60,10 +60,12 @@ export function GameHud({
   return (
     <>
       <div className={playerAlive ? 'hud' : 'hud is-player-down'} aria-hidden="true">
-        <div className="crosshair">
-          <i />
-          <i />
-        </div>
+        {!touchControls && (
+          <div className="crosshair">
+            <i />
+            <i />
+          </div>
+        )}
         <span>BOOMSTICK // v{APP_VERSION}</span>
         <HealthModule damageRevision={damageRevision} health={health} />
         <span className={weaponState.isReloading ? 'hud-ammo is-reloading' : 'hud-ammo'}>

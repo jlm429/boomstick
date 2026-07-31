@@ -14,6 +14,7 @@ vi.mock('./scene/GameViewport', () => ({
     onEncounterStateChange,
     onPlayerDamage,
     onWeaponStateChange,
+    touchControls,
   }: {
     active: boolean;
     invertY: boolean;
@@ -26,6 +27,7 @@ vi.mock('./scene/GameViewport', () => ({
     }) => void;
     onPlayerDamage: (damage: number) => void;
     onWeaponStateChange: (state: { ammunition: number; isReloading: boolean }) => void;
+    touchControls: boolean;
   }) => (
     <>
       <canvas
@@ -33,6 +35,7 @@ vi.mock('./scene/GameViewport', () => ({
         data-invert-y={invertY}
         data-life-state={playerLifeState}
         data-run-id={runId}
+        data-touch-controls={touchControls}
         data-testid="game-viewport"
         ref={onCanvasReady}
       />
@@ -154,6 +157,7 @@ describe('App navigation', () => {
     expect(screen.getByText('Escape')).toBeInTheDocument();
     expect(screen.getByText('R')).toBeInTheDocument();
     expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-active', 'false');
+    expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-touch-controls', 'false');
   });
 
   it('requests lock from the R3F canvas and only plays after pointerlockchange', () => {
@@ -188,6 +192,7 @@ describe('App navigation', () => {
 
     expect(requestPointerLock).not.toHaveBeenCalled();
     expect(canvas).toHaveAttribute('data-active', 'true');
+    expect(canvas).toHaveAttribute('data-touch-controls', 'true');
     expect(gameShell).toHaveClass('touch-gameplay-active');
     expect(screen.getByRole('group', { name: 'Touch gameplay controls' })).toBeInTheDocument();
     expect(useAppStore.getState()).toMatchObject({

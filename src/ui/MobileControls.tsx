@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import { useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { type GameplayAction, type TouchInputState } from '../game/input';
 
 export const MOBILE_TAP_MOVE_THRESHOLD_PX = 10;
@@ -68,16 +61,22 @@ export function MobileControls({
   const activePointers = useRef(new Set<number>());
   const movementPointer = useRef<number | null>(null);
   const movementRegion = useRef<HTMLDivElement | null>(null);
+  const movementKnob = useRef<HTMLSpanElement | null>(null);
   const lookPointers = useRef(new Set<number>());
   const lookGesture = useRef<LookGesture | null>(null);
-  const [stickPosition, setStickPosition] = useState({ x: 0, y: 0 });
+
+  const positionMovementKnob = (x: number, y: number) => {
+    movementKnob.current?.style.setProperty('--stick-x', `${x}px`);
+    movementKnob.current?.style.setProperty('--stick-y', `${y}px`);
+  };
 
   const clearPointers = useCallback(() => {
     activePointers.current.clear();
     movementPointer.current = null;
     lookPointers.current.clear();
     lookGesture.current = null;
-    setStickPosition({ x: 0, y: 0 });
+    movementKnob.current?.style.setProperty('--stick-x', '0px');
+    movementKnob.current?.style.setProperty('--stick-y', '0px');
     input.clear();
   }, [input]);
 
@@ -103,7 +102,7 @@ export function MobileControls({
     const scale = length > radius ? radius / length : 1;
     const boundedX = x * scale;
     const boundedY = y * scale;
-    setStickPosition({ x: boundedX, y: boundedY });
+    positionMovementKnob(boundedX, boundedY);
     input.setMovement(boundedX / radius, boundedY / radius);
   };
 
@@ -128,7 +127,7 @@ export function MobileControls({
     event.preventDefault();
     event.stopPropagation();
     movementPointer.current = null;
-    setStickPosition({ x: 0, y: 0 });
+    positionMovementKnob(0, 0);
     input.setMovement(0, 0);
   };
 
@@ -216,14 +215,12 @@ export function MobileControls({
       durationMs >= 0 &&
       durationMs < MOBILE_TAP_MAX_DURATION_MS
     ) {
-      input.requestAction('fire');
+      input.requestAction('fire', {
+        clientX: gesture.lastX,
+        clientY: gesture.lastY,
+      });
     }
   };
-
-  const stickStyle = {
-    '--stick-x': `${stickPosition.x}px`,
-    '--stick-y': `${stickPosition.y}px`,
-  } as CSSProperties;
 
   return (
     <div
@@ -280,7 +277,7 @@ export function MobileControls({
         onPointerUp={endMovement}
       >
         <span className="mobile-movement-ring" aria-hidden />
-        <span className="mobile-movement-knob" style={stickStyle} aria-hidden />
+        <span ref={movementKnob} className="mobile-movement-knob" aria-hidden />
       </div>
       <div className="mobile-actions" role="group" aria-label="Weapon and movement actions">
         <ActionButton

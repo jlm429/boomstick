@@ -3,6 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { GameHud } from './GameOverlay';
 
 describe('GameHud reload reminder', () => {
+  it('keeps the center crosshair on desktop and removes it on the touch path', () => {
+    const props = {
+      damageRevision: 0,
+      emptyFirePulse: 0,
+      encounterCountdown: null,
+      health: 100,
+      lifeState: 'alive',
+      playing: true,
+      weaponState: { ammunition: 10, isReloading: false },
+    } as const;
+    const { container, rerender } = render(<GameHud {...props} />);
+
+    expect(container.querySelector('.crosshair')).toBeInTheDocument();
+    rerender(<GameHud {...props} touchControls />);
+    expect(container.querySelector('.crosshair')).not.toBeInTheDocument();
+  });
+
   it('shows only for an empty magazine outside reload', () => {
     const { rerender } = render(
       <GameHud
