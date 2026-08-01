@@ -12,6 +12,7 @@ import {
 } from '../game/constants';
 import {
   clearPressedKeys,
+  clampLookPitch,
   consumeTouchLookOrientation,
   createPressedKeys,
   isGameControl,
@@ -61,6 +62,7 @@ export function Player({
   const activeRef = useRef(active);
   const invertYRef = useRef(invertY);
   const lifeStateRef = useRef(lifeState);
+  const previousLifeState = useRef(lifeState);
   const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
@@ -93,15 +95,16 @@ export function Player({
   }, [invertY]);
 
   useEffect(() => {
-    clearPressedKeys(pressed.current);
-    touchInput.clear();
     lifeStateRef.current = lifeState;
+    if (previousLifeState.current !== lifeState) {
+      clearPressedKeys(pressed.current);
+      touchInput.clear();
+      previousLifeState.current = lifeState;
+    }
     if (lifeState === 'alive') {
       deathElapsed.current = 0;
     }
   }, [lifeState, touchInput]);
-
-  useEffect(() => () => touchInput.clear(), [touchInput]);
 
   useEffect(
     () =>
