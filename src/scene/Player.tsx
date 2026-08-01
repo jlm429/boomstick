@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Euler, Vector3 } from 'three';
 import { shouldResetPlayerPosition } from '../game/arena';
 import {
@@ -12,14 +12,13 @@ import {
 } from '../game/constants';
 import {
   clearPressedKeys,
-  clampLookPitch,
+  consumeTouchLookOrientation,
   createPressedKeys,
   isGameControl,
   movementInput,
   mouseLookDelta,
   pressKey,
   releaseKey,
-  touchLookDelta,
   type PressedKeys,
   type TouchInputState,
 } from '../game/input';
@@ -69,6 +68,18 @@ export function Player({
   const lastDiagnosticSample = useRef(0);
   const { camera, gl } = useThree();
 
+  const applyPendingTouchLook = useCallback(() => {
+    const orientation = consumeTouchLookOrientation(
+      touchInput,
+      yaw.current,
+      pitch.current,
+      invertYRef.current,
+    );
+    yaw.current = orientation.yaw;
+    pitch.current = orientation.pitch;
+    applyCameraAim(camera, orientation, rotation);
+  }, [camera, touchInput]);
+
   useEffect(() => {
     activeRef.current = active;
     if (!active) {
@@ -96,6 +107,7 @@ export function Player({
     () =>
       touchInput.subscribeAction('aim-fire', (coordinates) => {
         if (!coordinates || !activeRef.current || lifeStateRef.current !== 'alive') return;
+        applyPendingTouchLook();
         const orientation = aimOrientationFromClientPoint(
           camera,
           gl.domElement.getBoundingClientRect(),
@@ -108,7 +120,7 @@ export function Player({
         applyCameraAim(camera, orientation, rotation);
         touchInput.requestAction('fire', coordinates);
       }),
-    [camera, gl, touchInput],
+    [applyPendingTouchLook, camera, gl, touchInput],
   );
 
   useEffect(() => {
@@ -149,10 +161,7 @@ export function Player({
 
   useFrame(({ clock }, delta) => {
     if (activeRef.current && lifeState === 'alive') {
-      const [movementX, movementY] = touchInput.consumeLook();
-      const touchDelta = touchLookDelta(movementX, movementY, invertYRef.current);
-      yaw.current += touchDelta.yaw;
-      pitch.current = clampLookPitch(pitch.current + touchDelta.pitch);
+      applyPendingTouchLook();
     }
     if (!Number.isFinite(yaw.current) || !Number.isFinite(pitch.current)) {
       yaw.current = 0;

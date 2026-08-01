@@ -1,6 +1,10 @@
 import { Euler, Group, PerspectiveCamera, Raycaster, Vector2, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { MAX_LOOK_PITCH_RADIANS } from '../game/input';
+import {
+  consumeTouchLookOrientation,
+  createTouchInputState,
+  MAX_LOOK_PITCH_RADIANS,
+} from '../game/input';
 import {
   aimOrientationFromClientPoint,
   alignWeaponWithCamera,
@@ -73,6 +77,43 @@ describe('shotDirectionFromClientPoint', () => {
     expect(firedDirection.distanceTo(expectedDirection)).toBeLessThan(1e-10);
     expect(camera.rotation.x).toBeCloseTo(orientation.pitch);
     expect(camera.rotation.y).toBeCloseTo(orientation.yaw);
+  });
+
+  it('applies pending drag look before resolving and firing a tap aim', () => {
+    const camera = createCamera();
+    const input = createTouchInputState();
+    const coordinates = {
+      clientX: bounds.left + bounds.width * 0.7,
+      clientY: bounds.top + bounds.height * 0.35,
+    };
+    input.addLook(24, -12);
+
+    const dragOrientation = consumeTouchLookOrientation(
+      input,
+      camera.rotation.y,
+      camera.rotation.x,
+      false,
+    );
+    applyCameraAim(camera, dragOrientation, new Euler());
+    const expectedDirection = shotDirectionFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      new Vector3(),
+    ).clone();
+    const tapOrientation = aimOrientationFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      dragOrientation.yaw,
+      new Vector3(),
+    );
+    applyCameraAim(camera, tapOrientation, new Euler());
+
+    expect(input.consumeLook()).toEqual([0, 0]);
+    expect(camera.getWorldDirection(new Vector3()).distanceTo(expectedDirection)).toBeLessThan(
+      1e-10,
+    );
   });
 
   it('keeps yaw continuous and clamps extreme tap pitch at the drag-look limits', () => {

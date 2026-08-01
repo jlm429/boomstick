@@ -10,7 +10,6 @@ import {
   canFireWeapon,
   completeReload,
   consumeRound,
-  firstShotTarget,
   isReloadInput,
   pelletOffsets,
   reloadPoseAt,
@@ -32,13 +31,6 @@ describe('shotgun firing rules', () => {
       true,
     );
     expect(pelletOffsets()).toBe(offsets);
-  });
-
-  it('only reacts to the nearest shot collision', () => {
-    expect(firstShotTarget([{ target: null }, { target: 'covered-target' }])).toBeNull();
-    expect(firstShotTarget([{ target: 'visible-target' }, { target: null }])).toBe(
-      'visible-target',
-    );
   });
 
   it('keeps the visual firing pass separate from hitscan mechanics', () => {

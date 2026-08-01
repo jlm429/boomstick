@@ -7,6 +7,7 @@ export type TouchFireCoordinates = Readonly<{
   clientY: number;
 }>;
 export type GameplayActionListener = (coordinates?: TouchFireCoordinates) => void;
+export type LookOrientation = Readonly<{ yaw: number; pitch: number }>;
 
 export type TouchControlCapabilities = Readonly<{
   maxTouchPoints: number;
@@ -53,6 +54,11 @@ export function createTouchInputState(): TouchInputState {
     fire: new Set(),
     reload: new Set(),
   };
+  const pendingActions: Record<GameplayAction, (TouchFireCoordinates | undefined)[]> = {
+    'aim-fire': [],
+    fire: [],
+    reload: [],
+  };
 
   return {
     setMovement: (x, z) => {
@@ -88,10 +94,16 @@ export function createTouchInputState(): TouchInputState {
       return requested;
     },
     requestAction: (action, coordinates) => {
+      if (listeners[action].size === 0) {
+        pendingActions[action].push(coordinates);
+        return;
+      }
       for (const listener of listeners[action]) listener(coordinates);
     },
     subscribeAction: (action, listener) => {
       listeners[action].add(listener);
+      const pending = pendingActions[action].splice(0);
+      for (const coordinates of pending) listener(coordinates);
       return () => listeners[action].delete(listener);
     },
     clear: () => {
@@ -100,6 +112,9 @@ export function createTouchInputState(): TouchInputState {
       lookX = 0;
       lookY = 0;
       jumpRequested = false;
+      pendingActions['aim-fire'].length = 0;
+      pendingActions.fire.length = 0;
+      pendingActions.reload.length = 0;
     },
   };
 }
@@ -137,6 +152,20 @@ export const touchLookDelta = (movementX: number, movementY: number, invertY: bo
   yaw: -movementX * TOUCH_LOOK_SENSITIVITY,
   pitch: (invertY ? 1 : -1) * movementY * TOUCH_LOOK_SENSITIVITY,
 });
+
+export function consumeTouchLookOrientation(
+  input: TouchInputState,
+  currentYaw: number,
+  currentPitch: number,
+  invertY: boolean,
+): LookOrientation {
+  const [movementX, movementY] = input.consumeLook();
+  const delta = touchLookDelta(movementX, movementY, invertY);
+  return {
+    yaw: currentYaw + delta.yaw,
+    pitch: clampLookPitch(currentPitch + delta.pitch),
+  };
+}
 
 export const clampLookPitch = (pitch: number) =>
   Math.max(-MAX_LOOK_PITCH_RADIANS, Math.min(MAX_LOOK_PITCH_RADIANS, pitch));

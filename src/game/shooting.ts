@@ -33,7 +33,6 @@ export const INITIAL_WEAPON_STATE: WeaponState = {
 };
 
 export type ShotOffset = readonly [horizontal: number, vertical: number];
-export type ShotCollision<T> = Readonly<{ target: T | null }>;
 
 const PELLET_PATTERN: readonly ShotOffset[] = [
   [0, 0],
@@ -165,6 +164,3 @@ export function reloadPoseAt(
 }
 
 export const pelletOffsets = (): readonly ShotOffset[] => PELLET_OFFSETS;
-
-export const firstShotTarget = <T>(collisions: readonly ShotCollision<T>[]) =>
-  collisions[0]?.target ?? null;
