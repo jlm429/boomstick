@@ -1,7 +1,7 @@
 import type { MovementInput } from './movement';
 
 export type PressedKeys = Record<string, boolean>;
-export type GameplayAction = 'fire' | 'reload';
+export type GameplayAction = 'aim-fire' | 'fire' | 'reload';
 export type TouchFireCoordinates = Readonly<{
   clientX: number;
   clientY: number;
@@ -27,8 +27,12 @@ export type TouchInputState = Readonly<{
 }>;
 
 export const GAME_CONTROL_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'] as const;
-export const TOUCH_LOOK_SENSITIVITY = 0.004;
+const BASE_TOUCH_LOOK_SENSITIVITY = 0.004;
+export const MOBILE_LOOK_SENSITIVITY_MULTIPLIER = 1.8;
+export const TOUCH_LOOK_SENSITIVITY =
+  BASE_TOUCH_LOOK_SENSITIVITY * MOBILE_LOOK_SENSITIVITY_MULTIPLIER;
 const MOUSE_LOOK_SENSITIVITY = 0.0022;
+export const MAX_LOOK_PITCH_RADIANS = 1.35;
 
 export const supportsTouchControls = ({
   maxTouchPoints,
@@ -45,6 +49,7 @@ export function createTouchInputState(): TouchInputState {
   let lookY = 0;
   let jumpRequested = false;
   const listeners: Record<GameplayAction, Set<GameplayActionListener>> = {
+    'aim-fire': new Set(),
     fire: new Set(),
     reload: new Set(),
   };
@@ -132,3 +137,6 @@ export const touchLookDelta = (movementX: number, movementY: number, invertY: bo
   yaw: -movementX * TOUCH_LOOK_SENSITIVITY,
   pitch: (invertY ? 1 : -1) * movementY * TOUCH_LOOK_SENSITIVITY,
 });
+
+export const clampLookPitch = (pitch: number) =>
+  Math.max(-MAX_LOOK_PITCH_RADIANS, Math.min(MAX_LOOK_PITCH_RADIANS, pitch));

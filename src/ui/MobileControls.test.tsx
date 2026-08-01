@@ -49,7 +49,7 @@ describe('MobileControls', () => {
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     const input = createTouchInputState();
     const fire = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const look = screen.getByTestId('mobile-look-zone');
 
@@ -69,7 +69,7 @@ describe('MobileControls', () => {
     vi.spyOn(performance, 'now').mockReturnValue(100);
     const input = createTouchInputState();
     const fire = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const look = screen.getByTestId('mobile-look-zone');
 
@@ -100,7 +100,7 @@ describe('MobileControls', () => {
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     const input = createTouchInputState();
     const fire = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const look = screen.getByTestId('mobile-look-zone');
 
@@ -124,7 +124,7 @@ describe('MobileControls', () => {
     vi.spyOn(performance, 'now').mockReturnValue(100);
     const input = createTouchInputState();
     const fire = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const look = screen.getByTestId('mobile-look-zone');
 
@@ -133,13 +133,34 @@ describe('MobileControls', () => {
     fireEvent.pointerUp(look, { button: 0, clientX: 240, clientY: 120, pointerId: 2 });
     fireEvent.pointerUp(look, { button: 0, clientX: 200, clientY: 120, pointerId: 1 });
 
+    expect(fire).not.toHaveBeenCalled();
+  });
+
+  it('keeps UI-owned touches independent from a simultaneous look tap in both orders', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(100);
+    const input = createTouchInputState();
+    const aimFire = vi.fn();
+    const reload = vi.fn();
+    input.subscribeAction('aim-fire', aimFire);
+    input.subscribeAction('reload', reload);
+    render(<MobileControls input={input} onPause={vi.fn()} />);
+    const look = screen.getByTestId('mobile-look-zone');
+    const reloadButton = screen.getByRole('button', { name: 'Reload' });
+
     fireEvent.pointerDown(look, { button: 0, clientX: 200, clientY: 120, pointerId: 3 });
-    const reload = screen.getByRole('button', { name: 'Reload' });
-    fireEvent.pointerDown(reload, { button: 0, pointerId: 4 });
-    fireEvent.pointerUp(reload, { button: 0, pointerId: 4 });
+    fireEvent.pointerDown(reloadButton, { button: 0, pointerId: 4 });
+    fireEvent.pointerUp(reloadButton, { button: 0, pointerId: 4 });
     fireEvent.pointerUp(look, { button: 0, clientX: 200, clientY: 120, pointerId: 3 });
 
-    expect(fire).not.toHaveBeenCalled();
+    fireEvent.pointerDown(reloadButton, { button: 0, pointerId: 5 });
+    fireEvent.pointerDown(look, { button: 0, clientX: 210, clientY: 130, pointerId: 6 });
+    fireEvent.pointerUp(look, { button: 0, clientX: 210, clientY: 130, pointerId: 6 });
+    fireEvent.pointerUp(reloadButton, { button: 0, pointerId: 5 });
+
+    expect(reload).toHaveBeenCalledTimes(2);
+    expect(aimFire).toHaveBeenCalledTimes(2);
+    expect(aimFire).toHaveBeenNthCalledWith(1, { clientX: 200, clientY: 120 });
+    expect(aimFire).toHaveBeenNthCalledWith(2, { clientX: 210, clientY: 130 });
   });
 
   it('preserves movement with look, tap shooting, and reload', () => {
@@ -148,7 +169,7 @@ describe('MobileControls', () => {
     const input = createTouchInputState();
     const fire = vi.fn();
     const reload = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     input.subscribeAction('reload', reload);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const movement = screen.getByTestId('mobile-movement');
@@ -188,7 +209,7 @@ describe('MobileControls', () => {
     vi.spyOn(performance, 'now').mockReturnValue(100);
     const input = createTouchInputState();
     const fire = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     render(<MobileControls input={input} onPause={vi.fn()} />);
     const movement = screen.getByTestId('mobile-movement');
     const look = screen.getByTestId('mobile-look-zone');
@@ -246,7 +267,7 @@ describe('MobileControls', () => {
     const onPause = vi.fn();
     const fire = vi.fn();
     const reload = vi.fn();
-    input.subscribeAction('fire', fire);
+    input.subscribeAction('aim-fire', fire);
     input.subscribeAction('reload', reload);
     render(<MobileControls input={input} onPause={onPause} />);
     const movement = screen.getByTestId('mobile-movement');

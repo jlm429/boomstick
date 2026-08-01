@@ -31,6 +31,7 @@ describe('shotgun firing rules', () => {
     expect(offsets.some(([horizontal, vertical]) => horizontal !== 0 || vertical !== 0)).toBe(
       true,
     );
+    expect(pelletOffsets()).toBe(offsets);
   });
 
   it('only reacts to the nearest shot collision', () => {

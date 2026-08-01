@@ -22,3 +22,4 @@ All notable changes are documented here.
 - Added coarse-touch mobile browser controls for movement, look, fire, jump, reload, pause, and lifecycle-safe resume and reset while preserving the desktop input path.
 - Added tap-to-shoot to the mobile look area, kept movement and action controls within safe-area-aware viewport margins, and removed bite-effect remounts that caused intermittent frame gaps.
 - Added touch-position shotgun aiming and reduced high-density mobile rendering and joystick update work while keeping desktop aiming and quality unchanged.
+- Stabilized mobile tap aim around the authoritative camera, increased drag-look sensitivity, preserved concurrent touch ownership, and reduced fragmented zombie draw work without changing encounter behavior.

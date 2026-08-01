@@ -12,6 +12,7 @@ import {
 } from '../game/constants';
 import {
   clearPressedKeys,
+  clampLookPitch,
   createPressedKeys,
   isGameControl,
   movementInput,
@@ -29,10 +30,12 @@ import {
   type PlayerLifeState,
 } from '../game/playerHealth';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
+import { aimOrientationFromClientPoint, applyCameraAim } from './shotDirection';
 
 const UP = new Vector3(0, 1, 0);
 const walkDirection = new Vector3();
 const cameraDirection = new Vector3();
+const tapAimDirection = new Vector3();
 const rotation = new Euler(0, 0, 0, 'YXZ');
 
 function resetBody(rigidBody: RapierRigidBody) {
@@ -58,6 +61,7 @@ export function Player({
   const body = useRef<RapierRigidBody>(null);
   const activeRef = useRef(active);
   const invertYRef = useRef(invertY);
+  const lifeStateRef = useRef(lifeState);
   const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
@@ -80,12 +84,32 @@ export function Player({
   useEffect(() => {
     clearPressedKeys(pressed.current);
     touchInput.clear();
+    lifeStateRef.current = lifeState;
     if (lifeState === 'alive') {
       deathElapsed.current = 0;
     }
   }, [lifeState, touchInput]);
 
   useEffect(() => () => touchInput.clear(), [touchInput]);
+
+  useEffect(
+    () =>
+      touchInput.subscribeAction('aim-fire', (coordinates) => {
+        if (!coordinates || !activeRef.current || lifeStateRef.current !== 'alive') return;
+        const orientation = aimOrientationFromClientPoint(
+          camera,
+          gl.domElement.getBoundingClientRect(),
+          coordinates,
+          yaw.current,
+          tapAimDirection,
+        );
+        yaw.current = orientation.yaw;
+        pitch.current = orientation.pitch;
+        applyCameraAim(camera, orientation, rotation);
+        touchInput.requestAction('fire', coordinates);
+      }),
+    [camera, gl, touchInput],
+  );
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -106,7 +130,7 @@ export function Player({
       if (!Number.isFinite(event.movementX) || !Number.isFinite(event.movementY)) return;
       const delta = mouseLookDelta(event.movementX, event.movementY, invertYRef.current);
       yaw.current += delta.yaw;
-      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + delta.pitch));
+      pitch.current = clampLookPitch(pitch.current + delta.pitch);
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -128,7 +152,7 @@ export function Player({
       const [movementX, movementY] = touchInput.consumeLook();
       const touchDelta = touchLookDelta(movementX, movementY, invertYRef.current);
       yaw.current += touchDelta.yaw;
-      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + touchDelta.pitch));
+      pitch.current = clampLookPitch(pitch.current + touchDelta.pitch);
     }
     if (!Number.isFinite(yaw.current) || !Number.isFinite(pitch.current)) {
       yaw.current = 0;
@@ -179,6 +203,7 @@ export function Player({
     ) {
       lastDiagnosticSample.current = clock.elapsedTime;
       reportRuntimeDiagnostics({
+        cameraRotation: [pitch.current, yaw.current, 0],
         input: Object.keys(pressed.current),
         player: [position.x, position.y, position.z],
       });

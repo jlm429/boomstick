@@ -9,13 +9,15 @@ from that click.
 When the browser reports one or more touch points and a coarse primary pointer, the entry prompt
 shows touch controls instead. Touch play starts without pointer lock. Drag the left stick to move
 and use the right-side gameplay area to aim or fire. Releasing a primary pointer there in less than
-250 milliseconds after moving less than 10 pixels fires once toward the release position without
-rotating the camera. Reaching 10 pixels commits the gesture to camera look and never fires.
-Cancelled gestures, lost pointer capture, added look pointers, and other UI controls do not produce
-a shot; the movement stick can remain held while looking, firing, or reloading. The center crosshair
-is hidden for touch controls because taps set the shot direction. Jump, Reload, and Pause use
-dedicated labeled controls. Touch pointers and queued input clear when play pauses, the tab is
-hidden, the run resets, or the scene unmounts.
+250 milliseconds after moving less than 10 pixels immediately turns the authoritative player camera
+and visible weapon toward the release position, then fires once along the new camera-forward
+direction. Reaching 10 pixels commits the gesture to camera look and never fires. Cancelled
+gestures, lost pointer capture, added look pointers, and UI controls do not themselves produce a
+shot. Movement and UI touches remain independent from an owned look tap, so movement, aiming,
+shooting, and reloading can overlap in either touch order. The center crosshair is hidden for touch
+controls because a tap updates the camera aim. Jump, Reload, and Pause use dedicated labeled
+controls. Touch pointers and queued input clear when play pauses, the tab is hidden, the run resets,
+or the scene unmounts.
 
 From the pause dialog, select **Restart** to return to the arena spawn and begin a fresh training
 run with full health, a restored weapon, restored lights and targets, and no zombie, or select

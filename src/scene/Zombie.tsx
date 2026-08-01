@@ -27,7 +27,6 @@ import {
   PointsMaterial,
   Vector3,
 } from 'three';
-import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
   BITE_BURST_CAMERA_DISTANCE,
   BITE_PARTICLE_COUNT,
@@ -78,7 +77,7 @@ import {
   type ZombieAnimation,
 } from './zombieAnimation';
 import { ZombieAttackAudio } from './zombieAudio';
-import { ZOMBIE_ASSET_URLS } from './zombieAssets';
+import { createZombieModelInstance, ZOMBIE_ASSET_URLS } from './zombieAssets';
 
 const ZOMBIE_SOURCE_CLIP_NAME = 'mixamo.com';
 const ANIMATION_BONE_PREFIX = 'mixamorig5';
@@ -311,7 +310,7 @@ function ZombieActor({
   const attackAsset = useFBX(ZOMBIE_ASSET_URLS.attack);
   const hitAsset = useFBX(ZOMBIE_ASSET_URLS.hit);
   const dyingAsset = useFBX(ZOMBIE_ASSET_URLS.dying);
-  const model = useMemo(() => clone(modelAsset) as Group, [modelAsset]);
+  const model = useMemo(() => createZombieModelInstance(modelAsset), [modelAsset]);
   const modelNodeNames = useMemo(() => {
     const names = new Set<string>();
     model.traverse(({ name }) => names.add(name));

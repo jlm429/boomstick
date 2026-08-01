@@ -14,7 +14,6 @@ type LookGesture = {
   maximumDisplacementPx: number;
   cameraMovement: boolean;
   tapEligible: boolean;
-  movementPointerIdAtStart: number | null;
 };
 
 function ActionButton({
@@ -58,9 +57,7 @@ export function MobileControls({
   input: TouchInputState;
   onPause: () => void;
 }) {
-  const activePointers = useRef(new Set<number>());
   const movementPointer = useRef<number | null>(null);
-  const movementRegion = useRef<HTMLDivElement | null>(null);
   const movementKnob = useRef<HTMLSpanElement | null>(null);
   const lookPointers = useRef(new Set<number>());
   const lookGesture = useRef<LookGesture | null>(null);
@@ -71,7 +68,6 @@ export function MobileControls({
   };
 
   const clearPointers = useCallback(() => {
-    activePointers.current.clear();
     movementPointer.current = null;
     lookPointers.current.clear();
     lookGesture.current = null;
@@ -152,10 +148,7 @@ export function MobileControls({
       lastY: event.clientY,
       maximumDisplacementPx: 0,
       cameraMovement: false,
-      tapEligible: [...activePointers.current].every(
-        (pointerId) => pointerId === event.pointerId || pointerId === movementPointer.current,
-      ),
-      movementPointerIdAtStart: movementPointer.current,
+      tapEligible: true,
     };
   };
 
@@ -215,7 +208,7 @@ export function MobileControls({
       durationMs >= 0 &&
       durationMs < MOBILE_TAP_MAX_DURATION_MS
     ) {
-      input.requestAction('fire', {
+      input.requestAction('aim-fire', {
         clientX: gesture.lastX,
         clientY: gesture.lastY,
       });
@@ -228,24 +221,6 @@ export function MobileControls({
       role="group"
       aria-label="Touch gameplay controls"
       onContextMenu={(event) => event.preventDefault()}
-      onPointerCancelCapture={(event) => activePointers.current.delete(event.pointerId)}
-      onPointerDownCapture={(event) => {
-        activePointers.current.add(event.pointerId);
-        const gesture = lookGesture.current;
-        const startsMovement =
-          event.button === 0 &&
-          movementPointer.current === null &&
-          movementRegion.current?.contains(event.target as Node);
-        if (
-          gesture &&
-          event.pointerId !== gesture.pointerId &&
-          event.pointerId !== gesture.movementPointerIdAtStart &&
-          !startsMovement
-        ) {
-          gesture.tapEligible = false;
-        }
-      }}
-      onPointerUpCapture={(event) => activePointers.current.delete(event.pointerId)}
     >
       <div
         className="mobile-look-zone"
@@ -253,7 +228,6 @@ export function MobileControls({
         aria-label="Tap to shoot or drag to look"
         data-testid="mobile-look-zone"
         onLostPointerCapture={(event) => {
-          activePointers.current.delete(event.pointerId);
           finishLook(event, false);
         }}
         onPointerCancel={(event) => finishLook(event, false)}
@@ -262,13 +236,11 @@ export function MobileControls({
         onPointerUp={(event) => finishLook(event, true)}
       />
       <div
-        ref={movementRegion}
         className="mobile-movement"
         role="group"
         aria-label="Movement stick"
         data-testid="mobile-movement"
         onLostPointerCapture={(event) => {
-          activePointers.current.delete(event.pointerId);
           endMovement(event);
         }}
         onPointerCancel={endMovement}
