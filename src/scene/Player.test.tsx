@@ -88,8 +88,10 @@ describe('Player input readiness', () => {
     expect(fire).toHaveBeenCalledOnce();
     expect(fire).toHaveBeenCalledWith(coordinates);
     expect(input.consumeLook()).toEqual([0, 0]);
-    expect(camera.getWorldDirection(new Vector3()).distanceTo(
-      expectedCamera.getWorldDirection(new Vector3()),
-    )).toBeLessThan(1e-10);
+    expect(
+      camera
+        .getWorldDirection(new Vector3())
+        .distanceTo(expectedCamera.getWorldDirection(new Vector3())),
+    ).toBeLessThan(1e-10);
   });
 });
