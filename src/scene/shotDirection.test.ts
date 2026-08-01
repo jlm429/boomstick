@@ -1,6 +1,17 @@
-import { PerspectiveCamera, Raycaster, Vector2, Vector3 } from 'three';
+import { Euler, Group, PerspectiveCamera, Raycaster, Vector2, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { shotDirectionFromClientPoint, type CanvasClientBounds } from './shotDirection';
+import {
+  consumeTouchLookOrientation,
+  createTouchInputState,
+  MAX_LOOK_PITCH_RADIANS,
+} from '../game/input';
+import {
+  aimOrientationFromClientPoint,
+  alignWeaponWithCamera,
+  applyCameraAim,
+  shotDirectionFromClientPoint,
+  type CanvasClientBounds,
+} from './shotDirection';
 
 const bounds: CanvasClientBounds = {
   left: 20,
@@ -34,6 +45,115 @@ describe('shotDirectionFromClientPoint', () => {
     );
 
     expect(actual.distanceTo(expected)).toBeLessThan(1e-10);
+  });
+
+  it('applies an off-center tap to the authoritative camera before firing', () => {
+    const camera = createCamera();
+    const coordinates = {
+      clientX: bounds.left + bounds.width * 0.8,
+      clientY: bounds.top + bounds.height * 0.2,
+    };
+    const expectedDirection = shotDirectionFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      new Vector3(),
+    ).clone();
+    const orientation = aimOrientationFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      camera.rotation.y,
+      new Vector3(),
+    );
+    const sequence: string[] = [];
+
+    applyCameraAim(camera, orientation, new Euler());
+    sequence.push('aim');
+    const firedDirection = camera.getWorldDirection(new Vector3());
+    sequence.push('fire');
+
+    expect(sequence).toEqual(['aim', 'fire']);
+    expect(firedDirection.distanceTo(expectedDirection)).toBeLessThan(1e-10);
+    expect(camera.rotation.x).toBeCloseTo(orientation.pitch);
+    expect(camera.rotation.y).toBeCloseTo(orientation.yaw);
+  });
+
+  it('applies pending drag look before resolving and firing a tap aim', () => {
+    const camera = createCamera();
+    const input = createTouchInputState();
+    const coordinates = {
+      clientX: bounds.left + bounds.width * 0.7,
+      clientY: bounds.top + bounds.height * 0.35,
+    };
+    input.addLook(24, -12);
+
+    const dragOrientation = consumeTouchLookOrientation(
+      input,
+      camera.rotation.y,
+      camera.rotation.x,
+      false,
+    );
+    applyCameraAim(camera, dragOrientation, new Euler());
+    const expectedDirection = shotDirectionFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      new Vector3(),
+    ).clone();
+    const tapOrientation = aimOrientationFromClientPoint(
+      camera,
+      bounds,
+      coordinates,
+      dragOrientation.yaw,
+      new Vector3(),
+    );
+    applyCameraAim(camera, tapOrientation, new Euler());
+
+    expect(input.consumeLook()).toEqual([0, 0]);
+    expect(camera.getWorldDirection(new Vector3()).distanceTo(expectedDirection)).toBeLessThan(
+      1e-10,
+    );
+  });
+
+  it('keeps yaw continuous and clamps extreme tap pitch at the drag-look limits', () => {
+    const camera = createCamera();
+    const continuousYaw = Math.PI * 4 + camera.rotation.y;
+    const center = {
+      clientX: bounds.left + bounds.width / 2,
+      clientY: bounds.top + bounds.height / 2,
+    };
+    const centered = aimOrientationFromClientPoint(
+      camera,
+      bounds,
+      center,
+      continuousYaw,
+      new Vector3(),
+    );
+    const top = aimOrientationFromClientPoint(
+      camera,
+      bounds,
+      { clientX: center.clientX, clientY: -100_000 },
+      centered.yaw,
+      new Vector3(),
+    );
+
+    expect(centered.yaw).toBeCloseTo(continuousYaw);
+    expect(top.pitch).toBe(MAX_LOOK_PITCH_RADIANS);
+  });
+
+  it('aligns the visible weapon presentation with the camera aim', () => {
+    const camera = createCamera();
+    const weapon = new Group();
+
+    alignWeaponWithCamera(weapon, camera);
+    weapon.updateMatrixWorld(true);
+    const cameraForward = camera.getWorldDirection(new Vector3());
+    const weaponForward = new Vector3(0, 0, -1).applyQuaternion(weapon.quaternion);
+
+    expect(weapon.position.equals(camera.position)).toBe(true);
+    expect(weapon.quaternion.equals(camera.quaternion)).toBe(true);
+    expect(weaponForward.distanceTo(cameraForward)).toBeLessThan(1e-10);
   });
 
   it('maps an off-center point through the camera projection without rotating the camera', () => {

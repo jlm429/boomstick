@@ -1,11 +1,16 @@
-import { type Camera, Vector3 } from 'three';
-import type { TouchFireCoordinates } from '../game/input';
+import { type Camera, Euler, type Object3D, Vector3 } from 'three';
+import { clampLookPitch, type TouchFireCoordinates } from '../game/input';
 
 export type CanvasClientBounds = Readonly<{
   left: number;
   top: number;
   width: number;
   height: number;
+}>;
+
+export type AimOrientation = Readonly<{
+  yaw: number;
+  pitch: number;
 }>;
 
 export function shotDirectionFromClientPoint(
@@ -34,4 +39,38 @@ export function shotDirectionFromClientPoint(
     .unproject(camera)
     .sub(camera.position)
     .normalize();
+}
+
+export function aimOrientationFromClientPoint(
+  camera: Camera,
+  bounds: CanvasClientBounds,
+  coordinates: TouchFireCoordinates,
+  currentYaw: number,
+  targetDirection: Vector3,
+): AimOrientation {
+  const direction = shotDirectionFromClientPoint(camera, bounds, coordinates, targetDirection);
+  const normalizedYaw = Math.atan2(-direction.x, -direction.z);
+  const shortestYawDelta = Math.atan2(
+    Math.sin(normalizedYaw - currentYaw),
+    Math.cos(normalizedYaw - currentYaw),
+  );
+  return {
+    yaw: currentYaw + shortestYawDelta,
+    pitch: clampLookPitch(Math.asin(Math.max(-1, Math.min(1, direction.y)))),
+  };
+}
+
+export function applyCameraAim(
+  camera: Camera,
+  orientation: AimOrientation,
+  targetRotation: Euler,
+) {
+  targetRotation.set(orientation.pitch, orientation.yaw, 0, 'YXZ');
+  camera.quaternion.setFromEuler(targetRotation);
+  camera.updateMatrixWorld(true);
+}
+
+export function alignWeaponWithCamera(weapon: Object3D, camera: Camera) {
+  weapon.position.copy(camera.position);
+  weapon.quaternion.copy(camera.quaternion);
 }

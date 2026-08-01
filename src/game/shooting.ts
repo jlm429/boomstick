@@ -33,7 +33,6 @@ export const INITIAL_WEAPON_STATE: WeaponState = {
 };
 
 export type ShotOffset = readonly [horizontal: number, vertical: number];
-export type ShotCollision<T> = Readonly<{ target: T | null }>;
 
 const PELLET_PATTERN: readonly ShotOffset[] = [
   [0, 0],
@@ -46,6 +45,11 @@ const PELLET_PATTERN: readonly ShotOffset[] = [
   [0, -0.7],
   [0, 0.7],
 ];
+
+const PELLET_OFFSETS: readonly ShotOffset[] = PELLET_PATTERN.map(([horizontal, vertical]) => [
+  horizontal * SHOT_SPREAD_RADIANS,
+  vertical * SHOT_SPREAD_RADIANS,
+]);
 
 export const canFireShot = (lastShotAt: number, now: number) =>
   Number.isFinite(now) && now - lastShotAt >= SHOT_COOLDOWN_SECONDS;
@@ -159,11 +163,4 @@ export function reloadPoseAt(
   return restingPose(target, 'complete');
 }
 
-export const pelletOffsets = (): readonly ShotOffset[] =>
-  PELLET_PATTERN.map(([horizontal, vertical]) => [
-    horizontal * SHOT_SPREAD_RADIANS,
-    vertical * SHOT_SPREAD_RADIANS,
-  ]);
-
-export const firstShotTarget = <T>(collisions: readonly ShotCollision<T>[]) =>
-  collisions[0]?.target ?? null;
+export const pelletOffsets = (): readonly ShotOffset[] => PELLET_OFFSETS;

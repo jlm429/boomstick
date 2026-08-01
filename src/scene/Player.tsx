@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Euler, Vector3 } from 'three';
 import { shouldResetPlayerPosition } from '../game/arena';
 import {
@@ -12,13 +12,14 @@ import {
 } from '../game/constants';
 import {
   clearPressedKeys,
+  clampLookPitch,
+  consumeTouchLookOrientation,
   createPressedKeys,
   isGameControl,
   movementInput,
   mouseLookDelta,
   pressKey,
   releaseKey,
-  touchLookDelta,
   type PressedKeys,
   type TouchInputState,
 } from '../game/input';
@@ -29,10 +30,12 @@ import {
   type PlayerLifeState,
 } from '../game/playerHealth';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
+import { aimOrientationFromClientPoint, applyCameraAim } from './shotDirection';
 
 const UP = new Vector3(0, 1, 0);
 const walkDirection = new Vector3();
 const cameraDirection = new Vector3();
+const tapAimDirection = new Vector3();
 const rotation = new Euler(0, 0, 0, 'YXZ');
 
 function resetBody(rigidBody: RapierRigidBody) {
@@ -58,12 +61,26 @@ export function Player({
   const body = useRef<RapierRigidBody>(null);
   const activeRef = useRef(active);
   const invertYRef = useRef(invertY);
+  const lifeStateRef = useRef(lifeState);
+  const previousLifeState = useRef(lifeState);
   const pressed = useRef<PressedKeys>(createPressedKeys());
   const yaw = useRef(0);
   const pitch = useRef(0);
   const deathElapsed = useRef(0);
   const lastDiagnosticSample = useRef(0);
   const { camera, gl } = useThree();
+
+  const applyPendingTouchLook = useCallback(() => {
+    const orientation = consumeTouchLookOrientation(
+      touchInput,
+      yaw.current,
+      pitch.current,
+      invertYRef.current,
+    );
+    yaw.current = orientation.yaw;
+    pitch.current = orientation.pitch;
+    applyCameraAim(camera, orientation, rotation);
+  }, [camera, touchInput]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -78,14 +95,36 @@ export function Player({
   }, [invertY]);
 
   useEffect(() => {
-    clearPressedKeys(pressed.current);
-    touchInput.clear();
+    lifeStateRef.current = lifeState;
+    if (previousLifeState.current !== lifeState) {
+      clearPressedKeys(pressed.current);
+      touchInput.clear();
+      previousLifeState.current = lifeState;
+    }
     if (lifeState === 'alive') {
       deathElapsed.current = 0;
     }
   }, [lifeState, touchInput]);
 
-  useEffect(() => () => touchInput.clear(), [touchInput]);
+  useEffect(
+    () =>
+      touchInput.subscribeAction('aim-fire', (coordinates) => {
+        if (!coordinates || !activeRef.current || lifeStateRef.current !== 'alive') return;
+        applyPendingTouchLook();
+        const orientation = aimOrientationFromClientPoint(
+          camera,
+          gl.domElement.getBoundingClientRect(),
+          coordinates,
+          yaw.current,
+          tapAimDirection,
+        );
+        yaw.current = orientation.yaw;
+        pitch.current = orientation.pitch;
+        applyCameraAim(camera, orientation, rotation);
+        touchInput.requestAction('fire', coordinates);
+      }),
+    [applyPendingTouchLook, camera, gl, touchInput],
+  );
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -106,7 +145,7 @@ export function Player({
       if (!Number.isFinite(event.movementX) || !Number.isFinite(event.movementY)) return;
       const delta = mouseLookDelta(event.movementX, event.movementY, invertYRef.current);
       yaw.current += delta.yaw;
-      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + delta.pitch));
+      pitch.current = clampLookPitch(pitch.current + delta.pitch);
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -125,10 +164,7 @@ export function Player({
 
   useFrame(({ clock }, delta) => {
     if (activeRef.current && lifeState === 'alive') {
-      const [movementX, movementY] = touchInput.consumeLook();
-      const touchDelta = touchLookDelta(movementX, movementY, invertYRef.current);
-      yaw.current += touchDelta.yaw;
-      pitch.current = Math.max(-1.35, Math.min(1.35, pitch.current + touchDelta.pitch));
+      applyPendingTouchLook();
     }
     if (!Number.isFinite(yaw.current) || !Number.isFinite(pitch.current)) {
       yaw.current = 0;
@@ -179,6 +215,7 @@ export function Player({
     ) {
       lastDiagnosticSample.current = clock.elapsedTime;
       reportRuntimeDiagnostics({
+        cameraRotation: [pitch.current, yaw.current, 0],
         input: Object.keys(pressed.current),
         player: [position.x, position.y, position.z],
       });

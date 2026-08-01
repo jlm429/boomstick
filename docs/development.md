@@ -23,12 +23,12 @@ all five corpses are removed, hidden completion HUD, and full encounter restorat
 Restart Training, and Retry. Also verify pause and menu return. On a coarse touch device, also
 verify entry without pointer lock; the simultaneous and rejected touch gesture cases in
 [Controls](controls.md); held input clearing on pause, tab return, restart, and menu return; no
-overlap between the HUD and controls; hidden touch crosshair; center and off-center tap aim without
-camera movement; and usable portrait, landscape, and safe-area layouts. Repeat
+overlap between the HUD and controls; hidden touch crosshair; center and off-center tap aim with
+camera, weapon, and shot agreement; and usable portrait, landscape, and safe-area layouts. Repeat
 the desktop pointer-lock, keyboard, and mouse checks with touch emulation disabled.
 Development builds expose quiet live state at `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas
 size, WebGL state, frame count, camera, Rapier readiness, player position, pressed controls, and the
-latest successful shot coordinates and direction.
+latest successful shot coordinates and direction, renderer workload, and physics object counts.
 Scene helpers and diagnostics are excluded from production builds. Automated or headless
 pointer-lock simulation is useful for state coverage, but it does not replace hands-on browser
 verification.

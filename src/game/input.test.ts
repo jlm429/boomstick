@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   clearPressedKeys,
+  clampLookPitch,
+  consumeTouchLookOrientation,
   createPressedKeys,
   createTouchInputState,
+  MAX_LOOK_PITCH_RADIANS,
+  MOBILE_LOOK_SENSITIVITY_MULTIPLIER,
   movementInput,
   mouseLookDelta,
   pressKey,
@@ -58,10 +62,17 @@ describe('input lifecycle', () => {
     const invertedTouch = touchLookDelta(10, 8, true);
     expect(mouse.yaw).toBeCloseTo(-0.022);
     expect(mouse.pitch).toBeCloseTo(-0.0176);
-    expect(touch.yaw).toBeCloseTo(-0.04);
-    expect(touch.pitch).toBeCloseTo(-0.032);
-    expect(invertedTouch.yaw).toBeCloseTo(-0.04);
-    expect(invertedTouch.pitch).toBeCloseTo(0.032);
+    expect(MOBILE_LOOK_SENSITIVITY_MULTIPLIER).toBe(1.8);
+    expect(touch.yaw).toBeCloseTo(-0.072);
+    expect(touch.pitch).toBeCloseTo(-0.0576);
+    expect(invertedTouch.yaw).toBeCloseTo(-0.072);
+    expect(invertedTouch.pitch).toBeCloseTo(0.0576);
+  });
+
+  it('clamps touch and mouse pitch at the shared authoritative limits', () => {
+    expect(clampLookPitch(MAX_LOOK_PITCH_RADIANS + 1)).toBe(MAX_LOOK_PITCH_RADIANS);
+    expect(clampLookPitch(-MAX_LOOK_PITCH_RADIANS - 1)).toBe(-MAX_LOOK_PITCH_RADIANS);
+    expect(clampLookPitch(0.42)).toBe(0.42);
   });
 });
 
@@ -105,6 +116,59 @@ describe('touch input state', () => {
 
     expect(fire).toHaveBeenCalledOnce();
     expect(fire).toHaveBeenCalledWith({ clientX: 320, clientY: 180 });
+  });
+
+  it('delivers actions requested before their authoritative subscriber exactly once', () => {
+    const input = createTouchInputState();
+    const aimFire = vi.fn();
+    const coordinates = { clientX: 320, clientY: 180 };
+
+    input.requestAction('aim-fire', coordinates);
+    const unsubscribe = input.subscribeAction('aim-fire', aimFire);
+    unsubscribe();
+    input.subscribeAction('aim-fire', vi.fn());
+
+    expect(aimFire).toHaveBeenCalledOnce();
+    expect(aimFire).toHaveBeenCalledWith(coordinates);
+  });
+
+  it('clears actions queued before a subscriber becomes ready', () => {
+    const input = createTouchInputState();
+    const aimFire = vi.fn();
+
+    input.requestAction('aim-fire', { clientX: 320, clientY: 180 });
+    input.clear();
+    input.subscribeAction('aim-fire', aimFire);
+
+    expect(aimFire).not.toHaveBeenCalled();
+  });
+
+  it('consumes queued look through the shared yaw and pitch authority', () => {
+    const input = createTouchInputState();
+    input.addLook(20, -10);
+
+    const orientation = consumeTouchLookOrientation(input, 0.4, -0.2, false);
+
+    expect(orientation.yaw).toBeCloseTo(0.256);
+    expect(orientation.pitch).toBeCloseTo(-0.128);
+    expect(input.consumeLook()).toEqual([0, 0]);
+  });
+
+  it('sequences an aim tap before its single authoritative fire action', () => {
+    const input = createTouchInputState();
+    const sequence: string[] = [];
+    const coordinates = { clientX: 320, clientY: 180 };
+    input.subscribeAction('aim-fire', (received) => {
+      sequence.push(`aim:${received?.clientX},${received?.clientY}`);
+      input.requestAction('fire', received);
+    });
+    input.subscribeAction('fire', (received) => {
+      sequence.push(`fire:${received?.clientX},${received?.clientY}`);
+    });
+
+    input.requestAction('aim-fire', coordinates);
+
+    expect(sequence).toEqual(['aim:320,180', 'fire:320,180']);
   });
 
   it('clears every held or queued transient without removing action subscriptions', () => {

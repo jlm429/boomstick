@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Physics } from '@react-three/rapier';
+import { Physics, useRapier } from '@react-three/rapier';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
+import { ACESFilmicToneMapping, SRGBColorSpace, Vector3 } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
 import {
   areAllTrainingZombiesRemoved,
@@ -36,6 +36,8 @@ type GameViewportProps = {
   touchInput: TouchInputState;
   touchControls: boolean;
 };
+
+const diagnosticCameraForward = new Vector3();
 
 function CanvasRegistration({ onCanvasReady }: Pick<GameViewportProps, 'onCanvasReady'>) {
   const { gl } = useThree();
@@ -78,11 +80,20 @@ function RenderDiagnostics() {
     if (clock.elapsedTime - lastSample.current < DEVELOPMENT_DIAGNOSTICS.sampleIntervalSeconds)
       return;
     lastSample.current = clock.elapsedTime;
+    camera.getWorldDirection(diagnosticCameraForward);
     reportRuntimeDiagnostics({
       camera: [camera.position.x, camera.position.y, camera.position.z],
       cameraRotation: [camera.rotation.x, camera.rotation.y, camera.rotation.z],
+      cameraForward: [
+        diagnosticCameraForward.x,
+        diagnosticCameraForward.y,
+        diagnosticCameraForward.z,
+      ],
       canvas: [size.width, size.height],
       drawCalls: gl.info.render.calls,
+      triangles: gl.info.render.triangles,
+      geometries: gl.info.memory.geometries,
+      textures: gl.info.memory.textures,
       frame: frameCount.current,
       frameDelta: delta,
       sceneChildren: scene.children.length,
@@ -96,9 +107,31 @@ function RenderDiagnostics() {
 }
 
 function PhysicsDiagnostics() {
+  const { world } = useRapier();
+  const lastSample = useRef(0);
+
   useEffect(() => {
     reportRuntimeDiagnostics({ physics: 'ready' });
   }, []);
+
+  useFrame(({ clock }) => {
+    if (
+      !DEVELOPMENT_DIAGNOSTICS.enabled ||
+      clock.elapsedTime - lastSample.current < DEVELOPMENT_DIAGNOSTICS.sampleIntervalSeconds
+    )
+      return;
+    lastSample.current = clock.elapsedTime;
+    let rigidBodies = 0;
+    let colliders = 0;
+    world.forEachRigidBody(() => {
+      rigidBodies += 1;
+    });
+    world.forEachCollider(() => {
+      colliders += 1;
+    });
+    reportRuntimeDiagnostics({ rigidBodies, colliders });
+  });
+
   return null;
 }
 

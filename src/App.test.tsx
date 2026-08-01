@@ -220,6 +220,52 @@ describe('App navigation', () => {
     expect(requestPointerLock).not.toHaveBeenCalled();
   });
 
+  it('keeps one mobile HUD and control layer across combat, cancellation, pause, resize, and restart', () => {
+    setTouchControls(true);
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const canvas = screen.getByTestId('game-viewport');
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    const look = screen.getByTestId('mobile-look-zone');
+
+    fireEvent.click(screen.getByTestId('complete-training'));
+    fireEvent.click(screen.getByTestId('start-zombie'));
+    fireEvent.click(screen.getByTestId('damage-player'));
+    fireEvent.click(screen.getByTestId('empty-weapon'));
+    fireEvent.pointerDown(look, { button: 0, clientX: 240, clientY: 120, pointerId: 7 });
+    fireEvent.pointerCancel(look, { clientX: 240, clientY: 120, pointerId: 7 });
+    fireEvent(window, new Event('resize'));
+
+    expect(screen.getByTestId('health-module')).toHaveTextContent('95');
+    expect(screen.getByText('0 / 10')).toBeInTheDocument();
+    expect(container.querySelectorAll('.hud')).toHaveLength(1);
+    expect(container.querySelectorAll('.mobile-controls')).toHaveLength(1);
+    expect(container.querySelectorAll('canvas')).toHaveLength(1);
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), {
+      button: 0,
+      pointerId: 8,
+    });
+    expect(container.querySelectorAll('.hud')).toHaveLength(1);
+    expect(container.querySelectorAll('.mobile-controls')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(container.querySelectorAll('.hud')).toHaveLength(1);
+    expect(container.querySelectorAll('.mobile-controls')).toHaveLength(1);
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), {
+      button: 0,
+      pointerId: 9,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(canvas).toHaveAttribute('data-run-id', '2');
+    expect(screen.getByTestId('health-module')).toHaveTextContent('100');
+    expect(screen.getByText('10 / 10')).toBeInTheDocument();
+    expect(container.querySelectorAll('.hud')).toHaveLength(1);
+    expect(container.querySelectorAll('.mobile-controls')).toHaveLength(1);
+    expect(container.querySelectorAll('canvas')).toHaveLength(1);
+  });
+
   it('pauses on pointer-lock loss and resumes only after an explicit click and new lock', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
