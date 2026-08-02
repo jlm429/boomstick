@@ -10,6 +10,7 @@ export type ShotImpact = Readonly<{
 }>;
 
 export type ShotImpactHandler = (impact: ShotImpact) => ImpactSound | null;
+export type ShotImpactBatchHandler = (impacts: readonly ShotImpact[]) => ImpactSound | null;
 
 export type ArenaImpactState = Readonly<{
   brokenLightIds: ReadonlySet<string>;

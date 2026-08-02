@@ -111,6 +111,12 @@ export type ZombieHitResult = Readonly<{
   reacted: boolean;
 }>;
 
+export type ZombiePelletHitResult = Readonly<{
+  state: ZombieState;
+  damage: number;
+  reactedHits: number;
+}>;
+
 export const createZombieState = (): ZombieState => ({
   health: ZOMBIE_MAX_HEALTH,
   dead: false,
@@ -257,4 +263,20 @@ export function hitZombie(state: ZombieState, distance: number): ZombieHitResult
     damage: state.health - health,
     reacted: true,
   };
+}
+
+export function hitZombieWithPellets(
+  state: ZombieState,
+  pelletDistances: readonly number[],
+): ZombiePelletHitResult {
+  let nextState = state;
+  let damage = 0;
+  let reactedHits = 0;
+  for (const distance of pelletDistances) {
+    const result = hitZombie(nextState, distance);
+    nextState = result.state;
+    damage += result.damage;
+    if (result.reacted) reactedHits += 1;
+  }
+  return { state: nextState, damage, reactedHits };
 }
