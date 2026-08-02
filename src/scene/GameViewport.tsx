@@ -21,6 +21,7 @@ import { Player } from './Player';
 import { canvasDprForTouchControls } from './renderQuality';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 import { TrainingZombieEncounter } from './TrainingZombieEncounter';
+import { ZombieAssetWarmup } from './Zombie';
 import { preloadZombieAssets } from './zombieAssets';
 
 type GameViewportProps = {
@@ -187,6 +188,11 @@ function RunScene({
         onWeaponStateChange={onWeaponStateChange}
         touchInput={touchInput}
       />
+      {active && (
+        <Suspense fallback={null}>
+          <ZombieAssetWarmup />
+        </Suspense>
+      )}
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />

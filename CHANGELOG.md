@@ -23,3 +23,4 @@ All notable changes are documented here.
 - Added tap-to-shoot to the mobile look area, kept movement and action controls within safe-area-aware viewport margins, and removed bite-effect remounts that caused intermittent frame gaps.
 - Added touch-position shotgun aiming and reduced high-density mobile rendering and joystick update work while keeping desktop aiming and quality unchanged.
 - Stabilized mobile tap aim around the authoritative camera, increased drag-look sensitivity, preserved concurrent touch ownership, and reduced fragmented zombie draw work without changing encounter behavior.
+- Kept mobile shotgun firing responsive during zombie combat by reusing exact skinned-mesh raycast work, batching hit reactions, warming reusable encounter assets after arena entry, and releasing replay-only skeleton resources.

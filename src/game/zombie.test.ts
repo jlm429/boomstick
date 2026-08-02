@@ -15,6 +15,7 @@ import {
   createZombieMotionVariation,
   createZombieState,
   hitZombie,
+  hitZombieWithPellets,
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
@@ -118,6 +119,34 @@ describe('zombie health', () => {
 
     expect(zombie).toEqual({ health: 0, dead: true });
     expect(hitZombie(zombie, 0)).toEqual({ state: zombie, damage: 0, reacted: false });
+  });
+
+  it('applies every pellet in order while reporting one batch result', () => {
+    const initial = createZombieState();
+    const distances = [4, 8, 12, 16];
+    let sequential = initial;
+    let sequentialDamage = 0;
+    let sequentialReactions = 0;
+    for (const distance of distances) {
+      const result = hitZombie(sequential, distance);
+      sequential = result.state;
+      sequentialDamage += result.damage;
+      if (result.reacted) sequentialReactions += 1;
+    }
+
+    expect(hitZombieWithPellets(initial, distances)).toEqual({
+      state: sequential,
+      damage: sequentialDamage,
+      reactedHits: sequentialReactions,
+    });
+  });
+
+  it('stops reacting to remaining pellets after the same volley kills the zombie', () => {
+    const result = hitZombieWithPellets(createZombieState(), Array(20).fill(0));
+
+    expect(result.state).toEqual({ health: 0, dead: true });
+    expect(result.damage).toBe(ZOMBIE_MAX_HEALTH);
+    expect(result.reactedHits).toBeLessThan(20);
   });
 });
 

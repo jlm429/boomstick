@@ -28,6 +28,8 @@ import {
   hitBreakableLight,
   selectImpactSound,
   type ImpactSound,
+  type ShotImpact,
+  type ShotImpactBatchHandler,
   type ShotImpactHandler,
 } from '../game/impacts';
 import {
@@ -55,6 +57,7 @@ import { BreakableLights } from './Arena';
 import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiagnostics';
 import { alignWeaponWithCamera } from './shotDirection';
 import { WeaponAudio } from './weaponAudio';
+import { beginZombieRaycastShot } from './zombieAssets';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
@@ -71,11 +74,18 @@ const TARGET_HEALTH_METER_FRAME_HEIGHT = 0.18;
 const TARGET_HEALTH_METER_Y_GAP = 0.3;
 const TARGET_HEALTH_METER_Z_OFFSET = 0.08;
 
-function shotImpactHandler(object: Object3D): ShotImpactHandler | null {
+type LocatedShotImpactHandler = Readonly<
+  | { batch: ShotImpactBatchHandler; individual: null }
+  | { batch: null; individual: ShotImpactHandler }
+>;
+
+function shotImpactHandler(object: Object3D): LocatedShotImpactHandler | null {
   let current: Object3D | null = object;
   while (current) {
+    const onShotImpacts = current.userData.onShotImpacts as ShotImpactBatchHandler | undefined;
+    if (onShotImpacts) return { batch: onShotImpacts, individual: null };
     const onShotImpact = current.userData.onShotImpact as ShotImpactHandler | undefined;
-    if (onShotImpact) return onShotImpact;
+    if (onShotImpact) return { batch: null, individual: onShotImpact };
     current = current.parent;
   }
   return null;
@@ -499,6 +509,16 @@ export function CombatScene({
   const impactStateRef = useRef(impactState);
   const encounterStateRef = useRef(createEncounterState());
   const trainingTargetHealthRef = useRef(createTrainingTargetHealth());
+  const impactBatchMapRef = useRef(new Map<ShotImpactBatchHandler, ShotImpact[]>());
+  const impactBatchPoolRef = useRef<ShotImpact[][]>([]);
+  const resolvedImpactsRef = useRef<
+    {
+      batch: ShotImpactBatchHandler | null;
+      distance: number;
+      order: number;
+      sound: ImpactSound;
+    }[]
+  >([]);
 
   const updateWeaponState = useCallback(
     (state: WeaponState) => {
@@ -580,6 +600,8 @@ export function CombatScene({
         return false;
       }
       lastShotAt.current = now;
+      shotIdRef.current += 1;
+      weaponAudio.playShotgunBlast();
       updateWeaponState(consumeRound(weaponStateRef.current));
       camera.getWorldDirection(cameraDirection);
       if (DEVELOPMENT_DIAGNOSTICS.enabled) {
@@ -590,7 +612,14 @@ export function CombatScene({
       }
       cameraRight.crossVectors(cameraDirection, camera.up).normalize();
       cameraUp.crossVectors(cameraRight, cameraDirection).normalize();
-      let impact: { sound: ImpactSound; distance: number } | null = null;
+      beginZombieRaycastShot(raycaster);
+      const impactBatches = impactBatchMapRef.current;
+      const impactBatchPool = impactBatchPoolRef.current;
+      const resolvedImpacts = resolvedImpactsRef.current;
+      impactBatches.clear();
+      resolvedImpacts.length = 0;
+      let batchCount = 0;
+      let collisionOrder = 0;
       for (const [horizontal, vertical] of pelletOffsets()) {
         pelletDirection
           .copy(cameraDirection)
@@ -603,16 +632,45 @@ export function CombatScene({
         const handler = shotImpactHandler(collision.object);
         if (!handler) continue;
         const distance = camera.position.distanceTo(collision.point);
-        const sound = handler({ distance, point: collision.point });
+        const order = collisionOrder;
+        collisionOrder += 1;
+        if (handler.batch) {
+          let batch = impactBatches.get(handler.batch);
+          if (!batch) {
+            batch = impactBatchPool[batchCount] ?? [];
+            batch.length = 0;
+            impactBatchPool[batchCount] = batch;
+            batchCount += 1;
+            impactBatches.set(handler.batch, batch);
+          }
+          batch.push({ distance, point: collision.point });
+          if (batch.length === 1) {
+            resolvedImpacts.push({ batch: handler.batch, distance, order, sound: 'wall' });
+          }
+          continue;
+        }
+        const sound = handler.individual({ distance, point: collision.point });
         if (!sound) continue;
-        const selectedSound = selectImpactSound(impact?.sound ?? null, sound);
+        resolvedImpacts.push({ batch: null, distance, order, sound });
+      }
+      for (const [handler, impacts] of impactBatches) {
+        const sound = handler(impacts);
+        const resolved = resolvedImpacts.find(({ batch }) => batch === handler);
+        if (!sound && resolved) resolvedImpacts.splice(resolvedImpacts.indexOf(resolved), 1);
+        else if (sound && resolved) resolved.sound = sound;
+        impacts.length = 0;
+      }
+      impactBatches.clear();
+      resolvedImpacts.sort((left, right) => left.order - right.order);
+      let impact: { sound: ImpactSound; distance: number } | null = null;
+      for (const resolved of resolvedImpacts) {
+        const selectedSound = selectImpactSound(impact?.sound ?? null, resolved.sound);
         if (!impact || selectedSound !== impact.sound) {
-          impact = { sound: selectedSound, distance };
+          impact = { sound: selectedSound, distance: resolved.distance };
         }
       }
-      shotIdRef.current += 1;
-      weaponAudio.playShotgunBlast();
       if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
+      resolvedImpacts.length = 0;
       return true;
     },
     [camera, onEmptyFire, scene, updateWeaponState, weaponAudio],

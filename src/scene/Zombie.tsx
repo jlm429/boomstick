@@ -16,7 +16,6 @@ import {
   type MutableRefObject,
 } from 'react';
 import {
-  AnimationClip,
   AnimationMixer,
   BufferAttribute,
   Group,
@@ -44,14 +43,14 @@ import {
   type BloodBurst,
 } from '../game/bloodParticles';
 import { MAX_FRAME_DELTA } from '../game/constants';
-import type { ShotImpactHandler } from '../game/impacts';
+import type { ShotImpactBatchHandler } from '../game/impacts';
 import {
   ZOMBIE_COLLIDER_RADIUS,
   advanceZombieBehavior,
   createZombieBehaviorState,
   createZombieMotionVariation,
   createZombieState,
-  hitZombie,
+  hitZombieWithPellets,
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieSteeringBlocked,
@@ -77,11 +76,14 @@ import {
   type ZombieAnimation,
 } from './zombieAnimation';
 import { ZombieAttackAudio } from './zombieAudio';
-import { createZombieModelInstance, ZOMBIE_ASSET_URLS } from './zombieAssets';
+import {
+  createZombieModelInstance,
+  disposeZombieModelInstance,
+  prepareZombieAnimationClips,
+  warmZombieModelAsset,
+  ZOMBIE_ASSET_URLS,
+} from './zombieAssets';
 
-const ZOMBIE_SOURCE_CLIP_NAME = 'mixamo.com';
-const ANIMATION_BONE_PREFIX = 'mixamorig5';
-const MODEL_BONE_PREFIX = 'mixamorig';
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
 const COLLIDER_HALF_HEIGHT = 0.6;
@@ -99,37 +101,6 @@ const animationForMode = (mode: ZombieBehaviorMode): ZombieAnimation => {
 
 const normalizedAngleDelta = (from: number, to: number) =>
   Math.atan2(Math.sin(to - from), Math.cos(to - from));
-
-function prepareAnimation(
-  source: Group,
-  name: ZombieAnimation,
-  modelNodeNames: ReadonlySet<string>,
-  removeHorizontalRootMotion = false,
-): AnimationClip {
-  const sourceClip = source.animations.find(({ name }) => name === ZOMBIE_SOURCE_CLIP_NAME);
-  if (!sourceClip) {
-    throw new Error(`Zombie animation is missing the ${ZOMBIE_SOURCE_CLIP_NAME} clip.`);
-  }
-
-  const clip = sourceClip.clone();
-  clip.name = name;
-  for (const track of clip.tracks) {
-    track.name = track.name.replace(ANIMATION_BONE_PREFIX, MODEL_BONE_PREFIX);
-    if (!removeHorizontalRootMotion || track.name !== `${MODEL_BONE_PREFIX}Hips.position`)
-      continue;
-    const initialX = track.values[0];
-    const initialZ = track.values[2];
-    for (let index = 0; index < track.values.length; index += 3) {
-      track.values[index] = initialX;
-      track.values[index + 2] = initialZ;
-    }
-  }
-  clip.tracks = clip.tracks.filter((track) => {
-    const propertySeparator = track.name.indexOf('.');
-    return propertySeparator > 0 && modelNodeNames.has(track.name.slice(0, propertySeparator));
-  });
-  return clip;
-}
 
 function BloodBurstEffect({
   active,
@@ -285,6 +256,7 @@ function ZombieActor({
   const slotAssignmentRef = useRef<number | null>(null);
   const slotSettledRef = useRef(false);
   const nextBurstIdRef = useRef(1);
+  const pelletDistancesRef = useRef<number[]>([]);
   const nextBiteBurstIdRef = useRef(1);
   const biteBurstRef = useRef<BiteBurst | null>(null);
   const [motionVariation] = useState(createZombieMotionVariation);
@@ -311,21 +283,18 @@ function ZombieActor({
   const hitAsset = useFBX(ZOMBIE_ASSET_URLS.hit);
   const dyingAsset = useFBX(ZOMBIE_ASSET_URLS.dying);
   const model = useMemo(() => createZombieModelInstance(modelAsset), [modelAsset]);
-  const modelNodeNames = useMemo(() => {
-    const names = new Set<string>();
-    model.traverse(({ name }) => names.add(name));
-    return names;
-  }, [model]);
   const clips = useMemo(
-    () => [
-      prepareAnimation(idleAsset, 'idle', modelNodeNames),
-      prepareAnimation(runAsset, 'run', modelNodeNames, true),
-      prepareAnimation(attackAsset, 'attack', modelNodeNames, true),
-      prepareAnimation(hitAsset, 'hit', modelNodeNames),
-      prepareAnimation(dyingAsset, 'dying', modelNodeNames),
-    ],
-    [attackAsset, dyingAsset, hitAsset, idleAsset, modelNodeNames, runAsset],
+    () =>
+      prepareZombieAnimationClips(modelAsset, {
+        idle: idleAsset,
+        run: runAsset,
+        attack: attackAsset,
+        hit: hitAsset,
+        dying: dyingAsset,
+      }),
+    [attackAsset, dyingAsset, hitAsset, idleAsset, modelAsset, runAsset],
   );
+  useEffect(() => () => disposeZombieModelInstance(model), [model]);
   useEffect(() => {
     const attackController = new ZombieAttackController(WEAK_ZOMBIE_ATTACK, {
       isHitValid: () =>
@@ -455,12 +424,21 @@ function ZombieActor({
     setBloodBursts((bursts) => bursts.filter((burst) => burst.id !== id));
   }, []);
 
-  const onShotImpact: ShotImpactHandler = ({ distance, point }) => {
-    const result = hitZombie(zombieRef.current, distance);
-    if (!result.reacted) return null;
+  const onShotImpacts: ShotImpactBatchHandler = (impacts) => {
+    const pelletDistances = pelletDistancesRef.current;
+    pelletDistances.length = impacts.length;
+    for (let index = 0; index < impacts.length; index += 1) {
+      pelletDistances[index] = impacts[index].distance;
+    }
+    const result = hitZombieWithPellets(zombieRef.current, pelletDistances);
+    if (result.reactedHits === 0) return null;
+    const nextBursts: BloodBurst[] = [];
+    for (let index = 0; index < result.reactedHits; index += 1) {
+      nextBursts.push(createBloodBurst(nextBurstIdRef.current++, impacts[index].point));
+    }
     zombieRef.current = result.state;
     setZombie(result.state);
-    setBloodBursts((bursts) => [...bursts, createBloodBurst(nextBurstIdRef.current++, point)]);
+    setBloodBursts((bursts) => [...bursts, ...nextBursts]);
 
     const rigidBody = bodyRef.current;
     if (result.state.dead && rigidBody) {
@@ -662,7 +640,7 @@ function ZombieActor({
           position={[0, MODEL_FLOOR_OFFSET, 0]}
           rotation={[0, spawn.rotation, 0]}
           scale={MODEL_SCALE}
-          userData={{ onShotImpact }}
+          userData={{ onShotImpacts }}
           dispose={null}
         >
           <primitive object={model} />
@@ -679,6 +657,20 @@ function ZombieActor({
       <BiteBurstEffect active={active} burstRef={biteBurstRef} />
     </>
   );
+}
+
+export function ZombieAssetWarmup() {
+  const model = useFBX(ZOMBIE_ASSET_URLS.model);
+  const idle = useFBX(ZOMBIE_ASSET_URLS.idle);
+  const run = useFBX(ZOMBIE_ASSET_URLS.run);
+  const attack = useFBX(ZOMBIE_ASSET_URLS.attack);
+  const hit = useFBX(ZOMBIE_ASSET_URLS.hit);
+  const dying = useFBX(ZOMBIE_ASSET_URLS.dying);
+  useEffect(() => {
+    warmZombieModelAsset(model);
+    prepareZombieAnimationClips(model, { idle, run, attack, hit, dying });
+  }, [attack, dying, hit, idle, model, run]);
+  return null;
 }
 
 export function Zombie({
