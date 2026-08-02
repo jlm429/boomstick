@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { DEATH_SEQUENCE_MS } from './game/playerHealth';
@@ -160,19 +161,34 @@ describe('App navigation', () => {
     expect(screen.getByTestId('game-viewport')).toHaveAttribute('data-touch-controls', 'false');
   });
 
-  it('requests lock from the R3F canvas and only plays after pointerlockchange', () => {
+  it('enters desktop play through both visible buttons and the authoritative pointer-lock event', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+
+    await user.click(screen.getByRole('button', { name: 'Enter Arena' }));
+
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'arena-entry',
+      controlMode: null,
+      hasPointerLock: false,
+    });
     const canvas = screen.getByTestId('game-viewport');
-    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    await user.click(screen.getByRole('button', { name: 'Enter Arena' }));
+
     expect(requestPointerLock).toHaveBeenCalledOnce();
     expect(canvas).toHaveAttribute('data-active', 'false');
     expect(
       screen.queryByRole('group', { name: 'Touch gameplay controls' }),
     ).not.toBeInTheDocument();
+
     act(() => setPointerLockElement(canvas));
+
     expect(canvas).toHaveAttribute('data-active', 'true');
-    expect(useAppStore.getState().phase).toBe('playing');
+    expect(useAppStore.getState()).toMatchObject({
+      phase: 'playing',
+      controlMode: 'desktop',
+      hasPointerLock: true,
+    });
   });
 
   it('uses explicit touch play without pointer lock and cleans up pause and restart', () => {
