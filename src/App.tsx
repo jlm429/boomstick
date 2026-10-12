@@ -65,13 +65,21 @@ export function App() {
 
   useEffect(() => {
     const suspend = () => effectAudio.suspend();
+    const resume = () => {
+      if (document.visibilityState === 'visible' && canPlayerAct(useAppStore.getState())) {
+        effectAudio.resumeActive();
+      }
+    };
     const visibility = () => {
       if (document.visibilityState !== 'visible') suspend();
+      else resume();
     };
     window.addEventListener('blur', suspend);
+    window.addEventListener('focus', resume);
     document.addEventListener('visibilitychange', visibility);
     return () => {
       window.removeEventListener('blur', suspend);
+      window.removeEventListener('focus', resume);
       document.removeEventListener('visibilitychange', visibility);
       effectAudio.close();
     };

@@ -62,6 +62,11 @@ export class EffectAudio {
     if (!enabled) this.stopAll();
   }
 
+  resumeActive() {
+    if (!this.enabled || !this.context) return;
+    void this.context.resume().catch(this.reportError);
+  }
+
   play(owner: EffectOwner, sound: EffectSound, volume = 1, replace = true) {
     const context = this.context;
     const buffer = this.buffers.get(sound);

@@ -5,6 +5,33 @@ import { setupEffectAudio } from './effectAudio.test-support';
 const owner = (): EffectOwner => new Map();
 
 describe('short-effect audio runtime', () => {
+  it('resumes only an existing enabled context without fetching or queuing effects', async () => {
+    const { audio, createContext, context, fetchAsset, sources, ready } = setupEffectAudio();
+    audio.setEnabled(true);
+    audio.resumeActive();
+    expect(createContext).not.toHaveBeenCalled();
+    await ready();
+    audio.suspend();
+    audio.setEnabled(false);
+    audio.resumeActive();
+    expect(context.state).toBe('suspended');
+    expect(context.resume).toHaveBeenCalledOnce();
+    audio.setEnabled(true);
+    audio.play(owner(), 'bite');
+    audio.resumeActive();
+    expect(context.state).toBe('running');
+    expect(sources).toHaveLength(0);
+    expect(fetchAsset).toHaveBeenCalledTimes(6);
+    expect(createContext).toHaveBeenCalledOnce();
+    audio.play(owner(), 'bite');
+    expect(sources).toHaveLength(1);
+    audio.close();
+    audio.setEnabled(true);
+    audio.resumeActive();
+    expect(createContext).toHaveBeenCalledOnce();
+    expect(context.resume).toHaveBeenCalledTimes(2);
+  });
+
   it('constructs no browser resources before activation and caches all six decodes across gestures', async () => {
     const { audio, createContext, fetchAsset, context, ready } = setupEffectAudio();
     expect(createContext).not.toHaveBeenCalled();

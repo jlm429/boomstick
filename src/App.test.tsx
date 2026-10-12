@@ -97,13 +97,17 @@ function setTouchControls(enabled: boolean) {
 
 describe('App navigation', () => {
   const requestPointerLock = vi.fn<() => Promise<void>>(() => Promise.resolve());
+  let browserAudio: ReturnType<typeof setupEffectAudio>;
 
   beforeEach(() => {
-    const audio = setupEffectAudio();
-    vi.stubGlobal('AudioContext', function () {
-      return audio.context;
-    });
-    vi.stubGlobal('fetch', audio.fetchAsset);
+    browserAudio = setupEffectAudio();
+    vi.stubGlobal(
+      'AudioContext',
+      vi.fn(function () {
+        return browserAudio.context;
+      }),
+    );
+    vi.stubGlobal('fetch', browserAudio.fetchAsset);
     useAppStore.setState({
       phase: 'main-menu',
       controlMode: null,
@@ -135,6 +139,105 @@ describe('App navigation', () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+  const backgroundAndReturn = (path: 'focus' | 'visibility') => {
+    if (path === 'focus') {
+      fireEvent(window, new Event('blur'));
+      return () => fireEvent(window, new Event('focus'));
+    }
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    visibility.mockReturnValue('hidden');
+    fireEvent(document, new Event('visibilitychange'));
+    return () => {
+      visibility.mockReturnValue('visible');
+      fireEvent(document, new Event('visibilitychange'));
+    };
+  };
+
+  it.each(['focus', 'visibility'] as const)(
+    'recovers active touch audio after %s return without replaying stale bites',
+    async (path) => {
+      setTouchControls(true);
+      const enabled = vi.spyOn(EffectAudio.prototype, 'setEnabled');
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+      await vi.waitFor(() =>
+        expect(browserAudio.context.decodeAudioData).toHaveBeenCalledTimes(6),
+      );
+      const audio = enabled.mock.contexts[0];
+      const owner = new Map();
+      audio.play(owner, 'bite');
+      expect(browserAudio.sources).toHaveLength(1);
+      const foreground = backgroundAndReturn(path);
+      expect(browserAudio.context.state).toBe('suspended');
+      if (path === 'visibility') {
+        fireEvent(window, new Event('focus'));
+        expect(browserAudio.context.state).toBe('suspended');
+      }
+      expect(browserAudio.sources[0].stop).toHaveBeenCalledOnce();
+      audio.play(owner, 'bite');
+      foreground();
+      expect(browserAudio.context.state).toBe('running');
+      expect(useAppStore.getState().phase).toBe('playing');
+      expect(browserAudio.sources).toHaveLength(1);
+      audio.play(owner, 'bite');
+      expect(browserAudio.sources).toHaveLength(2);
+      expect(AudioContext).toHaveBeenCalledOnce();
+
+      const retryForeground = backgroundAndReturn(path);
+      browserAudio.context.resume.mockRejectedValueOnce(new Error('Gesture required'));
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      retryForeground();
+      await vi.waitFor(() => expect(warn).toHaveBeenCalledOnce());
+      expect(browserAudio.context.state).toBe('suspended');
+      audio.play(owner, 'bite');
+      fireEvent.pointerDown(window);
+      expect(browserAudio.context.state).toBe('running');
+      expect(browserAudio.sources).toHaveLength(2);
+      audio.play(owner, 'bite');
+      expect(browserAudio.sources).toHaveLength(3);
+      expect(AudioContext).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['focus', 'visibility'] as const)(
+    'does not create audio on %s return before a gesture',
+    (path) => {
+      setTouchControls(true);
+      useAppStore.setState({ phase: 'playing', controlMode: 'touch' });
+      render(<App />);
+      backgroundAndReturn(path)();
+      expect(AudioContext).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['focus', 'visibility'] as const)(
+    'does not resume inactive sessions on %s return',
+    (path) => {
+      setTouchControls(true);
+      render(<App />);
+      fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+      for (const phase of [
+        'paused',
+        'arena-entry',
+        'dying',
+        'defeated',
+        'training-complete',
+        'about',
+        'controls',
+        'main-menu',
+      ] as const) {
+        const foreground = backgroundAndReturn(path);
+        act(() => useAppStore.setState({ phase }));
+        const resumes = browserAudio.context.resume.mock.calls.length;
+        foreground();
+        expect(browserAudio.context.resume).toHaveBeenCalledTimes(resumes);
+        expect(AudioContext).toHaveBeenCalledOnce();
+      }
+    },
+  );
 
   it('activates audio from entry/resume gestures, clears pause/restart voices, and closes on menu/unmount', () => {
     setTouchControls(true);
