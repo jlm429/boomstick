@@ -10,7 +10,8 @@ export type ParticleKind = 'blood' | 'surface' | 'light';
 export const BLOOD_POOL_CAPACITY = BLOOD_PARTICLE_COUNT * 3;
 export const SURFACE_POOL_CAPACITY = 72;
 export const PARTICLE_MAX_LIFETIME = 0.42;
-const blood = new Color('#9f1821');
+const blood = new Color('#bd202b');
+const darkBlood = new Color('#72101b');
 const dust = new Color('#9c8970');
 const spark = new Color('#ffd393');
 
@@ -20,6 +21,7 @@ export class ImpactParticlePool {
   readonly colors: Float32Array;
   readonly opacity: Float32Array;
   readonly sizes: Float32Array;
+  readonly shapes: Float32Array;
   private readonly origins: Float32Array;
   private readonly velocities: Float32Array;
   private readonly ages: Float32Array;
@@ -36,6 +38,7 @@ export class ImpactParticlePool {
     this.velocities = new Float32Array(capacity * 3);
     this.opacity = new Float32Array(capacity);
     this.sizes = new Float32Array(capacity);
+    this.shapes = new Float32Array(capacity * 3);
     this.ages = new Float32Array(capacity);
     this.lifetimes = new Float32Array(capacity);
   }
@@ -45,6 +48,7 @@ export class ImpactParticlePool {
     point: ShotImpactPoint,
     normal: ShotImpactPoint,
     random: () => number = Math.random,
+    strength = 0,
   ) {
     if (
       !Number.isFinite(point.x) ||
@@ -56,6 +60,8 @@ export class ImpactParticlePool {
     )
       return;
     const count = kind === 'blood' ? BLOOD_PARTICLE_COUNT : kind === 'light' ? 18 : 12;
+    const isBlood = kind === 'blood';
+    const intensity = Number.isFinite(strength) ? Math.min(1, Math.max(0, strength)) : 0;
     for (let index = 0; index < Math.min(count, this.capacity); index++) {
       const slot = this.cursor;
       this.cursor = (slot + 1) % this.capacity;
@@ -64,23 +70,40 @@ export class ImpactParticlePool {
       const azimuth = random() * Math.PI * 2;
       const vertical = random() * 2 - 1;
       const radial = Math.sqrt(1 - vertical * vertical);
-      const speed = isSpark ? 1.7 + random() * 2 : 0.6 + random() * 1.5;
+      const speed = isBlood
+        ? (1.1 + random() * 1.7) * (1 + intensity * 0.3)
+        : isSpark
+          ? 1.7 + random() * 2
+          : 0.6 + random() * 1.5;
       this.origins[offset] = point.x + normal.x * 0.025;
       this.origins[offset + 1] = point.y + normal.y * 0.025;
       this.origins[offset + 2] = point.z + normal.z * 0.025;
-      this.velocities[offset] = (Math.cos(azimuth) * radial * 0.65 + normal.x) * speed;
-      this.velocities[offset + 1] = (vertical * 0.65 + normal.y) * speed + 0.3;
-      this.velocities[offset + 2] = (Math.sin(azimuth) * radial * 0.65 + normal.z) * speed;
+      const spread = isBlood ? 0.42 : 0.65;
+      const directed = isBlood ? 1.25 : 1;
+      this.velocities[offset] =
+        (Math.cos(azimuth) * radial * spread + normal.x * directed) * speed;
+      this.velocities[offset + 1] = (vertical * spread + normal.y * directed) * speed + 0.3;
+      this.velocities[offset + 2] =
+        (Math.sin(azimuth) * radial * spread + normal.z * directed) * speed;
       this.positions[offset] = this.origins[offset];
       this.positions[offset + 1] = this.origins[offset + 1];
       this.positions[offset + 2] = this.origins[offset + 2];
-      (kind === 'blood' ? blood : isSpark ? spark : dust).toArray(this.colors, offset);
-      this.sizes[slot] =
-        kind === 'blood'
-          ? BLOOD_PARTICLE_SIZE * (0.45 + random() * 0.55)
-          : isSpark
-            ? 0.035
-            : 0.08;
+      if (isBlood) {
+        const tint = random();
+        this.colors[offset] = darkBlood.r + (blood.r - darkBlood.r) * tint;
+        this.colors[offset + 1] = darkBlood.g + (blood.g - darkBlood.g) * tint;
+        this.colors[offset + 2] = darkBlood.b + (blood.b - darkBlood.b) * tint;
+      } else {
+        (isSpark ? spark : dust).toArray(this.colors, offset);
+      }
+      this.sizes[slot] = isBlood
+        ? BLOOD_PARTICLE_SIZE * (0.5 + random() * 0.65) * (1 + intensity * 0.3)
+        : isSpark
+          ? 0.035
+          : 0.08;
+      this.shapes[offset] = isBlood ? 0.5 + random() * 0.35 : 1;
+      this.shapes[offset + 1] = isBlood ? azimuth : 0;
+      this.shapes[offset + 2] = isBlood ? 1 : 0;
       this.ages[slot] = 0;
       this.lifetimes[slot] =
         kind === 'blood'
@@ -115,7 +138,8 @@ export class ImpactParticlePool {
           this.origins[offset + axis] + this.velocities[offset + axis] * travel;
       }
       this.positions[offset + 1] -= 2.5 * elapsed * elapsed;
-      this.opacity[slot] = (1 - elapsed / this.lifetimes[slot]) ** 2;
+      this.opacity[slot] =
+        (1 - elapsed / this.lifetimes[slot]) ** (this.shapes[offset + 2] === 1 ? 0.7 : 2);
     }
   }
 

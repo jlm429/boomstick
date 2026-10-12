@@ -13,7 +13,7 @@ const random = () => 0.5;
 describe('bounded impact particles', () => {
   it('bounds repeated bursts and reuses every upload buffer through expiration and restart', () => {
     const pool = new ImpactParticlePool(BLOOD_POOL_CAPACITY);
-    const buffers = [pool.positions, pool.colors, pool.opacity, pool.sizes];
+    const buffers = [pool.positions, pool.colors, pool.opacity, pool.sizes, pool.shapes];
     for (let i = 0; i < 100; i++) pool.emit('blood', origin, normal, random);
     expect(pool.activeCount).toBe(BLOOD_POOL_CAPACITY);
     expect(pool.opacity.filter((value) => value > 0)).toHaveLength(BLOOD_POOL_CAPACITY);
@@ -26,9 +26,13 @@ describe('bounded impact particles', () => {
     expect(pool.opacity.every((value) => value === 0)).toBe(true);
     pool.emit('blood', origin, normal, random);
     expect(pool.activeCount).toBe(14);
-    expect([pool.positions, pool.colors, pool.opacity, pool.sizes]).toEqual(buffers);
+    expect([pool.positions, pool.colors, pool.opacity, pool.sizes, pool.shapes]).toEqual(
+      buffers,
+    );
     for (let i = 0; i < buffers.length; i++) {
-      expect([pool.positions, pool.colors, pool.opacity, pool.sizes][i]).toBe(buffers[i]);
+      expect([pool.positions, pool.colors, pool.opacity, pool.sizes, pool.shapes][i]).toBe(
+        buffers[i],
+      );
     }
     pool.clear();
     pool.emit('blood', { x: 9, y: 2, z: 1 }, normal, random);
@@ -74,5 +78,53 @@ describe('bounded impact particles', () => {
     const pool = new ImpactParticlePool(14);
     pool.emit('blood', { ...origin, x: NaN }, normal, random);
     expect(pool.activeCount).toBe(0);
+  });
+
+  it('makes damaging blood hits larger and more directed without increasing count or lifetime', () => {
+    const normalHit = new ImpactParticlePool(BLOOD_POOL_CAPACITY);
+    const strongHit = new ImpactParticlePool(BLOOD_POOL_CAPACITY);
+    normalHit.emit('blood', origin, normal, random, 0);
+    strongHit.emit('blood', origin, normal, random, 1);
+    expect(normalHit.activeCount).toBe(14);
+    expect(strongHit.activeCount).toBe(14);
+    expect(strongHit.sizes[0]).toBeGreaterThan(normalHit.sizes[0]);
+    expect(strongHit.sizes[0]).toBeLessThan(0.25);
+    const start = strongHit.positions[2];
+    normalHit.advance(0.1, true);
+    strongHit.advance(0.1, true);
+    expect(strongHit.positions[2] - start).toBeGreaterThan(normalHit.positions[2] - start);
+    expect(strongHit.positions[2] - start).toBeGreaterThan(
+      Math.abs(strongHit.positions[0] - origin.x),
+    );
+    expect(strongHit.opacity[0]).toBeGreaterThan(0.7);
+    for (let i = 0; i < 3; i++) {
+      normalHit.advance(0.08, true);
+      strongHit.advance(0.08, true);
+    }
+    expect(normalHit.activeCount).toBe(0);
+    expect(strongHit.activeCount).toBe(0);
+  });
+
+  it('varies blood tint and elongated shapes while leaving dust and sparks distinct', () => {
+    const pool = new ImpactParticlePool(BLOOD_POOL_CAPACITY);
+    let seed = 0;
+    const varied = () => ((seed++ * 7) % 17) / 17;
+    pool.emit('blood', origin, normal, varied);
+    expect(
+      new Set(pool.colors.filter((_, index) => index % 3 === 0 && index < 42)).size,
+    ).toBeGreaterThan(1);
+    for (let i = 0; i < 14; i++) {
+      expect(pool.shapes[i * 3]).toBeGreaterThanOrEqual(0.5);
+      expect(pool.shapes[i * 3]).toBeLessThan(0.85);
+      expect(pool.shapes[i * 3 + 2]).toBe(1);
+    }
+    pool.clear();
+    pool.emit('surface', origin, normal, random);
+    expect(pool.shapes[0]).toBe(1);
+    expect(pool.shapes[2]).toBe(0);
+    expect(pool.sizes[0]).toBeCloseTo(0.035);
+    expect(pool.sizes[4]).toBeCloseTo(0.08);
+    pool.advance(0.1, true);
+    expect(pool.opacity[4]).toBeLessThan(0.6);
   });
 });

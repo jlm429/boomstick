@@ -19,6 +19,7 @@ export function ImpactParticles({
     geometry.setAttribute('color', new BufferAttribute(pool.colors, 3));
     geometry.setAttribute('opacity', new BufferAttribute(pool.opacity, 1));
     geometry.setAttribute('size', new BufferAttribute(pool.sizes, 1));
+    geometry.setAttribute('shape', new BufferAttribute(pool.shapes, 3));
     const material = new ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -27,23 +28,37 @@ export function ImpactParticles({
         attribute vec3 color;
         attribute float opacity;
         attribute float size;
+        attribute vec3 shape;
         uniform float pixelHeight;
         varying vec3 tint;
         varying float alpha;
+        varying vec3 droplet;
         void main() {
           vec4 view = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * view;
           gl_PointSize = clamp(size * pixelHeight * projectionMatrix[1][1] * 0.5 / max(0.1, -view.z), 1.0, 32.0);
           tint = color;
           alpha = opacity;
+          droplet = shape;
         }`,
       fragmentShader: `
         varying vec3 tint;
         varying float alpha;
+        varying vec3 droplet;
         void main() {
-          float radius = length(gl_PointCoord - 0.5) * 2.0;
+          vec2 coord = gl_PointCoord - 0.5;
+          float edge = 0.35;
+          if (droplet.z > 0.5) {
+            float c = cos(droplet.y), s = sin(droplet.y);
+            coord = mat2(c, -s, s, c) * coord;
+            coord.x += sin(coord.y * 14.0 + droplet.y) * 0.025;
+            coord.x *= (1.0 + max(0.0, coord.y) * 1.4) / droplet.x;
+            edge = 0.65;
+          }
+          float radius = length(coord) * 2.0;
           if (radius >= 1.0 || alpha <= 0.0) discard;
-          gl_FragColor = vec4(tint, alpha * (1.0 - smoothstep(0.35, 1.0, radius)));
+          vec3 pigment = tint * (droplet.z > 0.5 ? 1.0 - radius * radius * 0.35 : 1.0);
+          gl_FragColor = vec4(pigment, alpha * (1.0 - smoothstep(edge, 1.0, radius)));
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
@@ -84,6 +99,7 @@ export function ImpactParticles({
     object.geometry.attributes.color.needsUpdate = true;
     object.geometry.attributes.opacity.needsUpdate = true;
     object.geometry.attributes.size.needsUpdate = true;
+    object.geometry.attributes.shape.needsUpdate = true;
   });
   return <primitive ref={pointsRef} object={points} dispose={null} />;
 }
