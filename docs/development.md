@@ -7,19 +7,23 @@ npm install
 npm run dev
 ```
 
-Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with movement and target combat.
+Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with target training and zombie combat.
 
 Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, textured floor,
 perimeter, beveled industrial obstacles, orange landmark, targets, and detailed shotgun before testing
 pointer lock, mouse look,
 movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
 depletion, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
-zombie pursuit with distinct run phases and subtly varied speeds, exclusive attack positions,
+zombie pursuit with distinct run phases and subtly varied speeds, uneven upper-body sway and head
+tilt, intact foot contact cues, exclusive attack positions,
 stable position settlement without steering jitter, the 0.80-unit chase-to-attack boundary, timed
-bite damage and cancellation, synchronized bite audio and impact bursts, stable frame pacing during
+bite damage and cancellation, windup reaches and impact-timed lunges, synchronized bite audio and
+impact bursts, stable frame pacing during
 clustered bites, player health HUD bands and damage feedback, the reduced-motion-safe
 critical-health vignette, player death camera and fade, disabled controls and weapon actions during
-death, Retry and menu actions, zombie hit and death animations, zombie collision, completion after
+death, Retry and menu actions, zombie hit and death animations, directional recoil and stronger
+blood spray on more damaging shots, clear visual separation from surface dust and sparks without
+screen obstruction, zombie collision, completion after
 all five corpses are removed, hidden completion HUD, and full encounter restoration from Restart,
 Restart Training, and Retry. Also verify pause and menu return. On a coarse touch device, also
 verify entry without pointer lock; the simultaneous and rejected touch gesture cases in

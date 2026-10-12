@@ -58,6 +58,7 @@ describe('pooled particle presentation', () => {
       frame(0.016);
       expect(points.visible).toBe(true);
       expect(geometry.attributes.position.array).toBe(pool.positions);
+      expect(geometry.attributes.shape.array).toBe(pool.shapes);
       expect(
         new Raycaster(new Vector3(), new Vector3(0, 0, -1)).intersectObject(points),
       ).toHaveLength(0);
@@ -81,6 +82,8 @@ describe('pooled particle presentation', () => {
       expect(scene.children[0]).toBe(points);
       expect(points.geometry).toBe(geometry);
       expect(points.material).toBe(material);
+      expect(geometry.attributes.shape.array).toBe(pool.shapes);
+      expect(pool.shapes[2]).toBe(0);
       await act(async () => root.unmount());
       expect(pool.activeCount).toBe(0);
       expect(disposeGeometry).toHaveBeenCalledOnce();

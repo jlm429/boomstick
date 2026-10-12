@@ -37,6 +37,7 @@ import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactBatchHandler } from '../game/impacts';
 import {
   ZOMBIE_COLLIDER_RADIUS,
+  ZOMBIE_MAX_HEALTH,
   advanceZombieBehavior,
   createZombieBehaviorState,
   createZombieMotionVariation,
@@ -81,6 +82,7 @@ import { zombieHitFeedback } from './zombieMaterials';
 import { ZombieFootContact } from './ZombieFootContact';
 import { ImpactParticles } from './ImpactParticles';
 import { BLOOD_POOL_CAPACITY, ImpactParticlePool } from './particlePool';
+import { ZombiePoseOverlay } from './zombiePose';
 
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
@@ -225,6 +227,10 @@ function ZombieActor({
   const hitAsset = useFBX(ZOMBIE_ASSET_URLS.hit);
   const dyingAsset = useFBX(ZOMBIE_ASSET_URLS.dying);
   const model = useMemo(() => createZombieModelInstance(modelAsset), [modelAsset]);
+  const pose = useMemo(
+    () => new ZombiePoseOverlay(model, motionVariation.walkPhase),
+    [model, motionVariation.walkPhase],
+  );
   const clips = useMemo(
     () =>
       prepareZombieAnimationClips(modelAsset, {
@@ -246,6 +252,7 @@ function ZombieActor({
         behaviorRef.current.mode === 'attack',
       applyDamage: (damage) => {
         onPlayerDamage(damage);
+        pose.struckPlayer();
         camera.getWorldDirection(biteDirection);
         biteBurstRef.current = createBiteBurst(nextBiteBurstIdRef.current++, {
           x: camera.position.x + biteDirection.x * BITE_BURST_CAMERA_DISTANCE,
@@ -259,7 +266,7 @@ function ZombieActor({
       attackController.dispose();
       if (attackControllerRef.current === attackController) attackControllerRef.current = null;
     };
-  }, [camera, onPlayerDamage]);
+  }, [camera, onPlayerDamage, pose]);
 
   useLayoutEffect(() => {
     activeRef.current = active;
@@ -337,13 +344,14 @@ function ZombieActor({
     actionsRef.current = actions;
     playAnimation('idle');
     return () => {
+      pose.restore();
       mixer.stopAllAction();
       mixer.uncacheRoot(model);
       if (mixerRef.current === mixer) mixerRef.current = null;
       actionsRef.current = {};
       currentActionRef.current = null;
     };
-  }, [clips, model, motionVariation, playAnimation]);
+  }, [clips, model, motionVariation, playAnimation, pose]);
 
   useEffect(() => playAnimation(animation), [animation, animationRevision, playAnimation]);
   useEffect(() => () => zombieAudio.stop(), [zombieAudio]);
@@ -371,7 +379,13 @@ function ZombieActor({
     }
     origin.multiplyScalar(1 / result.reactedHits);
     hitNormal.current.copy(camera.position).sub(origin).normalize();
-    bloodPool.emit('blood', origin, hitNormal.current);
+    const strength = Math.min(1, result.damage / ZOMBIE_MAX_HEALTH);
+    bloodPool.emit('blood', origin, hitNormal.current, Math.random, strength);
+    const facing = visualRef.current?.rotation.y ?? spawn.rotation;
+    pose.hit(
+      strength,
+      hitNormal.current.x * Math.cos(facing) - hitNormal.current.z * Math.sin(facing),
+    );
     hitFeedback.current = 1;
     zombieHitFeedback(model, 1);
     zombieRef.current = result.state;
@@ -399,8 +413,10 @@ function ZombieActor({
         : undefined;
     const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) {
+      pose.restore();
       updateZombieAnimationBlend(actionsRef.current, delta);
       mixerRef.current?.update(delta);
+      pose.apply(actionsRef.current, delta, attackControllerRef.current?.getPhase() ?? 'idle');
       if (hitFeedback.current > 0) {
         hitFeedback.current = Math.max(0, hitFeedback.current - delta / 0.14);
         zombieHitFeedback(model, hitFeedback.current);
