@@ -9,6 +9,8 @@ import { DEATH_SEQUENCE_MS } from './game/playerHealth';
 import { readInvertYSetting, writeInvertYSetting } from './game/settings';
 import { INITIAL_WEAPON_STATE, type WeaponState } from './game/shooting';
 import { canPlayerAct, useAppStore } from './game/store';
+import { EffectAudioContext } from './scene/AudioContext';
+import { EffectAudio } from './scene/effectAudio';
 import { GameViewport } from './scene/GameViewport';
 import { reportRuntimeDiagnostics } from './scene/runtimeDiagnostics';
 import {
@@ -23,6 +25,7 @@ import { MobileControls } from './ui/MobileControls';
 import { useTouchControls } from './ui/useTouchControls';
 
 export function App() {
+  const [effectAudio] = useState(() => new EffectAudio());
   const arenaCanvas = useRef<HTMLCanvasElement | null>(null);
   const [invertY, setInvertY] = useState(readInvertYSetting);
   const [weaponState, setWeaponState] = useState<WeaponState>(INITIAL_WEAPON_STATE);
@@ -54,6 +57,38 @@ export function App() {
     handlePointerLockError,
   } = useAppStore();
   const gameplayActive = canPlayerAct({ phase, controlMode, hasPointerLock, lifeState });
+
+  useEffect(() => {
+    effectAudio.setEnabled(gameplayActive);
+    if (phase === 'main-menu') effectAudio.close();
+  }, [effectAudio, gameplayActive, phase]);
+
+  useEffect(() => {
+    const suspend = () => effectAudio.suspend();
+    const visibility = () => {
+      if (document.visibilityState !== 'visible') suspend();
+    };
+    window.addEventListener('blur', suspend);
+    document.addEventListener('visibilitychange', visibility);
+    return () => {
+      window.removeEventListener('blur', suspend);
+      document.removeEventListener('visibilitychange', visibility);
+      effectAudio.close();
+    };
+  }, [effectAudio]);
+
+  useEffect(() => {
+    if (!gameplayActive) return;
+    const activate = () => {
+      if (document.visibilityState === 'visible') effectAudio.activate();
+    };
+    window.addEventListener('pointerdown', activate, true);
+    window.addEventListener('keydown', activate, true);
+    return () => {
+      window.removeEventListener('pointerdown', activate, true);
+      window.removeEventListener('keydown', activate, true);
+    };
+  }, [effectAudio, gameplayActive]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -139,6 +174,8 @@ export function App() {
   }, [handlePointerLockError, preparePointerLockRequest]);
 
   const restartAndResume = useCallback(() => {
+    effectAudio.stopAll();
+    effectAudio.activate();
     touchInput.clear();
     setEncounterState(createEncounterState());
     setWeaponState(INITIAL_WEAPON_STATE);
@@ -159,23 +196,25 @@ export function App() {
     } catch {
       handlePointerLockError();
     }
-  }, [beginTouchPlay, handlePointerLockError, restart, touchControls, touchInput]);
+  }, [beginTouchPlay, effectAudio, handlePointerLockError, restart, touchControls, touchInput]);
 
   const enterOrResumeArena = useCallback(() => {
+    effectAudio.activate();
     touchInput.clear();
     if (touchControls) {
       beginTouchPlay();
       return;
     }
     requestArenaLock();
-  }, [beginTouchPlay, requestArenaLock, touchControls, touchInput]);
+  }, [beginTouchPlay, effectAudio, requestArenaLock, touchControls, touchInput]);
 
   const startTraining = useCallback(() => {
+    effectAudio.activate();
     setEncounterState(createEncounterState());
     setWeaponState(INITIAL_WEAPON_STATE);
     setEmptyFirePulse(0);
     startGame();
-  }, [startGame]);
+  }, [effectAudio, startGame]);
 
   const returnToMainMenu = () => {
     document.exitPointerLock?.();
@@ -216,19 +255,21 @@ export function App() {
 
   return (
     <main className={gameShellClassName}>
-      <GameViewport
-        active={gameplayActive}
-        invertY={invertY}
-        playerLifeState={lifeState}
-        runId={runId}
-        onCanvasReady={setArenaCanvas}
-        onEncounterStateChange={updateEncounterState}
-        onEmptyFire={reinforceReloadReminder}
-        onPlayerDamage={applyDamage}
-        onWeaponStateChange={setWeaponState}
-        touchInput={touchInput}
-        touchControls={touchControls}
-      />
+      <EffectAudioContext.Provider value={effectAudio}>
+        <GameViewport
+          active={gameplayActive}
+          invertY={invertY}
+          playerLifeState={lifeState}
+          runId={runId}
+          onCanvasReady={setArenaCanvas}
+          onEncounterStateChange={updateEncounterState}
+          onEmptyFire={reinforceReloadReminder}
+          onPlayerDamage={applyDamage}
+          onWeaponStateChange={setWeaponState}
+          touchInput={touchInput}
+          touchControls={touchControls}
+        />
+      </EffectAudioContext.Provider>
       {phase !== 'training-complete' && phase !== 'defeated' && (
         <GameHud
           damageRevision={damageRevision}

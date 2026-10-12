@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setupEffectAudio } from './scene/effectAudio.test-support';
+import { EffectAudio } from './scene/effectAudio';
 import { App } from './App';
 import { DEATH_SEQUENCE_MS } from './game/playerHealth';
 import { useAppStore } from './game/store';
@@ -97,6 +99,11 @@ describe('App navigation', () => {
   const requestPointerLock = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
   beforeEach(() => {
+    const audio = setupEffectAudio();
+    vi.stubGlobal('AudioContext', function () {
+      return audio.context;
+    });
+    vi.stubGlobal('fetch', audio.fetchAsset);
     useAppStore.setState({
       phase: 'main-menu',
       controlMode: null,
@@ -123,7 +130,41 @@ describe('App navigation', () => {
     setTouchControls(false);
   });
 
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('activates audio from entry/resume gestures, clears pause/restart voices, and closes on menu/unmount', () => {
+    setTouchControls(true);
+    const activate = vi.spyOn(EffectAudio.prototype, 'activate');
+    const stop = vi.spyOn(EffectAudio.prototype, 'stopAll');
+    const close = vi.spyOn(EffectAudio.prototype, 'close');
+    const suspend = vi.spyOn(EffectAudio.prototype, 'suspend');
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Arena' }));
+    expect(activate).toHaveBeenCalledTimes(2);
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), { button: 0 });
+    const pausedStops = stop.mock.calls.length;
+    expect(useAppStore.getState().phase).toBe('paused');
+    fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(activate).toHaveBeenCalledTimes(4);
+    fireEvent(window, new Event('blur'));
+    expect(suspend).toHaveBeenCalledOnce();
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), { button: 0 });
+    const previousRunId = useAppStore.getState().runId;
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(stop.mock.calls.length).toBeGreaterThan(pausedStops);
+    expect(useAppStore.getState().runId).toBe(previousRunId + 1);
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Pause' }), { button: 0 });
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Main Menu' }));
+    const menuCloses = close.mock.calls.length;
+    expect(menuCloses).toBeGreaterThan(1);
+    unmount();
+    expect(close).toHaveBeenCalledTimes(menuCloses + 1);
+  });
 
   it('navigates menu to About and back', () => {
     render(<App />);

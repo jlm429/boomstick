@@ -238,9 +238,14 @@ h2 {
   bottom: 3rem;
   min-width: 5.6rem;
   padding: 0.45rem 0.6rem;
-  border: 1px solid #e5532075;
+  border: 1px solid #73655b;
   color: #ffd0a3;
-  background: #120b08b8;
+  background: linear-gradient(105deg, #272827f2, #101312f2 62%, #20221ff2);
+  box-shadow:
+    inset 0 0 0 2px #090b0a,
+    inset 0 1px 0 #afa18c3d,
+    0 4px 14px #0008;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   font-size: 0.88rem;
   letter-spacing: 0.16em;
@@ -798,12 +803,12 @@ h2 {
   place-items: center;
   min-width: 3.5rem;
   min-height: 3.5rem;
-  border: 1px solid #f3c8a57a;
+  border: 1px solid #958477;
   border-radius: 50%;
   padding: 0;
   pointer-events: auto;
   color: #ffe3cb;
-  background: #0b0d0dc7;
+  background: linear-gradient(145deg, #303332e6, #111615e6 65%);
   box-shadow:
     inset 0 0 0 0.2rem #05070761,
     0 0.4rem 1.2rem #0008;
