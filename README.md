@@ -51,7 +51,8 @@ No installation required. Open the link and enter the arena.
 - Target training followed by a five-zombie encounter
 - Shotgun, reload, empty-trigger, and impact sound effects
 - Breakable dynamic lighting and atmospheric arena
-- Worn arena and weapon surfaces, blended zombie animations, and brief muzzle, spark, and blood effects
+- Shambling zombies with aggressive reaches, directional hit reactions, and damage-scaled blood spray
+- Worn arena and weapon surfaces and brief muzzle and spark effects
 - Pause menu, HUD, and accessibility features
 - GitHub Actions validation and GitHub Pages deployment
 
