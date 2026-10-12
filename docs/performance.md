@@ -2,12 +2,14 @@
 
 Boomstick keeps rendering and physics frame data outside React state. The Canvas retains its 1.5
 device pixel ratio cap for desktop and uses a conservative 1.25 cap only on the existing coarse-touch
-path. Shadows use one 512-pixel basic shadow map for the compact arena. Player, shot, and enemy
+path. Shadows use one 512-pixel PCF-filtered shadow map for the compact arena. Player, shot, and enemy
 updates reuse their core Three.js objects, and touch joystick movement updates CSS custom properties
 directly instead of rerendering the control tree for every pointer move. Zombie model preparation
 consolidates fragmented FBX material groups once, then shares the optimized immutable geometry among
 per-entity skeleton clones. Shotgun pellet offsets are configured once and each raycast examines its
-nearest collision without constructing a second mapped collision list.
+nearest collision using a reused intersection array without constructing a second mapped collision list.
+Industrial obstacle details are merged into one presentation mesh per block, and surface grain uses
+small procedural bump textures. The beveled weapon uses low-segment geometry without postprocessing.
 
 ## Mobile stabilization evidence
 
