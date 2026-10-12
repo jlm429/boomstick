@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics, useRapier } from '@react-three/rapier';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { ACESFilmicToneMapping, SRGBColorSpace, Vector3 } from 'three';
+import { ACESFilmicToneMapping, SRGBColorSpace, PCFShadowMap, Vector3 } from 'three';
 import { ARENA_RENDER_CONFIG } from '../game/arena';
 import {
   areAllTrainingZombiesRemoved,
@@ -243,7 +243,7 @@ export function GameViewport({
       className="game-viewport"
       camera={{ fov: 76, near: 0.1, far: 120, position: [0, 2.1, 12] }}
       dpr={canvasDprForTouchControls(touchControls)}
-      shadows="basic"
+      shadows={{ type: PCFShadowMap }}
       gl={{
         alpha: false,
         antialias: true,

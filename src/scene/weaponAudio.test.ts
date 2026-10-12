@@ -1,99 +1,51 @@
-import { describe, expect, it, vi } from 'vitest';
-import emptyFireUrl from '../assets/audio/gun_empty_short.mp3';
-import lightHitUrl from '../assets/audio/light_hit_short.mp3';
-import reloadUrl from '../assets/audio/reload.mp3';
-import shotgunBlastUrl from '../assets/audio/shotgun_blast_short.mp3';
-import wallHitUrl from '../assets/audio/wall_hit_short.mp3';
+import { describe, expect, it } from 'vitest';
+import { impactVolumeAtDistance } from '../game/impacts';
+import { setupEffectAudio } from './effectAudio.test-support';
 import { WeaponAudio } from './weaponAudio';
 
-type AudioStub = {
-  currentTime: number;
-  paused: boolean;
-  pause: ReturnType<typeof vi.fn>;
-  play: ReturnType<typeof vi.fn>;
-  volume: number;
-};
-
-const setup = () => {
-  const audioBySource = new Map<string, AudioStub>();
-  const createAudio = vi.fn((source: string) => {
-    const audio: AudioStub = {
-      currentTime: 4,
-      paused: true,
-      pause: vi.fn(),
-      play: vi.fn().mockResolvedValue(undefined),
-      volume: 1,
-    };
-    audioBySource.set(source, audio);
-    return audio as unknown as HTMLAudioElement;
-  });
-  const weaponAudio = new WeaponAudio(createAudio);
-
-  return { audioBySource, createAudio, weaponAudio };
-};
-
 describe('WeaponAudio', () => {
-  it('creates and reuses one audio object for each weapon sound', () => {
-    const { audioBySource, createAudio, weaponAudio } = setup();
-
-    weaponAudio.playShotgunBlast();
-    weaponAudio.playShotgunBlast();
-    weaponAudio.playEmptyFire();
-    weaponAudio.playEmptyFire();
-
-    expect(createAudio).toHaveBeenCalledTimes(5);
-    expect(createAudio).toHaveBeenCalledWith(emptyFireUrl);
-    expect(createAudio).toHaveBeenCalledWith(lightHitUrl);
-    expect(createAudio).toHaveBeenCalledWith(reloadUrl);
-    expect(createAudio).toHaveBeenCalledWith(shotgunBlastUrl);
-    expect(createAudio).toHaveBeenCalledWith(wallHitUrl);
-    expect(audioBySource.get(shotgunBlastUrl)?.play).toHaveBeenCalledTimes(2);
-    expect(audioBySource.get(emptyFireUrl)?.play).toHaveBeenCalledTimes(2);
+  it('keeps shot and empty-fire repetition independent and replaces each preceding voice', async () => {
+    const { audio, ready, sources } = setupEffectAudio();
+    await ready();
+    const weapon = new WeaponAudio(audio);
+    weapon.playShotgunBlast();
+    weapon.playEmptyFire();
+    weapon.playShotgunBlast();
+    weapon.playEmptyFire();
+    expect(sources).toHaveLength(4);
+    expect(sources[0].stop).toHaveBeenCalledOnce();
+    expect(sources[1].stop).toHaveBeenCalledOnce();
+    expect(sources[2].buffer).toBe(sources[0].buffer);
+    expect(sources[3].buffer).toBe(sources[1].buffer);
   });
 
-  it('selects and attenuates impact audio by hit type and distance', () => {
-    const { audioBySource, weaponAudio } = setup();
-
-    weaponAudio.playImpact('light', 4);
-    weaponAudio.playImpact('wall', 24);
-
-    const lightHit = audioBySource.get(lightHitUrl)!;
-    const wallHit = audioBySource.get(wallHitUrl)!;
-    expect(lightHit.play).toHaveBeenCalledOnce();
-    expect(wallHit.play).toHaveBeenCalledOnce();
-    expect(lightHit.volume).toBeGreaterThan(wallHit.volume);
+  it('retains distance attenuation and distinct impact buffers', async () => {
+    const { audio, ready, sources, gains } = setupEffectAudio();
+    await ready();
+    const weapon = new WeaponAudio(audio);
+    weapon.playImpact('light', 4);
+    weapon.playImpact('wall', 24);
+    expect(gains[0].gain.value).toBe(impactVolumeAtDistance(4));
+    expect(gains[1].gain.value).toBe(impactVolumeAtDistance(24));
+    expect(sources[0].buffer).not.toBe(sources[1].buffer);
+    expect(sources[0].stop).not.toHaveBeenCalled();
   });
 
-  it('starts reload audio once and does not restart it while it is playing', () => {
-    const { audioBySource, weaponAudio } = setup();
-    const reload = audioBySource.get(reloadUrl)!;
-
-    weaponAudio.playReload();
-    reload.paused = false;
-    weaponAudio.playReload();
-
-    expect(reload.play).toHaveBeenCalledTimes(1);
-    expect(reload.currentTime).toBe(0);
-  });
-
-  it('handles browser playback rejection without an unhandled failure', async () => {
-    const { audioBySource, weaponAudio } = setup();
-    const blast = audioBySource.get(shotgunBlastUrl)!;
-    vi.mocked(blast.play).mockRejectedValueOnce(new Error('playback blocked'));
-
-    weaponAudio.playShotgunBlast();
-
-    await expect(Promise.resolve()).resolves.toBeUndefined();
-  });
-
-  it('stops and rewinds every owned audio object', () => {
-    const { audioBySource, weaponAudio } = setup();
-
-    weaponAudio.stop();
-
-    for (const audio of audioBySource.values()) {
-      expect(audio.pause).toHaveBeenCalledOnce();
-      expect(audio.currentTime).toBe(0);
-    }
+  it('guards active reloads, allows reload after completion, and cleans up every weapon voice', async () => {
+    const { audio, ready, sources, gains } = setupEffectAudio();
+    await ready();
+    const weapon = new WeaponAudio(audio);
+    weapon.playReload();
+    weapon.playReload();
+    expect(sources).toHaveLength(1);
+    sources[0].onended!();
+    weapon.playReload();
+    weapon.playShotgunBlast();
+    weapon.playEmptyFire();
+    weapon.playImpact('wall', 0);
+    weapon.playImpact('light', 0);
+    weapon.stop();
+    expect(sources.slice(1).every((s) => s.stop.mock.calls.length === 1)).toBe(true);
+    expect(gains.every((g) => g.disconnect.mock.calls.length === 1)).toBe(true);
   });
 });

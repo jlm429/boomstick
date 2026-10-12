@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import {
   ARENA_BLOCKS,
@@ -7,27 +8,56 @@ import {
   type ArenaLightFixture,
 } from '../game/arena';
 import type { ImpactSound, ShotImpactHandler } from '../game/impacts';
+import { SurfaceFinish } from './SurfaceFinish';
+import { industrialBlockGeometry } from './industrialGeometry';
 
 const onSurfaceImpact: ShotImpactHandler = () => 'wall';
 
 function ArenaMesh({ block }: { block: ArenaBlock }) {
   const { position, halfExtents, color, emissive = '#000000' } = block;
+  const industrial = /cover|pillar|landmark/.test(block.id);
+  const geometry = useMemo(
+    () =>
+      industrial
+        ? industrialBlockGeometry(
+            halfExtents.map((value) => value * 2) as [number, number, number],
+            block.id.includes('landmark'),
+          )
+        : null,
+    [block.id, halfExtents, industrial],
+  );
+  useEffect(() => () => geometry?.dispose(), [geometry]);
   return (
-    <mesh
-      position={[...position]}
-      castShadow={block.id !== 'floor'}
-      receiveShadow
-      userData={{ onShotImpact: onSurfaceImpact }}
-    >
-      <boxGeometry args={halfExtents.map((value) => value * 2) as [number, number, number]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={emissive}
-        emissiveIntensity={emissive === '#000000' ? 0 : 0.45}
-        roughness={0.78}
-        metalness={0.08}
-      />
-    </mesh>
+    <group position={[...position]} userData={{ onShotImpact: onSurfaceImpact }}>
+      <mesh castShadow={!industrial && block.id !== 'floor'} receiveShadow>
+        <boxGeometry args={halfExtents.map((value) => value * 2) as [number, number, number]} />
+        {industrial ? (
+          <meshBasicMaterial visible={false} />
+        ) : (
+          <meshStandardMaterial
+            color={block.id === 'floor' ? '#45443e' : color}
+            emissive={emissive}
+            roughness={0.92}
+            metalness={0.04}
+            bumpScale={0.025}
+          >
+            <SurfaceFinish repeat={Math.max(...halfExtents) * 2} />
+          </meshStandardMaterial>
+        )}
+      </mesh>
+      {geometry && (
+        <mesh geometry={geometry} castShadow receiveShadow raycast={() => null}>
+          <meshStandardMaterial
+            vertexColors
+            roughness={0.72}
+            metalness={0.18}
+            bumpScale={0.012}
+          >
+            <SurfaceFinish repeat={3} />
+          </meshStandardMaterial>
+        </mesh>
+      )}
+    </group>
   );
 }
 
@@ -147,15 +177,17 @@ export function ArenaVisuals() {
   return (
     <>
       <color attach="background" args={[ARENA_RENDER_CONFIG.background]} />
-      <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 15, 48]} />
+      <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 20, 52]} />
       <ambientLight {...ARENA_RENDER_CONFIG.ambientLight} />
-      <hemisphereLight intensity={0.88} color="#81483b" groundColor="#170e0b" />
+      <hemisphereLight intensity={1.4} color="#b5c8d0" groundColor="#34291f" />
       <directionalLight
         position={[7, 13, 6]}
-        intensity={2.4}
-        color="#ffb36c"
+        intensity={2.7}
+        color="#ffd2a0"
         castShadow
         shadow-mapSize={[512, 512]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.04}
         shadow-camera-left={-26}
         shadow-camera-right={26}
         shadow-camera-top={26}

@@ -83,6 +83,7 @@ import {
   warmZombieModelAsset,
   ZOMBIE_ASSET_URLS,
 } from './zombieAssets';
+import { useEffectAudio } from './AudioContext';
 
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
@@ -269,7 +270,8 @@ function ZombieActor({
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
   const [animationRevision, setAnimationRevision] = useState(0);
   const [bloodBursts, setBloodBursts] = useState<readonly BloodBurst[]>([]);
-  const [zombieAudio] = useState(() => new ZombieAttackAudio());
+  const effectAudio = useEffectAudio();
+  const [zombieAudio] = useState(() => new ZombieAttackAudio(effectAudio));
   const { camera } = useThree();
   const { rapier, world } = useRapier();
   const obstacleRay = useMemo(

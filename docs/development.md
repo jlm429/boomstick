@@ -9,8 +9,9 @@ npm run dev
 
 Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with movement and target combat.
 
-Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, floor,
-perimeter, obstacles, orange landmark, targets, and shotgun before testing pointer lock, mouse look,
+Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, textured floor,
+perimeter, beveled industrial obstacles, orange landmark, targets, and detailed shotgun before testing
+pointer lock, mouse look,
 movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
 depletion, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
 zombie pursuit with distinct run phases and subtly varied speeds, exclusive attack positions,
@@ -26,6 +27,10 @@ verify entry without pointer lock; the simultaneous and rejected touch gesture c
 overlap between the HUD and controls; hidden touch crosshair; center and off-center tap aim with
 camera, weapon, and shot agreement; and usable portrait, landscape, and safe-area layouts. Repeat
 the desktop pointer-lock, keyboard, and mouse checks with touch emulation disabled.
+Compare shooting, reload, empty-trigger, impact, and bite effects in Chrome, Firefox, and Safari.
+Check the audio recovery behavior in [Controls](controls.md) after both window blur/focus and tab
+hide/show during active touch play, including a gesture retry when automatic resume is blocked.
+Check that pause, death, restart, and menu return do not replay stale sounds.
 Development builds expose quiet live state at `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas
 size, WebGL state, frame count, camera, Rapier readiness, player position, pressed controls, and the
 latest successful shot coordinates and direction, renderer workload, and physics object counts.

@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import {
   Group,
+  type Intersection,
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
@@ -58,6 +59,8 @@ import { DEVELOPMENT_DIAGNOSTICS, reportRuntimeDiagnostics } from './runtimeDiag
 import { alignWeaponWithCamera } from './shotDirection';
 import { WeaponAudio } from './weaponAudio';
 import { beginZombieRaycastShot } from './zombieAssets';
+import { useEffectAudio } from './AudioContext';
+import { BeveledBox } from './BeveledBox';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
@@ -221,7 +224,7 @@ function TargetVisuals({
   );
 }
 
-function Shotgun({
+export function Shotgun({
   lifeState,
   shotIdRef,
   weaponStateRef,
@@ -304,77 +307,63 @@ function Shotgun({
         distance={4}
         color="#ff9d45"
       />
-      <mesh position={[0, -0.05, 0.06]} castShadow>
-        <boxGeometry args={[0.72, 0.38, 0.7]} />
-        <meshStandardMaterial
-          color="#302724"
-          emissive="#140b08"
-          emissiveIntensity={0.22}
-          metalness={0.56}
-          roughness={0.4}
-        />
+      <BeveledBox args={[0.46, 0.28, 0.68]} radius={0.055} position={[0, -0.05, 0.06]}>
+        <meshStandardMaterial color="#6b7476" metalness={0.58} roughness={0.36} />
+      </BeveledBox>
+      <BeveledBox args={[0.43, 0.22, 0.9]} radius={0.035} position={[0, 0.08, -0.56]}>
+        <meshStandardMaterial color="#4c585d" metalness={0.65} roughness={0.32} />
+      </BeveledBox>
+      <mesh position={[0, 0.21, -0.58]}>
+        <boxGeometry args={[0.065, 0.025, 0.92]} />
+        <meshStandardMaterial color="#959b92" metalness={0.5} roughness={0.4} />
       </mesh>
-      <mesh position={[0, 0.08, -0.56]} castShadow>
-        <boxGeometry args={[0.54, 0.25, 0.82]} />
-        <meshStandardMaterial
-          color="#242024"
-          emissive="#10080a"
-          emissiveIntensity={0.18}
-          metalness={0.82}
-          roughness={0.27}
-        />
-      </mesh>
-      <mesh position={[0, 0.02, -1.04]}>
-        <boxGeometry args={[0.59, 0.3, 0.46]} />
-        <meshStandardMaterial
-          color="#714028"
-          emissive="#210c06"
-          emissiveIntensity={0.3}
-          roughness={0.74}
-        />
-      </mesh>
-      <mesh position={[-0.16, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.095, 0.105, 1.12, 10]} />
-        <meshStandardMaterial
-          color="#1d1c1e"
-          emissive="#090709"
-          emissiveIntensity={0.16}
-          metalness={0.88}
-          roughness={0.23}
-        />
-      </mesh>
-      <mesh position={[0.16, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.095, 0.105, 1.12, 10]} />
-        <meshStandardMaterial
-          color="#1d1c1e"
-          emissive="#090709"
-          emissiveIntensity={0.16}
-          metalness={0.88}
-          roughness={0.23}
-        />
-      </mesh>
-      <mesh position={[0, 0.16, -1.9]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.115, 0.115, 0.16, 10]} />
-        <meshStandardMaterial color="#171417" metalness={0.9} roughness={0.2} />
-      </mesh>
-      <mesh position={[0, -0.3, 0.39]} rotation={[0.3, 0, 0]} castShadow>
-        <boxGeometry args={[0.46, 0.38, 0.7]} />
-        <meshStandardMaterial
-          color="#713d26"
-          emissive="#220e07"
-          emissiveIntensity={0.28}
-          roughness={0.78}
-        />
-      </mesh>
-      <mesh position={[0, -0.38, -0.14]} rotation={[0.42, 0, 0]}>
-        <boxGeometry args={[0.24, 0.46, 0.36]} />
-        <meshStandardMaterial
-          color="#392019"
-          emissive="#150705"
-          emissiveIntensity={0.22}
-          roughness={0.92}
-        />
-      </mesh>
+      <BeveledBox args={[0.51, 0.28, 0.5]} radius={0.075} position={[0, 0.02, -1.04]}>
+        <meshStandardMaterial color="#985c32" roughness={0.66} metalness={0.04} />
+      </BeveledBox>
+      {[-0.12, 0.12].map((x) => (
+        <group key={x}>
+          <mesh position={[x, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.087, 0.095, 1.12, 12, 1, true]} />
+            <meshStandardMaterial color="#667378" metalness={0.72} roughness={0.3} />
+          </mesh>
+          <mesh position={[x, 0.13, -1.982]} rotation={[0, Math.PI, 0]}>
+            <ringGeometry args={[0.055, 0.095, 12]} />
+            <meshStandardMaterial color="#a9ad9e" metalness={0.62} roughness={0.35} />
+          </mesh>
+          <mesh position={[x, 0.13, -1.974]} rotation={[0, Math.PI, 0]}>
+            <circleGeometry args={[0.055, 12]} />
+            <meshBasicMaterial color="#101518" />
+          </mesh>
+        </group>
+      ))}
+      {[0.17, -0.17].map((x) => (
+        <mesh key={x} position={[x, 0.23, -0.88]}>
+          <boxGeometry args={[0.035, 0.02, 0.28]} />
+          <meshStandardMaterial color="#be9657" metalness={0.5} roughness={0.45} />
+        </mesh>
+      ))}
+      {[-1.22, -1.1, -0.98, -0.86].map((z) => (
+        <mesh key={z} position={[0, 0.245, z]}>
+          <boxGeometry args={[0.38, 0.025, 0.018]} />
+          <meshStandardMaterial color="#553b2b" roughness={0.8} />
+        </mesh>
+      ))}
+      <BeveledBox
+        args={[0.4, 0.34, 0.72]}
+        radius={0.09}
+        position={[0, -0.3, 0.39]}
+        rotation={[0.3, 0, 0]}
+      >
+        <meshStandardMaterial color="#8d552f" roughness={0.72} />
+      </BeveledBox>
+      <BeveledBox
+        args={[0.2, 0.43, 0.29]}
+        radius={0.05}
+        position={[0, -0.38, -0.14]}
+        rotation={[0.42, 0, 0]}
+      >
+        <meshStandardMaterial color="#5c4131" roughness={0.82} />
+      </BeveledBox>
       <group ref={muzzleFlash} position={[0, 0.16, -2.02]} visible={false} raycast={() => null}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <coneGeometry args={[0.26, 0.62, 6]} />
@@ -504,11 +493,13 @@ export function CombatScene({
   const lastShotAt = useRef(-Infinity);
   const weaponStateRef = useRef<WeaponState>(INITIAL_WEAPON_STATE);
   const reloadStartedAtRef = useRef(-Infinity);
-  const [weaponAudio] = useState(() => new WeaponAudio());
+  const effectAudio = useEffectAudio();
+  const [weaponAudio] = useState(() => new WeaponAudio(effectAudio));
   const [impactState, setImpactState] = useState(createArenaImpactState);
   const impactStateRef = useRef(impactState);
   const encounterStateRef = useRef(createEncounterState());
   const trainingTargetHealthRef = useRef(createTrainingTargetHealth());
+  const intersectionsRef = useRef<Intersection[]>([]);
   const impactBatchMapRef = useRef(new Map<ShotImpactBatchHandler, ShotImpact[]>());
   const impactBatchPoolRef = useRef<ShotImpact[][]>([]);
   const resolvedImpactsRef = useRef<
@@ -627,7 +618,9 @@ export function CombatScene({
           .addScaledVector(cameraUp, vertical)
           .normalize();
         raycaster.set(camera.position, pelletDirection);
-        const collision = raycaster.intersectObjects(scene.children, true)[0];
+        const intersections = intersectionsRef.current;
+        intersections.length = 0;
+        const collision = raycaster.intersectObjects(scene.children, true, intersections)[0];
         if (!collision) continue;
         const handler = shotImpactHandler(collision.object);
         if (!handler) continue;
@@ -669,6 +662,7 @@ export function CombatScene({
           impact = { sound: selectedSound, distance: resolved.distance };
         }
       }
+      intersectionsRef.current.length = 0;
       if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
       resolvedImpacts.length = 0;
       return true;

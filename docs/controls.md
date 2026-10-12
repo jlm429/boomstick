@@ -65,6 +65,11 @@ A successful shot plays the shotgun blast once, and each trigger press while emp
 empty-trigger sound once. A valid reload plays its sound once when reloading begins; rate-limited
 shots, shots during reload, and ignored reload attempts are silent.
 
+Effects become available after their audio assets finish loading. Sounds triggered while audio is
+loading or suspended are skipped rather than replayed later. Leaving the window or hiding the tab
+stops current effects. Returning to visible, active play attempts to restore audio; if the browser
+requires another gesture, a gameplay tap, click, or key press retries activation.
+
 Shots play an impact sound when their nearest pellet collisions hit arena walls, obstacles, or
 targets. Each target's visible meter updates as hits reduce its health. Pellet damage scales smoothly
 with distance from the shot origin and accuracy on the target face. A depleted target remains visible,

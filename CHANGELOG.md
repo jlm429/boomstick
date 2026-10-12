@@ -2,6 +2,11 @@
 
 All notable changes are documented here.
 
+## Unreleased
+
+- Refined the training arena with beveled industrial cover, surface grain, softer shadows, and more balanced lighting, alongside a detailed shotgun and refreshed HUD and touch controls.
+- Moved short sound effects to shared decoded Web Audio playback with active-session recovery after focus or tab return, preserving the existing clips and combat triggers. See [next-pass work](docs/roadmap.md) for outstanding verification.
+
 ## [0.1.0] - 2026-07-16
 
 - Initial playable Boomstick movement prototype.

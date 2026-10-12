@@ -1,41 +1,27 @@
-import zombieBitingUrl from '../assets/audio/zombie_biting.mp3';
-
-type AudioFactory = (source: string) => HTMLAudioElement;
-
-const replay = (audio: HTMLAudioElement) => {
-  audio.currentTime = 0;
-  void audio.play().catch(() => undefined);
-};
+import { EffectAudio, type EffectOwner } from './effectAudio';
 
 export class ZombieAttackAudio {
-  private readonly bite: HTMLAudioElement;
+  private readonly owner: EffectOwner = new Map();
   private attacking = false;
 
-  constructor(createAudio: AudioFactory = (source) => new Audio(source)) {
-    this.bite = createAudio(zombieBitingUrl);
-  }
+  constructor(private readonly audio: EffectAudio) {}
 
   enterAttack() {
     if (this.attacking) return;
     this.attacking = true;
-    replay(this.bite);
+    this.audio.play(this.owner, 'bite');
   }
 
   synchronizeAttackCycle() {
-    if (!this.attacking) return;
-    replay(this.bite);
+    if (this.attacking) this.audio.play(this.owner, 'bite');
   }
 
   leaveAttack() {
-    if (!this.attacking) return;
-    this.attacking = false;
-    this.bite.pause();
-    this.bite.currentTime = 0;
+    if (this.attacking) this.stop();
   }
 
   stop() {
     this.attacking = false;
-    this.bite.pause();
-    this.bite.currentTime = 0;
+    this.audio.stop(this.owner);
   }
 }
