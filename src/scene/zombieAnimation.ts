@@ -6,6 +6,23 @@ export const HIT_REACTION_TIME_SCALE = 3;
 export type ZombieAnimation = 'idle' | 'run' | 'attack' | 'hit' | 'dying';
 export type ZombieActions = Partial<Record<ZombieAnimation, AnimationAction>>;
 
+const blends = new WeakMap<
+  ZombieActions,
+  { elapsed: number; duration: number; weights: [AnimationAction, number, number][] }
+>();
+
+export function updateZombieAnimationBlend(actions: ZombieActions, delta: number) {
+  const blend = blends.get(actions);
+  if (!blend) return;
+  blend.elapsed += delta;
+  const progress = Math.min(blend.elapsed / blend.duration, 1);
+  for (const [action, start, end] of blend.weights) {
+    action.setEffectiveWeight(start + (end - start) * progress);
+    if (progress === 1 && end === 0) action.enabled = false;
+  }
+  if (progress === 1) blends.delete(actions);
+}
+
 export function applyZombieAnimationTimeScales(
   actions: ZombieActions,
   { speedMultiplier }: ZombieMotionVariation,
@@ -36,13 +53,17 @@ export function transitionZombieAnimation(
   const nextAction = actions[next];
   if (!nextAction) return false;
   const blendSeconds = next === 'hit' ? 0.055 : next === 'run' ? 0.16 : 0.12;
-  for (const [name, action] of Object.entries(actions)) {
-    if (name === next || !action) continue;
-    const weight = action.getEffectiveWeight();
-    if (weight > 0) action.setEffectiveWeight(weight).fadeOut(blendSeconds);
+  const weights: [AnimationAction, number, number][] = [];
+  for (const action of Object.values(actions)) {
+    if (!action) continue;
+    const weight = action.isScheduled() ? action.getEffectiveWeight() : 0;
+    const start = action === nextAction && current === null ? 1 : weight;
+    action.setEffectiveWeight(start);
+    weights.push([action, start, action === nextAction ? 1 : 0]);
   }
+  const nextWeight = nextAction.getEffectiveWeight();
   const walkTime = nextAction.time;
-  nextAction.reset().setEffectiveWeight(1);
+  nextAction.reset().setEffectiveWeight(nextWeight);
   if (next === 'run') {
     nextAction.time = walkTime;
     applyInitialWalkPhase(nextAction);
@@ -52,7 +73,7 @@ export function transitionZombieAnimation(
     nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
     nextAction.clampWhenFinished ? 1 : Infinity,
   );
-  if (current !== null && current !== next) nextAction.fadeIn(blendSeconds);
+  blends.set(actions, { elapsed: 0, duration: blendSeconds, weights });
   nextAction.play();
   return true;
 }

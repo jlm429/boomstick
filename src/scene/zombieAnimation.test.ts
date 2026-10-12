@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HIT_REACTION_TIME_SCALE,
   transitionZombieAnimation,
+  updateZombieAnimationBlend,
   applyZombieAnimationTimeScales,
   createInitialZombieWalkPhaseApplier,
   type ZombieActions,
@@ -65,21 +66,25 @@ describe('zombie animation transitions', () => {
       ]),
     ) as ZombieActions;
     applyZombieAnimationTimeScales(actions, { speedMultiplier: 1.04, walkPhase: 0.5 });
-    return { root, mixer, actions, initial: createInitialZombieWalkPhaseApplier(0.5) };
+    const update = (delta: number) => {
+      updateZombieAnimationBlend(actions, delta);
+      mixer.update(delta);
+    };
+    return { root, mixer, actions, update, initial: createInitialZombieWalkPhaseApplier(0.5) };
   }
 
   it('blends interrupted transitions from the live pose without a bind-pose flash', () => {
-    const { root, mixer, actions, initial } = fixture();
+    const { root, mixer, actions, update, initial } = fixture();
     transitionZombieAnimation(actions, null, 'idle', initial);
-    mixer.update(0.01);
+    update(0.01);
     expect(root.position.y).toBe(1);
     transitionZombieAnimation(actions, 'idle', 'run', initial);
-    mixer.update(0.04);
+    update(0.04);
     expect(root.position.y).toBeGreaterThan(1);
     expect(root.position.y).toBeLessThan(2);
     transitionZombieAnimation(actions, 'run', 'attack', initial);
     for (let i = 0; i < 12; i++) {
-      mixer.update(0.01);
+      update(0.01);
       expect(root.position.y).toBeGreaterThanOrEqual(1);
       expect(root.position.y).toBeLessThanOrEqual(3.001);
     }
@@ -90,12 +95,12 @@ describe('zombie animation transitions', () => {
   });
 
   it('resumes the walking phase and retains hit/death duration and repeat-hit reset semantics', () => {
-    const { mixer, actions, initial } = fixture();
+    const { mixer, actions, update, initial } = fixture();
     transitionZombieAnimation(actions, null, 'run', initial);
     expect(actions.run!.time).toBe(0.5);
-    mixer.update(0.08);
+    update(0.08);
     transitionZombieAnimation(actions, 'run', 'hit', initial);
-    mixer.update(0.06);
+    update(0.06);
     const walkTime = actions.run!.time;
     transitionZombieAnimation(actions, 'hit', 'hit', initial);
     expect(actions.hit!.time).toBe(0);
@@ -109,9 +114,75 @@ describe('zombie animation transitions', () => {
     expect(actions.dying!.time).toBe(0);
     expect(actions.dying!.timeScale).toBe(1);
     expect(actions.dying!.clampWhenFinished).toBe(true);
-    mixer.update(1.1);
+    update(1.1);
     expect(actions.dying!.time).toBe(1);
     expect(actions.dying!.paused).toBe(true);
     mixer.stopAllAction();
   });
+
+  const animationNames = ['idle', 'run', 'attack', 'hit', 'dying'] as const;
+
+  it('resets a repeated hit clock without discarding an unfinished blend', () => {
+    const { root, mixer, actions, update, initial } = fixture();
+    transitionZombieAnimation(actions, null, 'attack', initial);
+    update(0.01);
+    transitionZombieAnimation(actions, 'attack', 'hit', initial);
+    update(0.055 / 4);
+    const pose = root.position.y;
+    transitionZombieAnimation(actions, 'hit', 'hit', initial);
+    expect(actions.hit!.time).toBe(0);
+    expect(actions.hit!.getEffectiveWeight()).toBeCloseTo(0.25);
+    expect(actions.attack!.getEffectiveWeight()).toBeCloseTo(0.75);
+    update(0);
+    expect(root.position.y).toBeCloseTo(pose);
+    update(0.055);
+    expect(root.position.y).toBeCloseTo(4);
+    expect(actions.hit!.time).toBeCloseTo(0.165);
+    mixer.stopAllAction();
+  });
+
+  const reversals = animationNames.flatMap((from) =>
+    animationNames.filter((to) => to !== from).map((to) => ({ from, to })),
+  );
+
+  it.each(reversals)(
+    'preserves live contributions during $from -> $to -> $from',
+    ({ from, to }) => {
+      const { root, mixer, actions, update, initial } = fixture();
+      transitionZombieAnimation(actions, null, from, initial);
+      update(0.01);
+      transitionZombieAnimation(actions, from, to, initial);
+      const duration = to === 'hit' ? 0.055 : to === 'run' ? 0.16 : 0.12;
+      update(duration / 4);
+      const pose = root.position.y;
+      const walkTime = actions.run!.time;
+      expect(actions[from]!.getEffectiveWeight()).toBeCloseTo(0.75);
+      expect(actions[to]!.getEffectiveWeight()).toBeCloseTo(0.25);
+
+      transitionZombieAnimation(actions, to, from, initial);
+      expect(actions[from]!.getEffectiveWeight()).toBeCloseTo(0.75);
+      expect(actions[to]!.getEffectiveWeight()).toBeCloseTo(0.25);
+      expect(actions[from]!.time).toBe(from === 'run' ? walkTime : 0);
+      update(0);
+      expect(root.position.y).toBeCloseTo(pose);
+      const destination = animationNames.indexOf(from) + 1;
+      for (let frame = 0; frame < 16; frame++) {
+        update(0.01);
+        const total = Object.values(actions).reduce(
+          (sum, action) => sum + action.getEffectiveWeight(),
+          0,
+        );
+        expect(total).toBeCloseTo(1);
+        expect(root.position.y).toBeGreaterThanOrEqual(Math.min(pose, destination) - 0.00001);
+        expect(root.position.y).toBeLessThanOrEqual(Math.max(pose, destination) + 0.00001);
+      }
+      expect(root.position.y).toBeCloseTo(destination);
+      expect(actions.attack!.timeScale).toBe(1);
+      expect(actions.hit!.timeScale).toBe(HIT_REACTION_TIME_SCALE);
+      expect(actions.run!.timeScale).toBe(1.04);
+      if (from === 'attack') expect(actions.attack!.time).toBeCloseTo(0.16);
+      if (from === 'hit') expect(actions.hit!.time).toBeCloseTo(0.48);
+      mixer.stopAllAction();
+    },
+  );
 });

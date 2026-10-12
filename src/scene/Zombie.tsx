@@ -64,6 +64,7 @@ import {
   applyZombieAnimationTimeScales,
   createInitialZombieWalkPhaseApplier,
   transitionZombieAnimation,
+  updateZombieAnimationBlend,
   type ZombieActions,
   type ZombieAnimation,
 } from './zombieAnimation';
@@ -398,6 +399,7 @@ function ZombieActor({
         : undefined;
     const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) {
+      updateZombieAnimationBlend(actionsRef.current, delta);
       mixerRef.current?.update(delta);
       if (hitFeedback.current > 0) {
         hitFeedback.current = Math.max(0, hitFeedback.current - delta / 0.14);
