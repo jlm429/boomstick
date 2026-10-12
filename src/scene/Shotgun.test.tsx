@@ -1,14 +1,29 @@
 import { act } from 'react';
-import { createRequire } from 'node:module';
 import { createRoot, extend } from '@react-three/fiber';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { INITIAL_WEAPON_STATE } from '../game/shooting';
 import { Shotgun } from './CombatScene';
 
-vi.mock('three', () => createRequire(import.meta.url)('three'));
+vi.mock('three', async () => {
+  const { createRequire } = await vi.importActual<{
+    createRequire: (url: string) => (id: string) => unknown;
+  }>('node:module');
+  return createRequire(import.meta.url)('three') as typeof THREE;
+});
 
-extend(THREE);
+extend({
+  Group: THREE.Group,
+  Mesh: THREE.Mesh,
+  PointLight: THREE.PointLight,
+  BoxGeometry: THREE.BoxGeometry,
+  CylinderGeometry: THREE.CylinderGeometry,
+  RingGeometry: THREE.RingGeometry,
+  CircleGeometry: THREE.CircleGeometry,
+  ConeGeometry: THREE.ConeGeometry,
+  MeshStandardMaterial: THREE.MeshStandardMaterial,
+  MeshBasicMaterial: THREE.MeshBasicMaterial,
+});
 
 describe('shotgun decorative surfaces', () => {
   it('exposes outward muzzle faces and raised trim on both sides', async () => {

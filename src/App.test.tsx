@@ -166,6 +166,7 @@ describe('App navigation', () => {
         expect(browserAudio.context.decodeAudioData).toHaveBeenCalledTimes(6),
       );
       const audio = enabled.mock.contexts[0];
+      if (!(audio instanceof EffectAudio)) throw new Error('Expected an EffectAudio owner');
       const owner = new Map();
       audio.play(owner, 'bite');
       expect(browserAudio.sources).toHaveLength(1);
