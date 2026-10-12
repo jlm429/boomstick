@@ -8,8 +8,12 @@ directly instead of rerendering the control tree for every pointer move. Zombie 
 consolidates fragmented FBX material groups once, then shares the optimized immutable geometry among
 per-entity skeleton clones. Shotgun pellet offsets are configured once and each raycast examines its
 nearest collision using a reused intersection array without constructing a second mapped collision list.
-Industrial obstacle details are merged into one presentation mesh per block, and surface grain uses
-small procedural bump textures. The beveled weapon uses low-segment geometry without postprocessing.
+Industrial obstacle details are merged into one presentation mesh per block. Surface finishes use
+small procedural bump and roughness textures, with optional color tint, cached CPU tiles, and
+component-owned GPU textures. The beveled weapon uses low-segment geometry without postprocessing.
+Blood and surface effects use fixed particle pools whose limits are defined in
+`src/scene/particlePool.ts` and `src/game/bloodParticles.ts`; overload replaces existing slots
+instead of growing storage.
 
 ## Mobile stabilization evidence
 

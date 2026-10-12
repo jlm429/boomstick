@@ -10,6 +10,7 @@ import {
 } from 'three';
 import { mergeGroups } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { prepareZombieMaterials, disposeZombieMaterials } from './zombieMaterials';
 import zombieModelUrl from '../assets/models/zombies/Zombie.fbx?url';
 import zombieAttackUrl from '../assets/models/zombies/Zombie_Attack.fbx?url';
 import zombieDyingUrl from '../assets/models/zombies/Zombie_Dying.fbx?url';
@@ -162,6 +163,7 @@ function optimizedZombieModelAsset(source: Group) {
 
 export function createZombieModelInstance(source: Group) {
   const model = clone(optimizedZombieModelAsset(source)) as Group;
+  prepareZombieMaterials(model);
   model.traverse((child) => {
     if (child instanceof SkinnedMesh) installCachedShotRaycast(child);
   });
@@ -169,6 +171,7 @@ export function createZombieModelInstance(source: Group) {
 }
 
 export function disposeZombieModelInstance(model: Group) {
+  disposeZombieMaterials(model);
   const disposedSkeletons = new Set<SkinnedMesh['skeleton']>();
   model.traverse((child) => {
     if (!(child instanceof SkinnedMesh) || disposedSkeletons.has(child.skeleton)) return;

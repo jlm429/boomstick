@@ -2,7 +2,9 @@ import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import {
+  AdditiveBlending,
   Group,
+  Matrix3,
   type Intersection,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -61,12 +63,18 @@ import { WeaponAudio } from './weaponAudio';
 import { beginZombieRaycastShot } from './zombieAssets';
 import { useEffectAudio } from './AudioContext';
 import { BeveledBox } from './BeveledBox';
+import { createMuzzleTexture } from './muzzleTexture';
+import { SurfaceFinish } from './SurfaceFinish';
+import { ImpactParticles } from './ImpactParticles';
+import { ImpactParticlePool, SURFACE_POOL_CAPACITY } from './particlePool';
 
 const cameraDirection = new Vector3();
 const cameraRight = new Vector3();
 const cameraUp = new Vector3();
 const pelletDirection = new Vector3();
 const targetLocalHitPoint = new Vector3();
+const impactNormal = new Vector3();
+const impactNormalMatrix = new Matrix3();
 const raycaster = new Raycaster();
 const HIT_FLASH_SECONDS = 0.18;
 const MUZZLE_FLASH_SECONDS = 0.075;
@@ -225,11 +233,13 @@ function TargetVisuals({
 }
 
 export function Shotgun({
+  active = true,
   lifeState,
   shotIdRef,
   weaponStateRef,
   reloadStartedAtRef,
 }: {
+  active?: boolean;
   lifeState: PlayerLifeState;
   shotIdRef: MutableRefObject<number>;
   weaponStateRef: MutableRefObject<WeaponState>;
@@ -240,7 +250,12 @@ export function Shotgun({
   const muzzleLight = useRef<PointLight>(null);
   const flashMaterial = useRef<MeshBasicMaterial>(null);
   const streakMaterial = useRef<MeshBasicMaterial>(null);
-  const { camera } = useThree();
+  const [flashTexture] = useState(createMuzzleTexture);
+  useEffect(() => () => flashTexture.dispose(), [flashTexture]);
+  const { camera, gl, scene } = useThree();
+  useEffect(() => {
+    if (muzzleFlash.current) gl.compile(muzzleFlash.current, camera, scene);
+  }, [camera, gl, scene]);
   const recoil = useRef(0);
   const flash = useRef(0);
   const deathElapsedRef = useRef(0);
@@ -271,10 +286,18 @@ export function Shotgun({
       flash.current = 1;
     }
     recoil.current = Math.max(0, recoil.current - delta * 6);
-    flash.current = Math.max(0, flash.current - delta / MUZZLE_FLASH_SECONDS);
+    if (lifeState !== 'alive' || (active && delta > 0.1)) flash.current = 0;
+    else if (active && Number.isFinite(delta) && delta > 0) {
+      flash.current = Math.max(0, flash.current - delta / MUZZLE_FLASH_SECONDS);
+    }
     if (muzzleFlash.current) {
       muzzleFlash.current.visible = flash.current > 0;
-      muzzleFlash.current.scale.setScalar(0.7 + flash.current * 0.55);
+      muzzleFlash.current.scale.set(
+        0.55 + flash.current * 0.7,
+        0.55 + flash.current * 0.7,
+        0.45 + flash.current * 0.55,
+      );
+      muzzleFlash.current.rotation.z = ((renderedShotId.current % 4) * Math.PI) / 4;
     }
     if (flashMaterial.current) flashMaterial.current.opacity = flash.current;
     if (streakMaterial.current) streakMaterial.current.opacity = flash.current * 0.8;
@@ -308,17 +331,38 @@ export function Shotgun({
         color="#ff9d45"
       />
       <BeveledBox args={[0.46, 0.28, 0.68]} radius={0.055} position={[0, -0.05, 0.06]}>
-        <meshStandardMaterial color="#6b7476" metalness={0.58} roughness={0.36} />
+        <meshStandardMaterial
+          color="#6b7476"
+          metalness={0.58}
+          roughness={0.36}
+          bumpScale={0.002}
+        >
+          <SurfaceFinish variant="metal" repeat={1} />
+        </meshStandardMaterial>
       </BeveledBox>
       <BeveledBox args={[0.43, 0.22, 0.9]} radius={0.035} position={[0, 0.08, -0.56]}>
-        <meshStandardMaterial color="#4c585d" metalness={0.65} roughness={0.32} />
+        <meshStandardMaterial
+          color="#4c585d"
+          metalness={0.65}
+          roughness={0.32}
+          bumpScale={0.002}
+        >
+          <SurfaceFinish variant="metal" repeat={1} />
+        </meshStandardMaterial>
       </BeveledBox>
       <mesh position={[0, 0.21, -0.58]}>
         <boxGeometry args={[0.065, 0.025, 0.92]} />
         <meshStandardMaterial color="#959b92" metalness={0.5} roughness={0.4} />
       </mesh>
       <BeveledBox args={[0.51, 0.28, 0.5]} radius={0.075} position={[0, 0.02, -1.04]}>
-        <meshStandardMaterial color="#985c32" roughness={0.66} metalness={0.04} />
+        <meshStandardMaterial
+          color="#985c32"
+          roughness={0.66}
+          metalness={0.04}
+          bumpScale={0.002}
+        >
+          <SurfaceFinish variant="wood" repeat={1} />
+        </meshStandardMaterial>
       </BeveledBox>
       {[-0.12, 0.12].map((x) => (
         <group key={x}>
@@ -354,7 +398,9 @@ export function Shotgun({
         position={[0, -0.3, 0.39]}
         rotation={[0.3, 0, 0]}
       >
-        <meshStandardMaterial color="#8d552f" roughness={0.72} />
+        <meshStandardMaterial color="#8d552f" roughness={0.72} bumpScale={0.002}>
+          <SurfaceFinish variant="wood" repeat={1} />
+        </meshStandardMaterial>
       </BeveledBox>
       <BeveledBox
         args={[0.2, 0.43, 0.29]}
@@ -365,30 +411,31 @@ export function Shotgun({
         <meshStandardMaterial color="#5c4131" roughness={0.82} />
       </BeveledBox>
       <group ref={muzzleFlash} position={[0, 0.16, -2.02]} visible={false} raycast={() => null}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.26, 0.62, 6]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -0.225]} raycast={() => null}>
+          <coneGeometry args={[0.18, 0.45, 6]} />
           <meshBasicMaterial
             ref={flashMaterial}
-            color="#ffe1a0"
+            alphaMap={flashTexture}
+            color="#fff1c8"
+            blending={AdditiveBlending}
+            toneMapped={false}
             transparent
             depthWrite={false}
           />
         </mesh>
-        {[
-          [-0.13, 0.05, -0.56, -0.08, 0.12],
-          [0.14, -0.03, -0.68, 0.06, -0.1],
-          [0.03, 0.13, -0.5, 0.13, 0.03],
-        ].map(([x, y, z, rotationX, rotationY]) => (
-          <mesh key={`${x}-${y}`} position={[x, y, z]} rotation={[rotationX, rotationY, 0]}>
-            <boxGeometry args={[0.025, 0.025, 0.9]} />
-            <meshBasicMaterial
-              ref={streakMaterial}
-              color="#ffbc63"
-              transparent
-              depthWrite={false}
-            />
-          </mesh>
-        ))}
+        <mesh position={[0, 0, -0.325]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+          <coneGeometry args={[0.29, 0.65, 5]} />
+          <meshBasicMaterial
+            ref={streakMaterial}
+            alphaMap={flashTexture}
+            color="#ff8d32"
+            opacity={0.8}
+            blending={AdditiveBlending}
+            toneMapped={false}
+            transparent
+            depthWrite={false}
+          />
+        </mesh>
       </group>
     </group>
   );
@@ -495,6 +542,7 @@ export function CombatScene({
   const reloadStartedAtRef = useRef(-Infinity);
   const effectAudio = useEffectAudio();
   const [weaponAudio] = useState(() => new WeaponAudio(effectAudio));
+  const [surfacePool] = useState(() => new ImpactParticlePool(SURFACE_POOL_CAPACITY));
   const [impactState, setImpactState] = useState(createArenaImpactState);
   const impactStateRef = useRef(impactState);
   const encounterStateRef = useRef(createEncounterState());
@@ -508,6 +556,7 @@ export function CombatScene({
       distance: number;
       order: number;
       sound: ImpactSound;
+      collision: Intersection;
     }[]
   >([]);
 
@@ -638,13 +687,19 @@ export function CombatScene({
           }
           batch.push({ distance, point: collision.point });
           if (batch.length === 1) {
-            resolvedImpacts.push({ batch: handler.batch, distance, order, sound: 'wall' });
+            resolvedImpacts.push({
+              batch: handler.batch,
+              distance,
+              order,
+              sound: 'wall',
+              collision,
+            });
           }
           continue;
         }
         const sound = handler.individual({ distance, point: collision.point });
         if (!sound) continue;
-        resolvedImpacts.push({ batch: null, distance, order, sound });
+        resolvedImpacts.push({ batch: null, distance, order, sound, collision });
       }
       for (const [handler, impacts] of impactBatches) {
         const sound = handler(impacts);
@@ -655,19 +710,36 @@ export function CombatScene({
       }
       impactBatches.clear();
       resolvedImpacts.sort((left, right) => left.order - right.order);
-      let impact: { sound: ImpactSound; distance: number } | null = null;
+      let impact: (typeof resolvedImpacts)[number] | null = null;
       for (const resolved of resolvedImpacts) {
         const selectedSound = selectImpactSound(impact?.sound ?? null, resolved.sound);
         if (!impact || selectedSound !== impact.sound) {
-          impact = { sound: selectedSound, distance: resolved.distance };
+          impact = resolved;
         }
       }
       intersectionsRef.current.length = 0;
-      if (impact) weaponAudio.playImpact(impact.sound, impact.distance);
+      if (impact) {
+        weaponAudio.playImpact(impact.sound, impact.distance);
+        if (!impact.batch) {
+          const { collision } = impact;
+          if (collision.face) {
+            impactNormal
+              .copy(collision.face.normal)
+              .applyNormalMatrix(
+                impactNormalMatrix.getNormalMatrix(collision.object.matrixWorld),
+              );
+          } else impactNormal.copy(cameraDirection).negate();
+          surfacePool.emit(
+            impact.sound === 'light' ? 'light' : 'surface',
+            collision.point,
+            impactNormal,
+          );
+        }
+      }
       resolvedImpacts.length = 0;
       return true;
     },
-    [camera, onEmptyFire, scene, updateWeaponState, weaponAudio],
+    [camera, onEmptyFire, scene, surfacePool, updateWeaponState, weaponAudio],
   );
 
   const reload = useCallback(() => {
@@ -683,7 +755,9 @@ export function CombatScene({
     <>
       <BreakableLights brokenLightIds={impactState.brokenLightIds} onLightHit={hitLight} />
       <TargetVisuals onHealthChange={updateTargetHealth} />
+      <ImpactParticles pool={surfacePool} active={active} clear={playerLifeState !== 'alive'} />
       <Shotgun
+        active={active}
         lifeState={playerLifeState}
         shotIdRef={shotIdRef}
         weaponStateRef={weaponStateRef}

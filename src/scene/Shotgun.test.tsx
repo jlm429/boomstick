@@ -33,6 +33,7 @@ describe('shotgun decorative surfaces', () => {
     const root = createRoot(canvas);
     const renderer = {
       render: vi.fn(),
+      compile: vi.fn(),
       setSize: vi.fn(),
       setPixelRatio: vi.fn(),
       domElement: canvas,
@@ -96,6 +97,89 @@ describe('shotgun decorative surfaces', () => {
         const hit = probe(new THREE.Vector3(0.1, 1, z), new THREE.Vector3(0, -1, 0), '#553b2b');
         expect(hit.point.y / 0.68).toBeGreaterThan(0.225);
       }
+    } finally {
+      await act(async () => root.unmount());
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('bounds flash lifetime, freezes pause and never retriggers from an unrelated render', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const canvas = document.createElement('canvas');
+    const scene = new THREE.Scene();
+    const root = createRoot(canvas);
+    const renderer = {
+      render: vi.fn(),
+      compile: vi.fn(),
+      setSize: vi.fn(),
+      setPixelRatio: vi.fn(),
+      domElement: canvas,
+      xr: { addEventListener: vi.fn(), removeEventListener: vi.fn() },
+    } as unknown as THREE.WebGLRenderer;
+    await root.configure({
+      gl: renderer,
+      scene,
+      frameloop: 'never',
+      size: { width: 640, height: 480, top: 0, left: 0 },
+    });
+    const shotIdRef = { current: 0 };
+    const weaponStateRef = { current: { ...INITIAL_WEAPON_STATE } };
+    const reloadStartedAtRef = { current: 0 };
+    let store: ReturnType<typeof root.render>;
+    const render = async (active: boolean, lifeState: 'alive' | 'dying' = 'alive') => {
+      await act(async () => {
+        store = root.render(
+          <Shotgun
+            active={active}
+            lifeState={lifeState}
+            shotIdRef={shotIdRef}
+            weaponStateRef={weaponStateRef}
+            reloadStartedAtRef={reloadStartedAtRef}
+          />,
+        );
+      });
+    };
+    const frame = (delta: number) => {
+      const state = store.getState();
+      for (const { ref } of state.internal.subscribers) ref.current(state, delta);
+    };
+    try {
+      await render(true);
+      const weapon = scene.children[0] as THREE.Group;
+      const flash = weapon.children.find(
+        (object) => object instanceof THREE.Group && object.position.z === -2.02,
+      )!;
+      expect(flash.visible).toBe(false);
+      expect(renderer.compile).toHaveBeenCalledWith(flash, store!.getState().camera, scene);
+      shotIdRef.current++;
+      frame(0.016);
+      expect(flash.visible).toBe(true);
+      expect(flash.children).toHaveLength(2);
+      expect(
+        new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1)).intersectObject(
+          flash,
+          true,
+        ),
+      ).toHaveLength(0);
+      await render(false);
+      frame(1);
+      expect(flash.visible).toBe(true);
+      await render(true);
+      for (let i = 0; i < 4; i++) frame(0.016);
+      expect(flash.visible).toBe(false);
+      await render(true);
+      frame(0.016);
+      expect(flash.visible).toBe(false);
+      shotIdRef.current++;
+      frame(0.016);
+      expect(flash.visible).toBe(true);
+      frame(0.5);
+      expect(flash.visible).toBe(false);
+      shotIdRef.current++;
+      frame(0.016);
+      await render(false, 'dying');
+      frame(0.016);
+      expect(flash.visible).toBe(false);
     } finally {
       await act(async () => root.unmount());
       vi.unstubAllGlobals();
