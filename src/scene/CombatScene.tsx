@@ -224,7 +224,7 @@ function TargetVisuals({
   );
 }
 
-function Shotgun({
+export function Shotgun({
   lifeState,
   shotIdRef,
   weaponStateRef,
@@ -323,27 +323,27 @@ function Shotgun({
       {[-0.12, 0.12].map((x) => (
         <group key={x}>
           <mesh position={[x, 0.13, -1.42]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.087, 0.095, 1.12, 12]} />
+            <cylinderGeometry args={[0.087, 0.095, 1.12, 12, 1, true]} />
             <meshStandardMaterial color="#667378" metalness={0.72} roughness={0.3} />
           </mesh>
-          <mesh position={[x, 0.13, -1.986]}>
-            <ringGeometry args={[0.055, 0.087, 12]} />
+          <mesh position={[x, 0.13, -1.982]} rotation={[0, Math.PI, 0]}>
+            <ringGeometry args={[0.055, 0.095, 12]} />
             <meshStandardMaterial color="#a9ad9e" metalness={0.62} roughness={0.35} />
           </mesh>
-          <mesh position={[x, 0.13, -1.984]}>
+          <mesh position={[x, 0.13, -1.974]} rotation={[0, Math.PI, 0]}>
             <circleGeometry args={[0.055, 12]} />
             <meshBasicMaterial color="#101518" />
           </mesh>
         </group>
       ))}
       {[0.17, -0.17].map((x) => (
-        <mesh key={x} position={[x, 0.15, -0.88]}>
+        <mesh key={x} position={[x, 0.23, -0.88]}>
           <boxGeometry args={[0.035, 0.02, 0.28]} />
           <meshStandardMaterial color="#be9657" metalness={0.5} roughness={0.45} />
         </mesh>
       ))}
       {[-1.22, -1.1, -0.98, -0.86].map((z) => (
-        <mesh key={z} position={[0, 0.17, z]}>
+        <mesh key={z} position={[0, 0.245, z]}>
           <boxGeometry args={[0.38, 0.025, 0.018]} />
           <meshStandardMaterial color="#553b2b" roughness={0.8} />
         </mesh>
