@@ -41,7 +41,7 @@ function ArenaMesh({ block }: { block: ArenaBlock }) {
             metalness={0.04}
             bumpScale={0.025}
           >
-            <SurfaceFinish repeat={Math.max(...halfExtents) * 2} />
+            <SurfaceFinish repeat={Math.max(...halfExtents) / 2} tint />
           </meshStandardMaterial>
         )}
       </mesh>
@@ -53,7 +53,7 @@ function ArenaMesh({ block }: { block: ArenaBlock }) {
             metalness={0.18}
             bumpScale={0.012}
           >
-            <SurfaceFinish repeat={3} />
+            <SurfaceFinish variant="metal" repeat={2} />
           </meshStandardMaterial>
         </mesh>
       )}

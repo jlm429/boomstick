@@ -1,26 +1,43 @@
-import { LinearFilter, RepeatWrapping, RGBAFormat } from 'three';
+import { useEffect, useMemo } from 'react';
+import type { DataTexture, MeshStandardMaterial } from 'three';
+import { createSurfaceTextures, type SurfaceVariant } from './surfaceTextures';
 
-// A small deterministic height tile. R3F owns and disposes the texture instances.
-const SIZE = 64;
-const grain = new Uint8Array(SIZE * SIZE * 4);
-let seed = 719;
-for (let i = 0; i < grain.length; i += 4) {
-  seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-  grain[i] = grain[i + 1] = grain[i + 2] = 80 + (seed % 96);
-  grain[i + 3] = 255;
+function attachData(parent: MeshStandardMaterial, texture: DataTexture) {
+  const bump = parent.bumpMap;
+  const roughness = parent.roughnessMap;
+  parent.bumpMap = parent.roughnessMap = texture;
+  parent.needsUpdate = true;
+  return () => {
+    parent.bumpMap = bump;
+    parent.roughnessMap = roughness;
+    parent.needsUpdate = true;
+  };
 }
 
-export function SurfaceFinish({ repeat = 1 }: { repeat?: number }) {
+export function SurfaceFinish({
+  repeat = 1,
+  variant = 'concrete',
+  tint = false,
+}: {
+  repeat?: number;
+  variant?: SurfaceVariant;
+  tint?: boolean;
+}) {
+  const textures = useMemo(
+    () => createSurfaceTextures(variant, repeat, tint),
+    [variant, repeat, tint],
+  );
+  useEffect(
+    () => () => {
+      textures.data.dispose();
+      textures.color?.dispose();
+    },
+    [textures],
+  );
   return (
-    <dataTexture
-      attach="bumpMap"
-      args={[grain, SIZE, SIZE, RGBAFormat]}
-      wrapS={RepeatWrapping}
-      wrapT={RepeatWrapping}
-      repeat={[repeat, repeat]}
-      magFilter={LinearFilter}
-      minFilter={LinearFilter}
-      needsUpdate
-    />
+    <>
+      <primitive object={textures.data} attach={attachData} dispose={null} />
+      {textures.color && <primitive object={textures.color} attach="map" dispose={null} />}
+    </>
   );
 }

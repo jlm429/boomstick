@@ -19,8 +19,6 @@ import {
   AnimationMixer,
   BufferAttribute,
   Group,
-  LoopOnce,
-  LoopRepeat,
   Mesh,
   Points,
   PointsMaterial,
@@ -35,13 +33,6 @@ import {
   isBiteBurstComplete,
   type BiteBurst,
 } from '../game/biteParticles';
-import {
-  BLOOD_PARTICLE_SIZE,
-  bloodBurstOpacity,
-  createBloodBurst,
-  isBloodBurstComplete,
-  type BloodBurst,
-} from '../game/bloodParticles';
 import { MAX_FRAME_DELTA } from '../game/constants';
 import type { ShotImpactBatchHandler } from '../game/impacts';
 import {
@@ -72,6 +63,7 @@ import {
 import {
   applyZombieAnimationTimeScales,
   createInitialZombieWalkPhaseApplier,
+  transitionZombieAnimation,
   type ZombieActions,
   type ZombieAnimation,
 } from './zombieAnimation';
@@ -84,13 +76,16 @@ import {
   ZOMBIE_ASSET_URLS,
 } from './zombieAssets';
 import { useEffectAudio } from './AudioContext';
+import { zombieHitFeedback } from './zombieMaterials';
+import { ZombieFootContact } from './ZombieFootContact';
+import { ImpactParticles } from './ImpactParticles';
+import { BLOOD_POOL_CAPACITY, ImpactParticlePool } from './particlePool';
 
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
 const COLLIDER_HALF_HEIGHT = 0.6;
 const COLLIDER_RADIUS = ZOMBIE_COLLIDER_RADIUS;
 const COLLIDER_CENTER_Y = COLLIDER_HALF_HEIGHT + COLLIDER_RADIUS;
-const ANIMATION_BLEND_SECONDS = 0.12;
 const TURN_SPEED_RADIANS = 7;
 const biteDirection = new Vector3();
 
@@ -102,64 +97,6 @@ const animationForMode = (mode: ZombieBehaviorMode): ZombieAnimation => {
 
 const normalizedAngleDelta = (from: number, to: number) =>
   Math.atan2(Math.sin(to - from), Math.cos(to - from));
-
-function BloodBurstEffect({
-  active,
-  burst,
-  onComplete,
-}: {
-  active: boolean;
-  burst: BloodBurst;
-  onComplete: () => void;
-}) {
-  const elapsedRef = useRef(0);
-  const completedRef = useRef(false);
-  const positionAttributeRef = useRef<BufferAttribute>(null);
-  const materialRef = useRef<PointsMaterial>(null);
-  const positions = useMemo(() => new Float32Array(burst.particles.length * 3), [burst]);
-
-  useFrame((_, delta) => {
-    if (!active || completedRef.current || !Number.isFinite(delta) || delta <= 0) return;
-    elapsedRef.current += delta;
-    if (isBloodBurstComplete(elapsedRef.current)) {
-      completedRef.current = true;
-      onComplete();
-      return;
-    }
-
-    const elapsed = elapsedRef.current;
-    const drag = Math.exp(-elapsed * 2.4);
-    burst.particles.forEach(({ velocity }, index) => {
-      const positionIndex = index * 3;
-      positions[positionIndex] = velocity[0] * elapsed * drag;
-      positions[positionIndex + 1] = velocity[1] * elapsed * drag - 1.8 * elapsed * elapsed;
-      positions[positionIndex + 2] = velocity[2] * elapsed * drag;
-    });
-    if (positionAttributeRef.current) positionAttributeRef.current.needsUpdate = true;
-    if (materialRef.current) materialRef.current.opacity = bloodBurstOpacity(elapsed);
-  });
-
-  return (
-    <points position={[burst.origin.x, burst.origin.y, burst.origin.z]} raycast={() => null}>
-      <bufferGeometry>
-        <bufferAttribute
-          ref={positionAttributeRef}
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-      </bufferGeometry>
-      <pointsMaterial
-        ref={materialRef}
-        color="#d51f1f"
-        opacity={1}
-        size={BLOOD_PARTICLE_SIZE}
-        sizeAttenuation
-        transparent
-        depthWrite={false}
-      />
-    </points>
-  );
-}
 
 function BiteBurstEffect({
   active,
@@ -256,7 +193,6 @@ function ZombieActor({
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
   const slotAssignmentRef = useRef<number | null>(null);
   const slotSettledRef = useRef(false);
-  const nextBurstIdRef = useRef(1);
   const pelletDistancesRef = useRef<number[]>([]);
   const nextBiteBurstIdRef = useRef(1);
   const biteBurstRef = useRef<BiteBurst | null>(null);
@@ -269,7 +205,10 @@ function ZombieActor({
   const [zombie, setZombie] = useState(createZombieState);
   const [animation, setAnimation] = useState<ZombieAnimation>('idle');
   const [animationRevision, setAnimationRevision] = useState(0);
-  const [bloodBursts, setBloodBursts] = useState<readonly BloodBurst[]>([]);
+  const [bloodPool] = useState(() => new ImpactParticlePool(BLOOD_POOL_CAPACITY));
+  const hitFeedback = useRef(0);
+  const hitOrigin = useRef(new Vector3());
+  const hitNormal = useRef(new Vector3());
   const effectAudio = useEffectAudio();
   const [zombieAudio] = useState(() => new ZombieAttackAudio(effectAudio));
   const { camera } = useThree();
@@ -373,23 +312,15 @@ function ZombieActor({
 
   const playAnimation = useCallback(
     (next: ZombieAnimation) => {
-      const nextAction = actionsRef.current[next];
-      if (!nextAction) return;
-      const previousAction = currentActionRef.current
-        ? actionsRef.current[currentActionRef.current]
-        : undefined;
-      if (previousAction && previousAction !== nextAction) {
-        previousAction.fadeOut(ANIMATION_BLEND_SECONDS);
-      }
-      nextAction.reset();
-      if (next === 'run') applyInitialWalkPhase(nextAction);
-      nextAction.enabled = true;
-      nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
-      nextAction.setLoop(
-        nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
-        nextAction.clampWhenFinished ? 1 : Infinity,
-      );
-      nextAction.fadeIn(ANIMATION_BLEND_SECONDS).play();
+      if (
+        !transitionZombieAnimation(
+          actionsRef.current,
+          currentActionRef.current,
+          next,
+          applyInitialWalkPhase,
+        )
+      )
+        return;
       currentActionRef.current = next;
     },
     [applyInitialWalkPhase],
@@ -422,10 +353,6 @@ function ZombieActor({
     [attackSlots, spawn.id],
   );
 
-  const removeBloodBurst = useCallback((id: number) => {
-    setBloodBursts((bursts) => bursts.filter((burst) => burst.id !== id));
-  }, []);
-
   const onShotImpacts: ShotImpactBatchHandler = (impacts) => {
     const pelletDistances = pelletDistancesRef.current;
     pelletDistances.length = impacts.length;
@@ -434,13 +361,20 @@ function ZombieActor({
     }
     const result = hitZombieWithPellets(zombieRef.current, pelletDistances);
     if (result.reactedHits === 0) return null;
-    const nextBursts: BloodBurst[] = [];
+    const origin = hitOrigin.current.set(0, 0, 0);
     for (let index = 0; index < result.reactedHits; index += 1) {
-      nextBursts.push(createBloodBurst(nextBurstIdRef.current++, impacts[index].point));
+      const point = impacts[index].point;
+      origin.x += point.x;
+      origin.y += point.y;
+      origin.z += point.z;
     }
+    origin.multiplyScalar(1 / result.reactedHits);
+    hitNormal.current.copy(camera.position).sub(origin).normalize();
+    bloodPool.emit('blood', origin, hitNormal.current);
+    hitFeedback.current = 1;
+    zombieHitFeedback(model, 1);
     zombieRef.current = result.state;
     setZombie(result.state);
-    setBloodBursts((bursts) => [...bursts, ...nextBursts]);
 
     const rigidBody = bodyRef.current;
     if (result.state.dead && rigidBody) {
@@ -463,7 +397,17 @@ function ZombieActor({
         ? actionsRef.current.attack
         : undefined;
     const previousAttackTime = attackAction?.time ?? 0;
-    if (active && safeFrame) mixerRef.current?.update(delta);
+    if (active && safeFrame) {
+      mixerRef.current?.update(delta);
+      if (hitFeedback.current > 0) {
+        hitFeedback.current = Math.max(0, hitFeedback.current - delta / 0.14);
+        zombieHitFeedback(model, hitFeedback.current);
+      }
+    }
+    if (hitFeedback.current > 0 && (!playerAlive || (active && !safeFrame))) {
+      hitFeedback.current = 0;
+      zombieHitFeedback(model, 0);
+    }
 
     const rigidBody = bodyRef.current;
     if (!rigidBody || !active) return;
@@ -648,14 +592,8 @@ function ZombieActor({
           <primitive object={model} />
         </group>
       </RigidBody>
-      {bloodBursts.map((burst) => (
-        <BloodBurstEffect
-          key={burst.id}
-          active={active}
-          burst={burst}
-          onComplete={() => removeBloodBurst(burst.id)}
-        />
-      ))}
+      <ZombieFootContact model={model} active={active} />
+      <ImpactParticles pool={bloodPool} active={active} clear={!playerAlive} />
       <BiteBurstEffect active={active} burstRef={biteBurstRef} />
     </>
   );

@@ -44,9 +44,27 @@ export function industrialBlockGeometry(size: Vector3Tuple, landmark = false) {
       box([0.07, h - 0.5, 0.054], [x, 0, z], '#a1a295');
     }
   }
+  // Sparse edge chips and a small stamped service label, merged into the same draw.
+  if (w > 1.3 && h > 1.3) {
+    for (const sign of [-1, 1]) {
+      const face = sign * (d / 2 - 0.0015);
+      for (const x of [-w / 2 + 0.18, w / 2 - 0.18]) {
+        box([0.05, 0.045, 0.001], [x, h / 2 - 0.38, face], '#c0b69a');
+        box([0.03, 0.085, 0.001], [x, -h / 2 + 0.57, face], '#424844');
+      }
+      box([0.28, 0.13, 0.002], [w * 0.25, h * 0.07, sign * (d / 2 - 0.003)], '#ac8c51');
+      for (let i = 0; i < 3; i++) {
+        box([0.025, 0.08, 0.001], [w * 0.25 - 0.07 + i * 0.07, h * 0.07, face], '#393e39');
+      }
+    }
+  }
   for (const x of [-w / 2 + 0.03, w / 2 - 0.03]) {
     box([0.05, h - 0.48, d - 0.2], [x, 0, 0], '#5b655f');
     box([0.06, 0.08, d - 0.28], [x, -h / 2 + 0.36, 0], '#c49951');
+    const panels = Math.max(1, Math.floor(d / 1.5));
+    for (let i = 1; i < panels; i++) {
+      box([0.054, h - 0.52, 0.025], [x, 0, -d / 2 + (d * (i - 0.25)) / panels], '#303938');
+    }
   }
   const merged = mergeGeometries(parts)!;
   for (const part of parts) part.dispose();
