@@ -538,6 +538,7 @@ function ReloadInput({
 }
 
 export function CombatScene({
+  zombieRendererReady,
   active,
   playerLifeState,
   onEncounterStateChange,
@@ -545,6 +546,7 @@ export function CombatScene({
   onWeaponStateChange,
   touchInput,
 }: {
+  zombieRendererReady: boolean;
   active: boolean;
   playerLifeState: PlayerLifeState;
   onEncounterStateChange: (state: EncounterState) => void;
@@ -642,7 +644,9 @@ export function CombatScene({
       updateWeaponState(completeReload(weaponStateRef.current));
     }
     if (active) {
-      updateEncounterState(advanceEncounterCountdown(encounterStateRef.current, delta));
+      updateEncounterState(
+        advanceEncounterCountdown(encounterStateRef.current, delta, zombieRendererReady),
+      );
     }
   });
 

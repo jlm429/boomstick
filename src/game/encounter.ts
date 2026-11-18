@@ -2,6 +2,7 @@ import { ARENA_TARGETS, isTargetDepleted } from './targets';
 import { TRAINING_ZOMBIE_SPAWNS, type TrainingZombieId } from './zombie';
 
 export const ENCOUNTER_COUNTDOWN_SECONDS = 3;
+const ZOMBIE_WARMUP_GRACE_SECONDS = 2;
 const MAX_COUNTDOWN_FRAME_DELTA_SECONDS = 0.1;
 const COUNTDOWN_BOUNDARY_EPSILON_SECONDS = 1e-9;
 
@@ -53,12 +54,15 @@ export function updateTrainingProgress(
 export function advanceEncounterCountdown(
   state: EncounterState,
   deltaSeconds: number,
+  zombieRendererReady: boolean,
 ): EncounterState {
   if (state.phase !== 'countdown') return state;
   if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return state;
   const elapsedSeconds =
     state.elapsedSeconds + Math.min(deltaSeconds, MAX_COUNTDOWN_FRAME_DELTA_SECONDS);
-  return elapsedSeconds >= ENCOUNTER_COUNTDOWN_SECONDS - COUNTDOWN_BOUNDARY_EPSILON_SECONDS
+  const transitionSeconds =
+    ENCOUNTER_COUNTDOWN_SECONDS + (zombieRendererReady ? 0 : ZOMBIE_WARMUP_GRACE_SECONDS);
+  return elapsedSeconds >= transitionSeconds - COUNTDOWN_BOUNDARY_EPSILON_SECONDS
     ? { phase: 'zombie' }
     : { phase: 'countdown', elapsedSeconds };
 }

@@ -135,6 +135,7 @@ function PhysicsDiagnostics() {
 }
 
 function RunScene({
+  zombieRendererReady,
   active,
   invertY,
   playerLifeState,
@@ -153,7 +154,7 @@ function RunScene({
   | 'onPlayerDamage'
   | 'onWeaponStateChange'
   | 'touchInput'
->) {
+> & { zombieRendererReady: boolean }) {
   const [encounterState, setEncounterState] = useState(createEncounterState);
   const removedZombieIdsRef = useRef<ReadonlySet<TrainingZombieId>>(new Set());
   const updateEncounterState = useCallback(
@@ -179,6 +180,7 @@ function RunScene({
   return (
     <>
       <CombatScene
+        zombieRendererReady={zombieRendererReady}
         active={active}
         playerLifeState={playerLifeState}
         onEncounterStateChange={updateEncounterState}
@@ -226,6 +228,8 @@ export function GameViewport({
   touchInput,
   touchControls,
 }: GameViewportProps) {
+  const [zombieRendererReady, setZombieRendererReady] = useState(false);
+  const markZombieRendererReady = useCallback(() => setZombieRendererReady(true), []);
   useEffect(() => {
     preloadZombieAssets();
   }, []);
@@ -256,6 +260,7 @@ export function GameViewport({
       <RenderDiagnostics />
       <ArenaVisuals />
       <RunScene
+        zombieRendererReady={zombieRendererReady}
         key={runId}
         active={active}
         invertY={invertY}
@@ -267,7 +272,7 @@ export function GameViewport({
         touchInput={touchInput}
       />
       <Suspense fallback={null}>
-        <ZombieAssetWarmup />
+        <ZombieAssetWarmup onReady={markZombieRendererReady} />
       </Suspense>
     </Canvas>
   );

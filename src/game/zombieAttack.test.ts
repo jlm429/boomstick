@@ -11,11 +11,14 @@ describe('weak zombie attack cycle', () => {
     const applyDamage = vi.fn((damage: number) => {
       health = Math.max(0, health - damage);
     });
+    const onWindup = vi.fn();
     const controller = new ZombieAttackController(WEAK_ZOMBIE_ATTACK, {
+      onWindup,
       isHitValid: () => valid,
       applyDamage,
     });
     return {
+      onWindup,
       applyDamage,
       controller,
       health: () => health,
@@ -49,6 +52,21 @@ describe('weak zombie attack cycle', () => {
     vi.advanceTimersByTime(1 + WEAK_ZOMBIE_ATTACK.windupMs);
     expect(attack.applyDamage).toHaveBeenCalledTimes(2);
     expect(attack.health()).toBe(90);
+  });
+
+  it('cues the next bite only when a real windup starts after cooldown', () => {
+    const { controller, onWindup } = setup();
+    controller.update(true, true);
+    expect(onWindup).toHaveBeenCalledOnce();
+    vi.advanceTimersByTime(WEAK_ZOMBIE_ATTACK.windupMs);
+
+    controller.update(false, true);
+    controller.update(true, true);
+    expect(onWindup).toHaveBeenCalledOnce();
+
+    vi.advanceTimersByTime(WEAK_ZOMBIE_ATTACK.cooldownMs);
+    expect(controller.getPhase()).toBe('windup');
+    expect(onWindup).toHaveBeenCalledTimes(2);
   });
 
   it('cancels a pending hit when the player leaves during windup', () => {

@@ -15,10 +15,10 @@ import {
 } from './encounter';
 import { TRAINING_ZOMBIE_SPAWNS, type TrainingZombieId } from './zombie';
 
-function advanceFrames(state: EncounterState, frameCount: number) {
+function advanceFrames(state: EncounterState, frameCount: number, rendererReady = true) {
   let nextState = state;
   for (let frame = 0; frame < frameCount; frame += 1) {
-    nextState = advanceEncounterCountdown(nextState, 1 / 60);
+    nextState = advanceEncounterCountdown(nextState, 1 / 60, rendererReady);
   }
   return nextState;
 }
@@ -54,25 +54,37 @@ describe('training encounter transition', () => {
     expect(encounterCountdownValue(encounter)).toBe(1);
     encounter = advanceFrames(encounter, 60);
     expect(encounter).toEqual({ phase: 'zombie' });
-    expect(advanceEncounterCountdown(encounter, 10)).toBe(encounter);
+    expect(advanceEncounterCountdown(encounter, 10, true)).toBe(encounter);
+  });
+
+  it('holds the final countdown until rendering is ready or the grace period ends', () => {
+    const cleared = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
+    const countdown = updateTrainingProgress(createEncounterState(), cleared);
+    const waiting = advanceFrames(countdown, 180, false);
+
+    expect(encounterCountdownValue(waiting)).toBe(1);
+    expect(trainingTargetsHaveCollision(waiting)).toBe(true);
+    expect(advanceFrames(waiting, 1)).toEqual({ phase: 'zombie' });
+    expect(advanceFrames(waiting, 119, false).phase).toBe('countdown');
+    expect(advanceFrames(waiting, 120, false)).toEqual({ phase: 'zombie' });
   });
 
   it('does not skip countdown values after a large frame delta', () => {
     const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
     let encounter = updateTrainingProgress(createEncounterState(), allTargetsDepleted);
 
-    encounter = advanceEncounterCountdown(encounter, 10);
+    encounter = advanceEncounterCountdown(encounter, 10, true);
     expect(encounterCountdownValue(encounter)).toBe(3);
 
     encounter = advanceFrames(encounter, 60);
     expect(encounterCountdownValue(encounter)).toBe(2);
 
-    encounter = advanceEncounterCountdown(encounter, 10);
+    encounter = advanceEncounterCountdown(encounter, 10, true);
     expect(encounterCountdownValue(encounter)).toBe(2);
     encounter = advanceFrames(encounter, 60);
     expect(encounterCountdownValue(encounter)).toBe(1);
 
-    encounter = advanceEncounterCountdown(encounter, 10);
+    encounter = advanceEncounterCountdown(encounter, 10, true);
     expect(encounterCountdownValue(encounter)).toBe(1);
     encounter = advanceFrames(encounter, 60);
     expect(encounter).toEqual({ phase: 'zombie' });

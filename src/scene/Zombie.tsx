@@ -240,8 +240,19 @@ function ZombieActor({
     [attackAsset, dyingAsset, hitAsset, idleAsset, modelAsset, runAsset],
   );
   useEffect(() => () => disposeZombieModelInstance(model), [model]);
+  const changeAnimation = useCallback((next: ZombieAnimation, restart = false) => {
+    if (!restart && animationRef.current === next) return;
+    animationRef.current = next;
+    setAnimation(next);
+    if (restart) setAnimationRevision((revision) => revision + 1);
+  }, []);
+
   useEffect(() => {
     const attackController = new ZombieAttackController(WEAK_ZOMBIE_ATTACK, {
+      onWindup: () => {
+        changeAnimation('attack', true);
+        zombieAudio.playBite();
+      },
       isHitValid: () =>
         activeRef.current &&
         playerAliveRef.current &&
@@ -263,7 +274,7 @@ function ZombieActor({
       attackController.dispose();
       if (attackControllerRef.current === attackController) attackControllerRef.current = null;
     };
-  }, [camera, onPlayerDamage, pose]);
+  }, [camera, changeAnimation, onPlayerDamage, pose, zombieAudio]);
 
   useLayoutEffect(() => {
     activeRef.current = active;
@@ -274,18 +285,14 @@ function ZombieActor({
     }
   }, [active, attackSlots, playerAlive, spawn.id]);
 
-  const changeAnimation = (next: ZombieAnimation, restart = false) => {
-    if (!restart && animationRef.current === next) return;
-    animationRef.current = next;
-    setAnimation(next);
-    if (restart) setAnimationRevision((revision) => revision + 1);
-  };
-
   const applyBehavior = (next: ZombieBehaviorState, restartAnimation = false) => {
     const previousMode = behaviorRef.current.mode;
     behaviorRef.current = next;
     if (previousMode === next.mode && !restartAnimation) return;
-    if (previousMode === 'attack' && next.mode !== 'attack') zombieAudio.leaveAttack();
+    if (previousMode === 'attack' && next.mode !== 'attack') {
+      attackControllerRef.current?.update(false, false);
+      zombieAudio.stop();
+    }
     if (next.mode === 'dead') zombieAudio.stop();
     if (next.mode === 'dead' || next.mode === 'hit') {
       changeAnimation(animationForMode(next.mode), restartAnimation);
@@ -294,7 +301,7 @@ function ZombieActor({
 
   useEffect(() => {
     if (active && playerAlive) return;
-    zombieAudio.leaveAttack();
+    zombieAudio.stop();
     if (!bodyRef.current || zombieRef.current.dead) return;
     const velocity = bodyRef.current.linvel();
     bodyRef.current.setLinvel(
@@ -390,11 +397,6 @@ function ZombieActor({
 
   useFrame((_, delta) => {
     const safeFrame = Number.isFinite(delta) && delta > 0 && delta <= MAX_FRAME_DELTA;
-    const attackAction =
-      behaviorRef.current.mode === 'attack' && currentActionRef.current === 'attack'
-        ? actionsRef.current.attack
-        : undefined;
-    const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) {
       pose.restore();
       updateZombieAnimationBlend(actionsRef.current, delta);
@@ -414,6 +416,10 @@ function ZombieActor({
     if (!rigidBody || !active) return;
     if (!safeFrame) {
       attackControllerRef.current?.update(false, false);
+      if (animationRef.current === 'attack') {
+        zombieAudio.stop();
+        changeAnimation('idle');
+      }
       const velocity = rigidBody.linvel();
       rigidBody.setLinvel(
         { x: 0, y: Number.isFinite(velocity.y) ? velocity.y : 0, z: 0 },
@@ -522,17 +528,11 @@ function ZombieActor({
       mode === 'attack' &&
       visualRef.current !== null &&
       isZombieFacingPlayer(visualRef.current.rotation.y, toPlayer);
-    attackControllerRef.current?.update(aligned, active && playerAlive);
-    if (aligned) {
-      zombieAudio.enterAttack();
-      if (attackAction && attackAction.time < previousAttackTime) {
-        zombieAudio.synchronizeAttackCycle();
-      }
-    } else {
-      zombieAudio.leaveAttack();
-    }
-    if (mode !== 'hit') {
-      changeAnimation(aligned ? 'attack' : speed > 0 ? 'run' : 'idle');
+    const canBite = aligned && playerAlive;
+    attackControllerRef.current?.update(canBite, canBite);
+    if (mode !== 'hit' && !(canBite && animationRef.current === 'attack')) {
+      if (animationRef.current === 'attack') zombieAudio.stop();
+      changeAnimation(speed > 0 ? 'run' : 'idle');
     }
   });
 
@@ -573,7 +573,7 @@ function ZombieActor({
   );
 }
 
-export function ZombieAssetWarmup() {
+export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
   const { camera, gl, scene } = useThree();
   const model = useFBX(ZOMBIE_ASSET_URLS.model);
   const idle = useFBX(ZOMBIE_ASSET_URLS.idle);
@@ -604,7 +604,10 @@ export function ZombieAssetWarmup() {
         child.raycast = () => null;
       });
       scene.add(preview);
-      removeAfterRender = addAfterEffect(removePreview);
+      removeAfterRender = addAfterEffect(() => {
+        removePreview();
+        onReady();
+      });
     };
 
     // FBX can resolve while its embedded images are still loading.
@@ -641,7 +644,7 @@ export function ZombieAssetWarmup() {
       removePreview();
       disposeZombieModelInstance(preview);
     };
-  }, [attack, camera, dying, gl, hit, idle, model, run, scene]);
+  }, [attack, camera, dying, gl, hit, idle, model, onReady, run, scene]);
   return null;
 }
 

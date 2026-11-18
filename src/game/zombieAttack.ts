@@ -22,6 +22,7 @@ type AttackScheduler = Readonly<{
 }>;
 
 type ZombieAttackCallbacks = Readonly<{
+  onWindup?: () => void;
   isHitValid: () => boolean;
   applyDamage: (damage: number) => void;
 }>;
@@ -81,6 +82,7 @@ export class ZombieAttackController {
   private beginWindup() {
     this.clearTimer();
     this.phase = 'windup';
+    this.callbacks.onWindup?.();
     this.timer = this.scheduler.setTimeout(() => {
       this.timer = null;
       if (!this.canAttack()) {
