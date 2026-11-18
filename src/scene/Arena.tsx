@@ -57,13 +57,13 @@ function ArenaMesh({ block }: { block: ArenaBlock }) {
   );
 }
 
-function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
+function FixtureLight({ broken, fixture }: { broken: boolean; fixture: ArenaLightFixture }) {
   if (fixture.kind === 'wall' || fixture.kind === 'landmark') {
     const isLandmark = fixture.kind === 'landmark';
     return (
       <pointLight
         position={[0, 0.15, 0.28]}
-        intensity={isLandmark ? 8 : 3}
+        intensity={broken ? 0 : isLandmark ? 8 : 3}
         distance={isLandmark ? 13 : 7}
         color="#ffd3a2"
       />
@@ -74,7 +74,7 @@ function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
   return (
     <pointLight
       position={[0, 0.3, 0]}
-      intensity={isCover ? 2 : 3}
+      intensity={broken ? 0 : isCover ? 2 : 3}
       distance={isCover ? 9.5 : 10.5}
       color="#ffd3a2"
     />
@@ -130,7 +130,7 @@ function BreakableLight({
         <boxGeometry args={wallMounted ? [0.74, 0.94, 0.46] : [0.72, 0.48, 0.72]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
-      {!broken && fixture.contributesLight && <FixtureLight fixture={fixture} />}
+      {fixture.contributesLight && <FixtureLight broken={broken} fixture={fixture} />}
     </group>
   );
 }
