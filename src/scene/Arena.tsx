@@ -130,6 +130,7 @@ function BreakableLight({
         <boxGeometry args={wallMounted ? [0.74, 0.94, 0.46] : [0.72, 0.48, 0.72]} />
         <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
+      {/* Keep the point-light count stable so breaking a fixture preserves warmed shader programs. */}
       {fixture.contributesLight && <FixtureLight broken={broken} fixture={fixture} />}
     </group>
   );

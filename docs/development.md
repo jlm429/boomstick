@@ -10,12 +10,12 @@ npm run dev
 Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with target training and zombie combat.
 
 Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the daylight, weathered ground, concrete perimeter, steel gateway, and supported targets before testing
-pointer lock, mouse look,
-movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
-depletion, target objective progress, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
+pointer lock, mouse look, movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
+depletion, the objective and encounter transition described in [Controls](controls.md),
+all five concealed zombie spawns, simultaneous
 zombie pursuit with distinct run phases and subtly varied speeds, uneven upper-body sway and head
 tilt, intact foot contact cues, exclusive attack positions,
-cover approaches, controlled turns before bites, the 0.80-unit chase-to-attack boundary, timed
+cover approaches, controlled turns before bites, the bite range and line of sight, timed
 bite damage and cancellation, windup reaches and impact-timed lunges, synchronized bite audio and
 impact bursts, stable frame pacing during
 clustered bites, player health HUD bands and damage feedback, the reduced-motion-safe
