@@ -286,6 +286,9 @@ export function App() {
           health={health}
           lifeState={lifeState}
           playing={gameplayActive}
+          targetsCleared={
+            encounterState.phase === 'training' ? encounterState.targetsCleared : null
+          }
           touchControls={touchControls}
           weaponState={weaponState}
         />

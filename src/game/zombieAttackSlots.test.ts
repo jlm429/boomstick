@@ -3,12 +3,8 @@ import { selectZombieSteering, ZOMBIE_ATTACK_DISTANCE } from './zombie';
 import {
   ZOMBIE_ATTACK_SLOT_COUNT,
   ZOMBIE_ATTACK_SLOT_RADIUS,
-  ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE,
-  ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE,
   ZOMBIE_ATTACK_WAITING_RADIUS,
-  shouldZombieRepositionToSlot,
   ZombieAttackSlotCoordinator,
-  updateZombieSlotSettlement,
 } from './zombieAttackSlots';
 
 const player = { x: 10, z: -4 };
@@ -65,62 +61,16 @@ describe('zombie attack slots', () => {
 
     const releasedSlot = coordinator.getAttackSlot('zombie-3');
     coordinator.release('zombie-3');
-    const promoted = coordinator.claim('zombie-8', { x: 0, z: 10 }, { x: 0, z: 0 });
+    const promoted = coordinator.claim(
+      `zombie-${ZOMBIE_ATTACK_SLOT_COUNT}`,
+      { x: 0, z: 10 },
+      { x: 0, z: 0 },
+    );
 
     expect(promoted).toMatchObject({ kind: 'attack', index: releasedSlot });
   });
 
-  it('keeps a stable assignment settled through small target motion and exits beyond hysteresis', () => {
-    const coordinator = new ZombieAttackSlotCoordinator();
-    const zombiePosition = { x: 0, z: 8 };
-    const first = coordinator.claim('settled', zombiePosition, { x: 0, z: 0 });
-
-    let settled = updateZombieSlotSettlement(false, first.position, first.position);
-    expect(settled).toBe(true);
-    expect(ZOMBIE_ATTACK_SLOT_EXIT_TOLERANCE).toBeGreaterThan(
-      ZOMBIE_ATTACK_SLOT_ARRIVAL_TOLERANCE,
-    );
-
-    const smallPlayerMove = coordinator.claim('settled', zombiePosition, { x: 0.08, z: 0 });
-    expect(smallPlayerMove.index).toBe(first.index);
-    expect(updateZombieSlotSettlement(false, first.position, smallPlayerMove.position)).toBe(
-      false,
-    );
-    settled = updateZombieSlotSettlement(settled, first.position, smallPlayerMove.position);
-    expect(settled).toBe(true);
-    expect(coordinator.getAttackSlot('settled')).toBe(first.index);
-
-    const largePlayerMove = coordinator.claim('settled', zombiePosition, { x: 0.13, z: 0 });
-    settled = updateZombieSlotSettlement(settled, first.position, largePlayerMove.position);
-    expect(settled).toBe(false);
-    expect(coordinator.getAttackSlot('settled')).toBe(first.index);
-
-    coordinator.release('settled');
-    expect(coordinator.getAttackSlot('settled')).toBeNull();
-  });
-
-  it('keeps a settled zombie chasing when player motion puts it outside attack range', () => {
-    const playerMove = 0.02;
-    const zombiePosition = { x: 0, z: ZOMBIE_ATTACK_SLOT_RADIUS };
-    const movedSlotPosition = {
-      x: 0,
-      z: ZOMBIE_ATTACK_SLOT_RADIUS - playerMove,
-    };
-    const settled = updateZombieSlotSettlement(true, zombiePosition, movedSlotPosition);
-
-    expect(ZOMBIE_ATTACK_SLOT_RADIUS + playerMove).toBeGreaterThan(ZOMBIE_ATTACK_DISTANCE);
-    expect(settled).toBe(true);
-    expect(shouldZombieRepositionToSlot('chase', settled)).toBe(true);
-  });
-
-  it('resumes attack-mode slot steering only after exiting settlement tolerance', () => {
-    expect(shouldZombieRepositionToSlot('attack', true)).toBe(false);
-    expect(shouldZombieRepositionToSlot('attack', false)).toBe(true);
-    expect(shouldZombieRepositionToSlot('hit', false)).toBe(false);
-  });
-
-  it('uses eight attack slots strictly inside attack range', () => {
-    expect(ZOMBIE_ATTACK_SLOT_COUNT).toBe(8);
+  it('keeps attack targets strictly inside attack range', () => {
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBe(0.79);
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
   });

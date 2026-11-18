@@ -51,25 +51,30 @@ function CanvasRegistration({ onCanvasReady }: Pick<GameViewportProps, 'onCanvas
   return null;
 }
 
-function RenderDiagnostics() {
+function RenderDiagnostics({ onContextChange }: { onContextChange: (lost: boolean) => void }) {
   const { camera, gl, scene, size } = useThree();
   const frameCount = useRef(0);
   const lastSample = useRef(0);
 
   useEffect(() => {
     const canvas = gl.domElement;
-    const handleContextLost = () => reportRuntimeDiagnostics({ webglContext: 'lost' });
-    const handleContextRestored = () => reportRuntimeDiagnostics({ webglContext: 'ok' });
+    const handleContextLost = () => {
+      onContextChange(true);
+      reportRuntimeDiagnostics({ webglContext: 'lost' });
+    };
+    const handleContextRestored = () => {
+      onContextChange(false);
+      reportRuntimeDiagnostics({ webglContext: 'ok' });
+    };
     canvas.addEventListener('webglcontextlost', handleContextLost);
     canvas.addEventListener('webglcontextrestored', handleContextRestored);
-    reportRuntimeDiagnostics({
-      webglContext: gl.getContext().isContextLost() ? 'lost' : 'ok',
-    });
+    if (gl.getContext().isContextLost()) handleContextLost();
+    else reportRuntimeDiagnostics({ webglContext: 'ok' });
     return () => {
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
     };
-  }, [gl]);
+  }, [gl, onContextChange]);
 
   useEffect(() => {
     reportRuntimeDiagnostics({ canvas: [size.width, size.height] });
@@ -102,9 +107,7 @@ function RenderDiagnostics() {
     });
   });
 
-  return DEVELOPMENT_DIAGNOSTICS.showSceneHelpers ? (
-    <gridHelper args={[48, 48, '#b6f7ff', '#527e8c']} position={[0, 0.012, 0]} />
-  ) : null;
+  return null;
 }
 
 function PhysicsDiagnostics() {
@@ -137,6 +140,7 @@ function PhysicsDiagnostics() {
 }
 
 function RunScene({
+  zombieRendererReady,
   active,
   invertY,
   playerLifeState,
@@ -155,7 +159,7 @@ function RunScene({
   | 'onPlayerDamage'
   | 'onWeaponStateChange'
   | 'touchInput'
->) {
+> & { zombieRendererReady: boolean }) {
   const [encounterState, setEncounterState] = useState(createEncounterState);
   const removedZombieIdsRef = useRef<ReadonlySet<TrainingZombieId>>(new Set());
   const updateEncounterState = useCallback(
@@ -181,6 +185,7 @@ function RunScene({
   return (
     <>
       <CombatScene
+        zombieRendererReady={zombieRendererReady}
         active={active}
         playerLifeState={playerLifeState}
         onEncounterStateChange={updateEncounterState}
@@ -188,11 +193,6 @@ function RunScene({
         onWeaponStateChange={onWeaponStateChange}
         touchInput={touchInput}
       />
-      {active && (
-        <Suspense fallback={null}>
-          <ZombieAssetWarmup />
-        </Suspense>
-      )}
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
@@ -233,6 +233,26 @@ export function GameViewport({
   touchInput,
   touchControls,
 }: GameViewportProps) {
+  const [renderer, setRenderer] = useState({
+    generation: 0,
+    lost: false,
+    ready: false,
+  });
+  const updateRendererContext = useCallback((lost: boolean) => {
+    setRenderer(({ generation }) => ({
+      generation: generation + 1,
+      lost,
+      ready: false,
+    }));
+  }, []);
+  const generation = renderer.generation;
+  const markZombieRendererReady = useCallback(() => {
+    setRenderer((current) =>
+      current.generation === generation && !current.lost
+        ? { ...current, ready: true }
+        : current,
+    );
+  }, [generation]);
   useEffect(() => {
     preloadZombieAssets();
   }, []);
@@ -256,13 +276,14 @@ export function GameViewport({
         gl.outputColorSpace = SRGBColorSpace;
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = ARENA_RENDER_CONFIG.toneMappingExposure;
-        gl.setClearColor('#130e0e', 1);
+        gl.setClearColor(ARENA_RENDER_CONFIG.background, 1);
       }}
     >
       <CanvasRegistration onCanvasReady={onCanvasReady} />
-      <RenderDiagnostics />
+      <RenderDiagnostics onContextChange={updateRendererContext} />
       <ArenaVisuals />
       <RunScene
+        zombieRendererReady={renderer.ready}
         key={runId}
         active={active}
         invertY={invertY}
@@ -273,6 +294,11 @@ export function GameViewport({
         onWeaponStateChange={onWeaponStateChange}
         touchInput={touchInput}
       />
+      <Suspense fallback={null}>
+        {!renderer.lost && (
+          <ZombieAssetWarmup key={generation} onReady={markZombieRendererReady} />
+        )}
+      </Suspense>
     </Canvas>
   );
 }

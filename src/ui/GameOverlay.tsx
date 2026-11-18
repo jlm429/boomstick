@@ -1,4 +1,5 @@
 import { APP_VERSION } from '../game/constants';
+import type { EncounterCountdown } from '../game/encounter';
 import {
   DEATH_SEQUENCE_MS,
   PLAYER_MAX_HEALTH,
@@ -7,6 +8,7 @@ import {
   type PlayerLifeState,
 } from '../game/playerHealth';
 import { MAGAZINE_CAPACITY, type WeaponState } from '../game/shooting';
+import { ARENA_TARGETS } from '../game/targets';
 
 export function HealthModule({
   damageRevision,
@@ -43,15 +45,17 @@ export function GameHud({
   health,
   lifeState,
   playing,
+  targetsCleared = null,
   touchControls = false,
   weaponState,
 }: {
   damageRevision: number;
   emptyFirePulse: number;
-  encounterCountdown: 3 | 2 | 1 | null;
+  encounterCountdown: EncounterCountdown;
   health: number;
   lifeState: PlayerLifeState;
   playing: boolean;
+  targetsCleared?: number | null;
   touchControls?: boolean;
   weaponState: WeaponState;
 }) {
@@ -93,15 +97,33 @@ export function GameHud({
           aria-hidden
         />
       )}
+      {playing && playerAlive && targetsCleared !== null && (
+        <div className="training-objective" role="status">
+          <span>Shoot all targets to begin zombie practice</span>
+          <strong>
+            {targetsCleared} / {ARENA_TARGETS.length} cleared
+          </strong>
+        </div>
+      )}
       {encounterCountdown !== null && (
         <div
           key={encounterCountdown}
-          className="encounter-countdown"
+          className={
+            encounterCountdown === 'waiting'
+              ? 'encounter-countdown encounter-countdown--waiting'
+              : 'encounter-countdown'
+          }
           role="status"
           aria-live="assertive"
-          aria-label={`Zombie encounter begins in ${encounterCountdown}`}
+          aria-label={
+            encounterCountdown === 'waiting'
+              ? undefined
+              : `Zombie encounter begins in ${encounterCountdown}`
+          }
         >
-          {encounterCountdown}
+          {encounterCountdown === 'waiting'
+            ? 'Preparing zombie encounter…'
+            : encounterCountdown}
         </div>
       )}
     </>

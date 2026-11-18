@@ -4,7 +4,6 @@ import { PLAYER_SPAWN } from './constants';
 import {
   TRAINING_ZOMBIE_SPAWNS,
   ZOMBIE_ATTACK_DISTANCE,
-  ZOMBIE_COLLIDER_RADIUS,
   ZOMBIE_CORPSE_SECONDS,
   ZOMBIE_MAX_HEALTH,
   ZOMBIE_MOVE_SPEED,
@@ -18,7 +17,8 @@ import {
   hitZombieWithPellets,
   interruptZombieBehavior,
   isZombieCorpseExpired,
-  isZombieSteeringBlocked,
+  isZombieFacingPlayer,
+  selectDirectZombieSteering,
   selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
@@ -299,22 +299,16 @@ describe('zombie behavior', () => {
 });
 
 describe('zombie steering', () => {
-  it('faces the player while preparing an attack and repositioning toward a moved slot', () => {
+  it('requires the zombie to finish turning toward the player before biting', () => {
     const playerDirection = { x: 0, z: 0.7 };
-    const slotMovementDirection = { x: 1, z: 0 };
-
-    expect(selectZombieFacingDirection('attack', playerDirection, slotMovementDirection)).toBe(
+    expect(selectZombieFacingDirection('attack', playerDirection, { x: 1, z: 0 })).toBe(
       playerDirection,
     );
-  });
-
-  it('keeps the active bite facing the player while slot movement continues', () => {
-    const playerDirection = { x: -0.3, z: 0.6 };
-    const slotMovementDirection = { x: 0.8, z: -0.2 };
-
-    expect(selectZombieFacingDirection('attack', playerDirection, slotMovementDirection)).toBe(
-      playerDirection,
-    );
+    expect(isZombieFacingPlayer(Math.PI, playerDirection)).toBe(false);
+    expect(isZombieFacingPlayer(Math.PI / 2, playerDirection)).toBe(false);
+    expect(isZombieFacingPlayer(Math.PI / 8, playerDirection)).toBe(true);
+    expect(isZombieFacingPlayer(2 * Math.PI, playerDirection)).toBe(true);
+    expect(isZombieFacingPlayer(0, { x: 0, z: 0 })).toBe(false);
   });
 
   it('continues facing movement direction while chasing an attack slot', () => {
@@ -326,36 +320,19 @@ describe('zombie steering', () => {
     );
   });
 
-  const castAgainstWall = (
-    origin: { x: number; z: number },
-    direction: { x: number; z: number },
-    maximumDistance: number,
-  ) => {
-    const wall = { minimumX: -1, maximumX: 0, minimumZ: -10, maximumZ: 10 };
-    if (
-      origin.x >= wall.minimumX &&
-      origin.x <= wall.maximumX &&
-      origin.z >= wall.minimumZ &&
-      origin.z <= wall.maximumZ
-    ) {
-      return 0;
-    }
-
-    const distances = [
-      direction.x === 0 ? Infinity : (wall.minimumX - origin.x) / direction.x,
-      direction.x === 0 ? Infinity : (wall.maximumX - origin.x) / direction.x,
-      direction.z === 0 ? Infinity : (wall.minimumZ - origin.z) / direction.z,
-      direction.z === 0 ? Infinity : (wall.maximumZ - origin.z) / direction.z,
-    ].filter((distance) => {
-      if (distance < 0 || distance > maximumDistance) return false;
-      const x = origin.x + direction.x * distance;
-      const z = origin.z + direction.z * distance;
-      return (
-        x >= wall.minimumX && x <= wall.maximumX && z >= wall.minimumZ && z <= wall.maximumZ
-      );
+  it('checks only the direct sweep when evaluating a reserved slot', () => {
+    const blocked = vi.fn(() => true);
+    expect(selectDirectZombieSteering({ x: 3, z: 4 }, 5, blocked)).toBeNull();
+    expect(blocked).toHaveBeenCalledExactlyOnceWith(
+      { x: expect.closeTo(0.6), z: expect.closeTo(0.8) },
+      5,
+    );
+    expect(selectDirectZombieSteering({ x: 0, z: -2 }, 2, () => false)).toEqual({
+      direction: { x: 0, z: -1 },
+      directPathClear: true,
+      side: null,
     });
-    return distances.length > 0 ? Math.min(...distances) : null;
-  };
+  });
 
   it('keeps direct pursuit on a proven clear path', () => {
     const steering = selectZombieSteering({ x: 0, z: 8 }, 8, null, () => false);
@@ -396,18 +373,13 @@ describe('zombie steering', () => {
     });
   });
 
-  it('keeps boundary steering viable when a clearance ray starts inside a wall', () => {
-    const position = { x: ZOMBIE_COLLIDER_RADIUS, z: 0 };
-    const steering = selectZombieSteering(
-      { x: -8, z: 0 },
-      8,
-      null,
-      (direction, maximumDistance) =>
-        isZombieSteeringBlocked(position, direction, maximumDistance, castAgainstWall),
-    );
-
-    expect(steering.directPathClear).toBe(false);
-    expect(Math.abs(steering.direction.x)).toBeLessThan(0.000001);
-    expect(Math.abs(steering.direction.z)).toBe(1);
+  it('stays on the chosen side even if the other side offers a shallower turn', () => {
+    const steer = (direction: { x: number; z: number }) =>
+      direction.x > -0.8 && direction.x < 0.5;
+    expect(selectZombieSteering({ x: 0, z: 8 }, 8, 1, steer)).toMatchObject({
+      direction: { x: -Math.sin(Math.PI / 3) },
+      directPathClear: false,
+      side: 1,
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { useFBX } from '@react-three/drei';
-import { useFrame, useThree } from '@react-three/fiber';
+import { addAfterEffect, useFrame, useThree } from '@react-three/fiber';
 import {
   CapsuleCollider,
   RigidBody,
@@ -45,7 +45,8 @@ import {
   hitZombieWithPellets,
   interruptZombieBehavior,
   isZombieCorpseExpired,
-  isZombieSteeringBlocked,
+  isZombieFacingPlayer,
+  selectDirectZombieSteering,
   selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
@@ -56,11 +57,7 @@ import {
   type TrainingZombieSpawn,
 } from '../game/zombie';
 import { WEAK_ZOMBIE_ATTACK, ZombieAttackController } from '../game/zombieAttack';
-import {
-  shouldZombieRepositionToSlot,
-  ZombieAttackSlotCoordinator,
-  updateZombieSlotSettlement,
-} from '../game/zombieAttackSlots';
+import type { ZombieAttackSlotCoordinator } from '../game/zombieAttackSlots';
 import {
   applyZombieAnimationTimeScales,
   createInitialZombieWalkPhaseApplier,
@@ -74,7 +71,7 @@ import {
   createZombieModelInstance,
   disposeZombieModelInstance,
   prepareZombieAnimationClips,
-  warmZombieModelAsset,
+  zombieModelTextures,
   ZOMBIE_ASSET_URLS,
 } from './zombieAssets';
 import { useEffectAudio } from './AudioContext';
@@ -83,6 +80,7 @@ import { ZombieFootContact } from './ZombieFootContact';
 import { ImpactParticles } from './ImpactParticles';
 import { BLOOD_POOL_CAPACITY, ImpactParticlePool } from './particlePool';
 import { ZombiePoseOverlay } from './zombiePose';
+import { createZombieObstacleProbe } from './zombieObstacleProbe';
 
 const MODEL_SCALE = 0.01;
 const MODEL_FLOOR_OFFSET = 0.16;
@@ -90,6 +88,8 @@ const COLLIDER_HALF_HEIGHT = 0.6;
 const COLLIDER_RADIUS = ZOMBIE_COLLIDER_RADIUS;
 const COLLIDER_CENTER_Y = COLLIDER_HALF_HEIGHT + COLLIDER_RADIUS;
 const TURN_SPEED_RADIANS = 7;
+const SLOT_APPROACH_DISTANCE = 2.5;
+const NO_MOVEMENT = { x: 0, z: 0 };
 const biteDirection = new Vector3();
 
 const animationForMode = (mode: ZombieBehaviorMode): ZombieAnimation => {
@@ -194,8 +194,6 @@ function ZombieActor({
   const behaviorRef = useRef<ZombieBehaviorState>(createZombieBehaviorState());
   const removedRef = useRef(false);
   const steeringSideRef = useRef<ZombieSteeringSide>(null);
-  const slotAssignmentRef = useRef<number | null>(null);
-  const slotSettledRef = useRef(false);
   const pelletDistancesRef = useRef<number[]>([]);
   const nextBiteBurstIdRef = useRef(1);
   const biteBurstRef = useRef<BiteBurst | null>(null);
@@ -216,9 +214,9 @@ function ZombieActor({
   const [zombieAudio] = useState(() => new ZombieAttackAudio(effectAudio));
   const { camera } = useThree();
   const { rapier, world } = useRapier();
-  const obstacleRay = useMemo(
-    () => new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }),
-    [rapier],
+  const obstacleProbe = useMemo(
+    () => createZombieObstacleProbe(rapier, world),
+    [rapier, world],
   );
   const modelAsset = useFBX(ZOMBIE_ASSET_URLS.model);
   const idleAsset = useFBX(ZOMBIE_ASSET_URLS.idle);
@@ -243,8 +241,19 @@ function ZombieActor({
     [attackAsset, dyingAsset, hitAsset, idleAsset, modelAsset, runAsset],
   );
   useEffect(() => () => disposeZombieModelInstance(model), [model]);
+  const changeAnimation = useCallback((next: ZombieAnimation, restart = false) => {
+    if (!restart && animationRef.current === next) return;
+    animationRef.current = next;
+    setAnimation(next);
+    if (restart) setAnimationRevision((revision) => revision + 1);
+  }, []);
+
   useEffect(() => {
     const attackController = new ZombieAttackController(WEAK_ZOMBIE_ATTACK, {
+      onWindup: () => {
+        changeAnimation('attack', true);
+        zombieAudio.playBite();
+      },
       isHitValid: () =>
         activeRef.current &&
         playerAliveRef.current &&
@@ -266,7 +275,7 @@ function ZombieActor({
       attackController.dispose();
       if (attackControllerRef.current === attackController) attackControllerRef.current = null;
     };
-  }, [camera, onPlayerDamage, pose]);
+  }, [camera, changeAnimation, onPlayerDamage, pose, zombieAudio]);
 
   useLayoutEffect(() => {
     activeRef.current = active;
@@ -274,42 +283,26 @@ function ZombieActor({
     if (!active || !playerAlive) {
       attackControllerRef.current?.cancel();
       attackSlots.release(spawn.id);
-      slotAssignmentRef.current = null;
-      slotSettledRef.current = false;
     }
   }, [active, attackSlots, playerAlive, spawn.id]);
-
-  const changeAnimation = (next: ZombieAnimation, restart = false) => {
-    if (!restart && animationRef.current === next) return;
-    animationRef.current = next;
-    setAnimation(next);
-    if (restart) setAnimationRevision((revision) => revision + 1);
-  };
 
   const applyBehavior = (next: ZombieBehaviorState, restartAnimation = false) => {
     const previousMode = behaviorRef.current.mode;
     behaviorRef.current = next;
     if (previousMode === next.mode && !restartAnimation) return;
-    if (previousMode === 'attack' && next.mode !== 'attack') zombieAudio.leaveAttack();
-    if (next.mode === 'attack' && previousMode !== 'attack') zombieAudio.enterAttack();
+    if (previousMode === 'attack' && next.mode !== 'attack') {
+      attackControllerRef.current?.update(false, false);
+      zombieAudio.stop();
+    }
     if (next.mode === 'dead') zombieAudio.stop();
-    changeAnimation(animationForMode(next.mode), restartAnimation);
+    if (next.mode === 'dead' || next.mode === 'hit') {
+      changeAnimation(animationForMode(next.mode), restartAnimation);
+    }
   };
 
   useEffect(() => {
-    model.traverse((child) => {
-      if (!(child instanceof Mesh)) return;
-      child.castShadow = true;
-      child.receiveShadow = true;
-    });
-  }, [model]);
-
-  useEffect(() => {
-    if (active && playerAlive) {
-      if (behaviorRef.current.mode === 'attack') zombieAudio.enterAttack();
-      return;
-    }
-    zombieAudio.leaveAttack();
+    if (active && playerAlive) return;
+    zombieAudio.stop();
     if (!bodyRef.current || zombieRef.current.dead) return;
     const velocity = bodyRef.current.linvel();
     bodyRef.current.setLinvel(
@@ -398,8 +391,6 @@ function ZombieActor({
     if (result.state.dead) {
       attackControllerRef.current?.cancel();
       attackSlots.release(spawn.id);
-      slotAssignmentRef.current = null;
-      slotSettledRef.current = false;
     }
     applyBehavior(interruptZombieBehavior(behaviorRef.current, result.state.dead), true);
     return 'wall';
@@ -407,11 +398,6 @@ function ZombieActor({
 
   useFrame((_, delta) => {
     const safeFrame = Number.isFinite(delta) && delta > 0 && delta <= MAX_FRAME_DELTA;
-    const attackAction =
-      behaviorRef.current.mode === 'attack' && currentActionRef.current === 'attack'
-        ? actionsRef.current.attack
-        : undefined;
-    const previousAttackTime = attackAction?.time ?? 0;
     if (active && safeFrame) {
       pose.restore();
       updateZombieAnimationBlend(actionsRef.current, delta);
@@ -430,6 +416,11 @@ function ZombieActor({
     const rigidBody = bodyRef.current;
     if (!rigidBody || !active) return;
     if (!safeFrame) {
+      attackControllerRef.current?.update(false, false);
+      if (animationRef.current === 'attack') {
+        zombieAudio.stop();
+        changeAnimation('idle');
+      }
       const velocity = rigidBody.linvel();
       rigidBody.setLinvel(
         { x: 0, y: Number.isFinite(velocity.y) ? velocity.y : 0, z: 0 },
@@ -460,34 +451,11 @@ function ZombieActor({
       z: camera.position.z - position.z,
     };
     const distance = Math.hypot(toPlayer.x, toPlayer.z);
-    const isBlocked = (direction: PlanarDirection, maximumDistance: number) =>
-      isZombieSteeringBlocked(
-        position,
-        direction,
-        maximumDistance,
-        (origin, rayDirection, rayDistance) => {
-          obstacleRay.origin.x = origin.x;
-          obstacleRay.origin.y = position.y + COLLIDER_CENTER_Y;
-          obstacleRay.origin.z = origin.z;
-          obstacleRay.dir.x = rayDirection.x;
-          obstacleRay.dir.y = 0;
-          obstacleRay.dir.z = rayDirection.z;
-          return (
-            world.castRay(
-              obstacleRay,
-              rayDistance,
-              true,
-              rapier.QueryFilterFlags.EXCLUDE_DYNAMIC,
-              undefined,
-              undefined,
-              rigidBody,
-            )?.timeOfImpact ?? null
-          );
-        },
-      );
+    obstacleProbe.setOrigin(position.x, position.y + COLLIDER_CENTER_Y, position.z);
     const directPathClear =
       distance <= 0 ||
-      !isBlocked({ x: toPlayer.x / distance, z: toPlayer.z / distance }, distance);
+      (distance <= WEAK_ZOMBIE_ATTACK.range &&
+        obstacleProbe.hasClearBitePath(toPlayer, distance));
     const hitAction = actionsRef.current.hit;
     const hitDuration = hitAction ? hitAction.getClip().duration / hitAction.timeScale : 0;
     applyBehavior(
@@ -498,85 +466,75 @@ function ZombieActor({
         hitDuration,
       }),
     );
-    const pursuing =
+    const mode = behaviorRef.current.mode;
+    const nearPlayer =
       playerAlive &&
-      (behaviorRef.current.mode === 'chase' || behaviorRef.current.mode === 'attack');
-    const slotTarget = pursuing ? attackSlots.claim(spawn.id, position, camera.position) : null;
-    if (!pursuing) {
-      attackSlots.release(spawn.id);
-      slotAssignmentRef.current = null;
-      slotSettledRef.current = false;
-    }
-    const movementTarget = slotTarget?.position ?? camera.position;
-    const toMovementTarget = {
-      x: movementTarget.x - position.x,
-      z: movementTarget.z - position.z,
-    };
-    const movementDistance = Math.hypot(toMovementTarget.x, toMovementTarget.z);
-    const steering = selectZombieSteering(
-      toMovementTarget,
-      movementDistance,
-      steeringSideRef.current,
-      isBlocked,
-    );
-    steeringSideRef.current = steering.side;
-    attackControllerRef.current?.update(
-      behaviorRef.current.mode === 'attack' &&
-        directPathClear &&
-        distance <= WEAK_ZOMBIE_ATTACK.range,
-      active && playerAlive,
-    );
-
-    if (behaviorRef.current.mode === 'attack' && attackAction) {
-      if (attackAction.time < previousAttackTime) zombieAudio.synchronizeAttackCycle();
-    }
-
-    const velocity = rigidBody.linvel();
-    const verticalVelocity = Number.isFinite(velocity.y) ? velocity.y : 0;
-    if (slotTarget) {
-      const assignment =
-        slotTarget.kind === 'attack' ? slotTarget.index : -slotTarget.index - 1;
-      if (slotAssignmentRef.current !== assignment) {
-        slotAssignmentRef.current = assignment;
-        slotSettledRef.current = false;
+      distance <= SLOT_APPROACH_DISTANCE &&
+      (mode === 'chase' || mode === 'attack');
+    const slotTarget = nearPlayer
+      ? attackSlots.claim(spawn.id, position, camera.position)
+      : null;
+    if (!nearPlayer) attackSlots.release(spawn.id);
+    let movementDirection: PlanarDirection = NO_MOVEMENT;
+    let distanceToGoal = distance;
+    if (mode === 'chase' && playerAlive) {
+      let slotSteering = null;
+      // A player backed against cover can move a reserved slot inside that cover.
+      if (slotTarget) {
+        const toSlot = {
+          x: slotTarget.position.x - position.x,
+          z: slotTarget.position.z - position.z,
+        };
+        const slotDistance = Math.hypot(toSlot.x, toSlot.z);
+        slotSteering = selectDirectZombieSteering(
+          toSlot,
+          slotDistance,
+          obstacleProbe.isBlocked,
+        );
+        if (slotSteering) distanceToGoal = slotDistance;
       }
-      slotSettledRef.current = updateZombieSlotSettlement(
-        slotSettledRef.current,
-        position,
-        slotTarget.position,
-      );
+      const steering =
+        slotSteering ??
+        selectZombieSteering(
+          toPlayer,
+          distance,
+          steeringSideRef.current,
+          obstacleProbe.isBlocked,
+        );
+      movementDirection = steering.direction;
+      steeringSideRef.current = steering.side;
     }
-    const settled = slotTarget !== null && slotSettledRef.current;
-    const repositioning = shouldZombieRepositionToSlot(behaviorRef.current.mode, settled);
-    if (!Number.isFinite(movementDistance) || movementDistance <= 0 || !repositioning) {
-      rigidBody.setLinvel({ x: 0, y: verticalVelocity, z: 0 }, true);
-      if (behaviorRef.current.mode === 'attack' && visualRef.current) {
-        const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
-        const turn = normalizedAngleDelta(visualRef.current.rotation.y, targetAngle);
-        visualRef.current.rotation.y +=
-          Math.sign(turn) * Math.min(Math.abs(turn), TURN_SPEED_RADIANS * delta);
-      }
-      return;
-    }
-
-    rigidBody.setLinvel(
-      {
-        x: steering.direction.x * movementSpeed,
-        y: verticalVelocity,
-        z: steering.direction.z * movementSpeed,
-      },
-      true,
-    );
-    const facingDirection = selectZombieFacingDirection(
-      behaviorRef.current.mode,
-      toPlayer,
-      steering.direction,
-    );
+    const facingDirection = selectZombieFacingDirection(mode, toPlayer, movementDirection);
+    let speed = 0;
     if (visualRef.current && (facingDirection.x !== 0 || facingDirection.z !== 0)) {
       const targetAngle = Math.atan2(facingDirection.x, facingDirection.z);
       const turn = normalizedAngleDelta(visualRef.current.rotation.y, targetAngle);
       visualRef.current.rotation.y +=
         Math.sign(turn) * Math.min(Math.abs(turn), TURN_SPEED_RADIANS * delta);
+      if (mode === 'chase') {
+        speed =
+          Math.min(movementSpeed, distanceToGoal / delta) *
+          Math.max(0, Math.cos(targetAngle - visualRef.current.rotation.y));
+      }
+    }
+    const velocity = rigidBody.linvel();
+    rigidBody.setLinvel(
+      {
+        x: movementDirection.x * speed,
+        y: Number.isFinite(velocity.y) ? velocity.y : 0,
+        z: movementDirection.z * speed,
+      },
+      true,
+    );
+    const aligned =
+      mode === 'attack' &&
+      visualRef.current !== null &&
+      isZombieFacingPlayer(visualRef.current.rotation.y, toPlayer);
+    const canBite = aligned && playerAlive;
+    attackControllerRef.current?.update(canBite, canBite);
+    if (mode !== 'hit' && !(canBite && animationRef.current === 'attack')) {
+      if (animationRef.current === 'attack') zombieAudio.stop();
+      changeAnimation(speed > 0 ? 'run' : 'idle');
     }
   });
 
@@ -617,7 +575,8 @@ function ZombieActor({
   );
 }
 
-export function ZombieAssetWarmup() {
+export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
+  const { camera, gl, scene } = useThree();
   const model = useFBX(ZOMBIE_ASSET_URLS.model);
   const idle = useFBX(ZOMBIE_ASSET_URLS.idle);
   const run = useFBX(ZOMBIE_ASSET_URLS.run);
@@ -625,9 +584,68 @@ export function ZombieAssetWarmup() {
   const hit = useFBX(ZOMBIE_ASSET_URLS.hit);
   const dying = useFBX(ZOMBIE_ASSET_URLS.dying);
   useEffect(() => {
-    warmZombieModelAsset(model);
     prepareZombieAnimationClips(model, { idle, run, attack, hit, dying });
-  }, [attack, dying, hit, idle, model, run]);
+    const preview = createZombieModelInstance(model, { shotRaycast: false });
+    const textures = zombieModelTextures(preview);
+    const imageWaitDeadline = performance.now() + 2000;
+    let cancelled = false;
+    const compileFrame = requestAnimationFrame(() => gl.compile(preview, camera, scene));
+    let uploadFrame = 0;
+    let removeAfterRender: (() => void) | undefined;
+    const removePreview = () => {
+      preview.removeFromParent();
+      removeAfterRender?.();
+    };
+    const renderPreview = () => {
+      // One draw beneath the floor exercises the skinned shadow and draw programs.
+      preview.position.y = -4;
+      preview.scale.setScalar(MODEL_SCALE);
+      preview.traverse((child) => {
+        if (!(child instanceof Mesh)) return;
+        child.frustumCulled = false;
+      });
+      scene.add(preview);
+      removeAfterRender = addAfterEffect(() => {
+        removePreview();
+        if (!gl.getContext().isContextLost()) onReady();
+      });
+    };
+
+    // FBX can resolve while its embedded images are still loading.
+    const uploadNextTexture = () => {
+      if (textures.size === 0) {
+        renderPreview();
+        return;
+      }
+      const texture = [...textures].find(({ image }) => image instanceof HTMLImageElement);
+      if (!texture) {
+        if (performance.now() < imageWaitDeadline) {
+          uploadFrame = requestAnimationFrame(uploadNextTexture);
+        }
+        return;
+      }
+      const image = texture.image as HTMLImageElement;
+      void image.decode().then(
+        () => {
+          if (cancelled) return;
+          uploadFrame = requestAnimationFrame(() => {
+            gl.initTexture(texture);
+            textures.delete(texture);
+            uploadFrame = requestAnimationFrame(uploadNextTexture);
+          });
+        },
+        () => undefined,
+      );
+    };
+    uploadFrame = requestAnimationFrame(uploadNextTexture);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(compileFrame);
+      cancelAnimationFrame(uploadFrame);
+      removePreview();
+      disposeZombieModelInstance(preview);
+    };
+  }, [attack, camera, dying, gl, hit, idle, model, onReady, run, scene]);
   return null;
 }
 

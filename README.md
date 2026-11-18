@@ -119,7 +119,7 @@ npm run build
 Additional documentation can be found in the `docs` directory.
 
 - Architecture
-- Controls
+- [Controls and arena objectives](docs/controls.md)
 - Development Guide
 - Deployment Guide
 

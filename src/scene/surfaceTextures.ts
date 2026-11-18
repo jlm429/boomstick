@@ -8,9 +8,26 @@ import {
   SRGBColorSpace,
 } from 'three';
 
-export type SurfaceVariant = 'concrete' | 'metal' | 'wood';
+export type SurfaceVariant = 'concrete' | 'gravel' | 'metal' | 'wood';
 const SIZE = 128;
 const tiles = new Map<SurfaceVariant, { data: Uint8Array; color: Uint8Array }>();
+
+function tileNoise(x: number, y: number, cells: number) {
+  const u = (x / SIZE) * cells;
+  const v = (y / SIZE) * cells;
+  const ix = Math.floor(u);
+  const iy = Math.floor(v);
+  const random = (a: number, b: number) =>
+    ((Math.imul((a % cells) + 191, 1597334677) ^ Math.imul((b % cells) + 31, 3812015801)) >>>
+      0) /
+    0xffffffff;
+  const blend = (a: number, b: number, t: number) => a + (b - a) * t * t * (3 - 2 * t);
+  return blend(
+    blend(random(ix, iy), random(ix + 1, iy), u - ix),
+    blend(random(ix, iy + 1), random(ix + 1, iy + 1), u - ix),
+    v - iy,
+  );
+}
 
 function surfaceTile(variant: SurfaceVariant) {
   const cached = tiles.get(variant);
@@ -28,13 +45,18 @@ function surfaceTile(variant: SurfaceVariant) {
       );
       const seam = variant === 'concrete' && (x < 2 || y < 2);
       const scratch = variant === 'metal' && y % 37 === 3 && x > 21 && x < 83;
+      const mottling = tileNoise(x, y, 5) * 0.65 + tileNoise(x, y, 23) * 0.35;
       const height = seam
         ? 30
         : scratch
           ? 70
-          : 128 + noise + (variant === 'wood' ? grain * 22 : broad * 10);
+          : 98 +
+            noise * (variant === 'gravel' ? 3 : 1.3) +
+            (variant === 'wood' ? grain * 22 : mottling * 57);
       const roughness = variant === 'metal' ? 220 + broad * 18 : 240 + broad * 9;
-      const tint = seam ? 184 : 245 + broad * 6 + noise * 0.35;
+      const tint = seam
+        ? 142
+        : 162 + mottling * 76 + noise * (variant === 'gravel' ? 2.8 : 0.9);
       const offset = (y * SIZE + x) * 4;
       data[offset] = height;
       data[offset + 1] = roughness;
@@ -49,7 +71,11 @@ function surfaceTile(variant: SurfaceVariant) {
 }
 
 // CPU tiles are immutable and cached; each mounted finish owns its GPU textures.
-export function createSurfaceTextures(variant: SurfaceVariant, repeat: number, tint: boolean) {
+export function createSurfaceTextures(
+  variant: SurfaceVariant,
+  repeat: number | readonly [number, number],
+  tint: boolean,
+) {
   const tile = surfaceTile(variant);
   const texture = (
     bytes: Uint8Array,
@@ -58,7 +84,7 @@ export function createSurfaceTextures(variant: SurfaceVariant, repeat: number, t
     const result = new DataTexture(bytes, SIZE, SIZE, RGBAFormat);
     result.colorSpace = colorSpace;
     result.wrapS = result.wrapT = RepeatWrapping;
-    result.repeat.set(repeat, repeat);
+    result.repeat.set(...(typeof repeat === 'number' ? ([repeat, repeat] as const) : repeat));
     result.magFilter = LinearFilter;
     result.minFilter = LinearMipmapLinearFilter;
     result.generateMipmaps = true;

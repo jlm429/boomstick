@@ -5,6 +5,7 @@ import {
   Mesh,
   SkinnedMesh,
   Sphere,
+  Texture,
   Vector3,
   type Raycaster,
 } from 'three';
@@ -161,11 +162,15 @@ function optimizedZombieModelAsset(source: Group) {
   return optimized;
 }
 
-export function createZombieModelInstance(source: Group) {
+export function createZombieModelInstance(source: Group, { shotRaycast = true } = {}) {
   const model = clone(optimizedZombieModelAsset(source)) as Group;
   prepareZombieMaterials(model);
   model.traverse((child) => {
-    if (child instanceof SkinnedMesh) installCachedShotRaycast(child);
+    if (!(child instanceof Mesh)) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    if (!shotRaycast) child.raycast = () => null;
+    else if (child instanceof SkinnedMesh) installCachedShotRaycast(child);
   });
   return model;
 }
@@ -180,8 +185,17 @@ export function disposeZombieModelInstance(model: Group) {
   });
 }
 
-export function warmZombieModelAsset(source: Group) {
-  optimizedZombieModelAsset(source);
+export function zombieModelTextures(model: Group) {
+  const textures = new Set<Texture>();
+  model.traverse((child) => {
+    if (!(child instanceof Mesh)) return;
+    for (const material of [child.material].flat()) {
+      for (const value of Object.values(material)) {
+        if (value instanceof Texture) textures.add(value);
+      }
+    }
+  });
+  return textures;
 }
 
 export function preloadZombieAssets() {

@@ -3,7 +3,6 @@ import type { AppPhase } from '../game/store';
 export const DEVELOPMENT_DIAGNOSTICS = {
   enabled: import.meta.env.DEV,
   sampleIntervalSeconds: 1,
-  showSceneHelpers: import.meta.env.DEV,
 } as const;
 
 export type RuntimeDiagnostics = {

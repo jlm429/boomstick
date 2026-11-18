@@ -68,7 +68,7 @@ export function transitionZombieAnimation(
     nextAction.time = walkTime;
     applyInitialWalkPhase(nextAction);
   }
-  nextAction.clampWhenFinished = next === 'hit' || next === 'dying';
+  nextAction.clampWhenFinished = next === 'attack' || next === 'hit' || next === 'dying';
   nextAction.setLoop(
     nextAction.clampWhenFinished ? LoopOnce : LoopRepeat,
     nextAction.clampWhenFinished ? 1 : Infinity,

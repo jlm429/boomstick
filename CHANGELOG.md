@@ -4,6 +4,9 @@ All notable changes are documented here.
 
 ## Unreleased
 
+- Restyled the practice arena with weathered concrete, gravel, daylight, and mounted targets. The HUD now tracks how many targets are cleared before zombie practice.
+- Warmed the zombie renderer during arena entry and tightened pursuit around cover and bite facing.
+
 - Made zombie encounters more visceral with uneven upper-body motion, stronger attack poses, directional recoil, and more visible blood spray while preserving combat balance and bounded effects.
 - Polished zombie materials, animation blending, foot contact cues, and hit feedback; added restrained arena and weapon wear and refined muzzle flashes, impacts, sparks, and blood with bounded particle counts and lifetimes.
 - Refined the training arena with beveled industrial cover, surface grain, softer shadows, and more balanced lighting, alongside a detailed shotgun and refreshed HUD and touch controls.
