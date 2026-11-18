@@ -46,6 +46,7 @@ import {
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieFacingPlayer,
+  selectDirectZombieSteering,
   selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
@@ -474,31 +475,32 @@ function ZombieActor({
       ? attackSlots.claim(spawn.id, position, camera.position)
       : null;
     if (!nearPlayer) attackSlots.release(spawn.id);
-    const movementTarget = slotTarget?.position ?? camera.position;
-    const toMovementTarget = {
-      x: movementTarget.x - position.x,
-      z: movementTarget.z - position.z,
-    };
-    const movementDistance = Math.hypot(toMovementTarget.x, toMovementTarget.z);
     let movementDirection: PlanarDirection = NO_MOVEMENT;
-    let distanceToGoal = movementDistance;
+    let distanceToGoal = distance;
     if (mode === 'chase' && playerAlive) {
-      let steering = selectZombieSteering(
-        toMovementTarget,
-        movementDistance,
-        steeringSideRef.current,
-        obstacleProbe.isBlocked,
-      );
+      let slotSteering = null;
       // A player backed against cover can move a reserved slot inside that cover.
-      if (slotTarget && !steering.directPathClear) {
-        steering = selectZombieSteering(
+      if (slotTarget) {
+        const toSlot = {
+          x: slotTarget.position.x - position.x,
+          z: slotTarget.position.z - position.z,
+        };
+        const slotDistance = Math.hypot(toSlot.x, toSlot.z);
+        slotSteering = selectDirectZombieSteering(
+          toSlot,
+          slotDistance,
+          obstacleProbe.isBlocked,
+        );
+        if (slotSteering) distanceToGoal = slotDistance;
+      }
+      const steering =
+        slotSteering ??
+        selectZombieSteering(
           toPlayer,
           distance,
           steeringSideRef.current,
           obstacleProbe.isBlocked,
         );
-        distanceToGoal = distance;
-      }
       movementDirection = steering.direction;
       steeringSideRef.current = steering.side;
     }
@@ -606,7 +608,7 @@ export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
       scene.add(preview);
       removeAfterRender = addAfterEffect(() => {
         removePreview();
-        onReady();
+        if (!gl.getContext().isContextLost()) onReady();
       });
     };
 

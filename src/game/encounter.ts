@@ -67,14 +67,14 @@ export function advanceEncounterCountdown(
     : { phase: 'countdown', elapsedSeconds };
 }
 
-export function encounterCountdownValue(state: EncounterState): 3 | 2 | 1 | null {
+export type EncounterCountdown = 3 | 2 | 1 | 'waiting' | null;
+
+export function encounterCountdownValue(state: EncounterState): EncounterCountdown {
   if (state.phase !== 'countdown') return null;
-  return Math.max(
-    1,
-    Math.ceil(
-      ENCOUNTER_COUNTDOWN_SECONDS - state.elapsedSeconds - COUNTDOWN_BOUNDARY_EPSILON_SECONDS,
-    ),
-  ) as 3 | 2 | 1;
+  const secondsLeft = Math.ceil(
+    ENCOUNTER_COUNTDOWN_SECONDS - state.elapsedSeconds - COUNTDOWN_BOUNDARY_EPSILON_SECONDS,
+  );
+  return secondsLeft <= 0 ? 'waiting' : (secondsLeft as 3 | 2 | 1);
 }
 
 export const hasEncounterPresentationChanged = (

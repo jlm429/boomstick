@@ -192,20 +192,36 @@ const rotatedDirection = (
   };
 };
 
+function probeDirectZombieSteering(
+  toGoal: PlanarDirection,
+  distance: number,
+  isBlocked: ZombieSteeringProbe,
+): ZombieSteering {
+  if (!Number.isFinite(distance) || distance <= 0) {
+    return { direction: { x: 0, z: 0 }, directPathClear: true, side: null };
+  }
+  const inverseDistance = 1 / distance;
+  const direction = { x: toGoal.x * inverseDistance, z: toGoal.z * inverseDistance };
+  return { direction, directPathClear: !isBlocked(direction, distance), side: null };
+}
+
+export function selectDirectZombieSteering(
+  toGoal: PlanarDirection,
+  distance: number,
+  isBlocked: ZombieSteeringProbe,
+): ZombieSteering | null {
+  const steering = probeDirectZombieSteering(toGoal, distance, isBlocked);
+  return steering.directPathClear ? steering : null;
+}
+
 export function selectZombieSteering(
   toPlayer: PlanarDirection,
   distanceToPlayer: number,
   previousSide: ZombieSteeringSide,
   isBlocked: ZombieSteeringProbe,
 ): ZombieSteering {
-  if (!Number.isFinite(distanceToPlayer) || distanceToPlayer <= 0) {
-    return { direction: { x: 0, z: 0 }, directPathClear: true, side: null };
-  }
-  const inverseDistance = 1 / distanceToPlayer;
-  const direct = { x: toPlayer.x * inverseDistance, z: toPlayer.z * inverseDistance };
-  if (!isBlocked(direct, distanceToPlayer)) {
-    return { direction: direct, directPathClear: true, side: null };
-  }
+  const direct = probeDirectZombieSteering(toPlayer, distanceToPlayer, isBlocked);
+  if (direct.directPathClear) return direct;
 
   const sides: readonly Exclude<ZombieSteeringSide, null>[] = previousSide
     ? [previousSide, previousSide === 1 ? -1 : 1]
@@ -214,7 +230,7 @@ export function selectZombieSteering(
   const angles = [Math.PI / 5, Math.PI / 3, Math.PI / 2] as const;
   for (const side of sides) {
     for (const angle of angles) {
-      const direction = rotatedDirection(direct, angle, side);
+      const direction = rotatedDirection(direct.direction, angle, side);
       if (!isBlocked(direction, lookahead)) {
         return { direction, directPathClear: false, side };
       }

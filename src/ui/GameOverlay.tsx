@@ -1,4 +1,5 @@
 import { APP_VERSION } from '../game/constants';
+import type { EncounterCountdown } from '../game/encounter';
 import {
   DEATH_SEQUENCE_MS,
   PLAYER_MAX_HEALTH,
@@ -50,7 +51,7 @@ export function GameHud({
 }: {
   damageRevision: number;
   emptyFirePulse: number;
-  encounterCountdown: 3 | 2 | 1 | null;
+  encounterCountdown: EncounterCountdown;
   health: number;
   lifeState: PlayerLifeState;
   playing: boolean;
@@ -107,12 +108,22 @@ export function GameHud({
       {encounterCountdown !== null && (
         <div
           key={encounterCountdown}
-          className="encounter-countdown"
+          className={
+            encounterCountdown === 'waiting'
+              ? 'encounter-countdown encounter-countdown--waiting'
+              : 'encounter-countdown'
+          }
           role="status"
           aria-live="assertive"
-          aria-label={`Zombie encounter begins in ${encounterCountdown}`}
+          aria-label={
+            encounterCountdown === 'waiting'
+              ? undefined
+              : `Zombie encounter begins in ${encounterCountdown}`
+          }
         >
-          {encounterCountdown}
+          {encounterCountdown === 'waiting'
+            ? 'Preparing zombie encounter…'
+            : encounterCountdown}
         </div>
       )}
     </>

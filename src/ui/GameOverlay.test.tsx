@@ -133,6 +133,21 @@ describe('GameHud reload reminder', () => {
       <GameHud
         damageRevision={0}
         emptyFirePulse={0}
+        encounterCountdown="waiting"
+        health={100}
+        lifeState="alive"
+        playing
+        weaponState={{ ammunition: 10, isReloading: false }}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Preparing zombie encounter…');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'assertive');
+    expect(screen.getByRole('status')).not.toHaveAttribute('aria-label');
+
+    rerender(
+      <GameHud
+        damageRevision={0}
+        emptyFirePulse={0}
         encounterCountdown={null}
         health={100}
         lifeState="alive"

@@ -18,6 +18,7 @@ import {
   interruptZombieBehavior,
   isZombieCorpseExpired,
   isZombieFacingPlayer,
+  selectDirectZombieSteering,
   selectZombieFacingDirection,
   selectZombieSteering,
   zombieMovementSpeed,
@@ -317,6 +318,20 @@ describe('zombie steering', () => {
     expect(selectZombieFacingDirection('chase', playerDirection, slotMovementDirection)).toBe(
       slotMovementDirection,
     );
+  });
+
+  it('checks only the direct sweep when evaluating a reserved slot', () => {
+    const blocked = vi.fn(() => true);
+    expect(selectDirectZombieSteering({ x: 3, z: 4 }, 5, blocked)).toBeNull();
+    expect(blocked).toHaveBeenCalledExactlyOnceWith(
+      { x: expect.closeTo(0.6), z: expect.closeTo(0.8) },
+      5,
+    );
+    expect(selectDirectZombieSteering({ x: 0, z: -2 }, 2, () => false)).toEqual({
+      direction: { x: 0, z: -1 },
+      directPathClear: true,
+      side: null,
+    });
   });
 
   it('keeps direct pursuit on a proven clear path', () => {

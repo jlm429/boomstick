@@ -426,6 +426,11 @@ h2 {
   line-height: 1;
   animation: encounter-countdown-pulse 0.9s ease-out;
 }
+.encounter-countdown--waiting {
+  font-size: clamp(1rem, 4vw, 2rem);
+  text-align: center;
+  animation: none;
+}
 @keyframes encounter-countdown-pulse {
   0% {
     opacity: 0;
