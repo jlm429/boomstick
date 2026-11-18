@@ -12,7 +12,7 @@ describe('industrial arena presentation', () => {
       const geometry = industrialBlockGeometry([w, h, d], landmark);
       const mesh = new Mesh(geometry, material);
       mesh.updateMatrixWorld();
-      const bodyColor = new Color(landmark ? '#985337' : '#75746a');
+      const bodyColor = new Color(landmark ? '#685e51' : '#777970');
       const probe = (axis: number, sign: number, point: Vector3, expected: string) => {
         const half = block.halfExtents[axis];
         point.setComponent(axis, sign * (half + 1));
@@ -41,32 +41,32 @@ describe('industrial arena presentation', () => {
         }
       };
       for (const sign of [-1, 1]) {
-        probe(1, sign, new Vector3(), '#343c3d');
+        probe(1, sign, new Vector3(), '#45473e');
         for (const axis of [0, 2]) {
-          probe(axis, sign, new Vector3(0, h / 2 - 0.08, 0), '#343c3d');
-          probe(axis, sign, new Vector3(0, -h / 2 + 0.08, 0), '#343c3d');
+          probe(axis, sign, new Vector3(0, h / 2 - 0.08, 0), '#45473e');
+          probe(axis, sign, new Vector3(0, -h / 2 + 0.08, 0), '#45473e');
           probe(
             axis,
             sign,
             new Vector3(w * 0.23, (h - 0.48) * 0.35, 0),
-            axis === 2 && landmark ? '#bc693e' : '#5b655f',
+            axis === 2 && landmark ? '#746356' : '#68716a',
           );
-          probe(axis, sign, new Vector3(w * 0.23, -h / 2 + 0.36, 0), '#c49951');
+          probe(axis, sign, new Vector3(w * 0.23, -h / 2 + 0.36, 0), '#807353');
         }
         for (let i = 0; i < 3; i++) {
           probe(
             2,
             sign,
             new Vector3(0, h / 2 - 0.27 - i * 0.07, 0),
-            h < 0.8 && i === 1 ? '#c49951' : '#303938',
+            h < 0.8 && i === 1 ? '#807353' : '#494b41',
           );
         }
         for (const x of [-w / 2 + 0.18, w / 2 - 0.18]) {
-          probe(2, sign, new Vector3(x, 0.085, 0), '#a1a295');
+          probe(2, sign, new Vector3(x, 0.085, 0), '#929086');
         }
         const count = Math.max(1, Math.floor(w / 1.5));
         for (let i = 1; i < count; i++) {
-          probe(2, sign, new Vector3(-w / 2 + (w * i) / count, -0.085, 0), '#303938');
+          probe(2, sign, new Vector3(-w / 2 + (w * i) / count, -0.085, 0), '#494b41');
         }
       }
       geometry.dispose();

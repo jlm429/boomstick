@@ -3,13 +3,13 @@ import { ARENA_TARGETS } from './targets';
 import {
   advanceEncounterCountdown,
   areAllTrainingZombiesRemoved,
-  areAllTrainingTargetsDepleted,
   completeEncounter,
   createEncounterState,
   createTrainingTargetHealth,
   encounterCountdownValue,
+  hasEncounterPresentationChanged,
   recordTrainingZombieRemoval,
-  startEncounterCountdown,
+  updateTrainingProgress,
   trainingTargetsHaveCollision,
   type EncounterState,
 } from './encounter';
@@ -24,30 +24,28 @@ function advanceFrames(state: EncounterState, frameCount: number) {
 }
 
 describe('training encounter transition', () => {
-  it('requires every existing target to be depleted', () => {
-    const initialHealth = createTrainingTargetHealth();
-    expect(areAllTrainingTargetsDepleted(initialHealth)).toBe(false);
-
-    const oneTargetStillActive = Object.fromEntries(
-      ARENA_TARGETS.map(({ id }, index) => [id, index === 0 ? 1 : 0]),
-    );
-    expect(areAllTrainingTargetsDepleted(oneTargetStillActive)).toBe(false);
-
-    const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
-    expect(areAllTrainingTargetsDepleted(allTargetsDepleted)).toBe(true);
+  it('counts each cleared target once and leaves partial hits out of the HUD progress', () => {
+    const training = createEncounterState();
+    const [first, second] = ARENA_TARGETS;
+    const health = { ...createTrainingTargetHealth(), [first.id]: 0, [second.id]: 1 };
+    const progress = updateTrainingProgress(training, health);
+    expect(progress).toEqual({ phase: 'training', targetsCleared: 1 });
+    expect(hasEncounterPresentationChanged(training, progress)).toBe(true);
+    expect(updateTrainingProgress(progress, { ...health, [second.id]: 0.5 })).toBe(progress);
+    expect(updateTrainingProgress(training, { [first.id]: 0 })).toEqual(progress);
   });
 
   it('starts the countdown only once after training completes', () => {
     const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
-    const countdown = startEncounterCountdown(createEncounterState(), allTargetsDepleted);
+    const countdown = updateTrainingProgress(createEncounterState(), allTargetsDepleted);
 
     expect(countdown).toEqual({ phase: 'countdown', elapsedSeconds: 0 });
-    expect(startEncounterCountdown(countdown, allTargetsDepleted)).toBe(countdown);
+    expect(updateTrainingProgress(countdown, allTargetsDepleted)).toBe(countdown);
   });
 
   it('counts down 3, 2, 1 before spawning the zombie encounter', () => {
     const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
-    let encounter = startEncounterCountdown(createEncounterState(), allTargetsDepleted);
+    let encounter = updateTrainingProgress(createEncounterState(), allTargetsDepleted);
 
     expect(encounterCountdownValue(encounter)).toBe(3);
     encounter = advanceFrames(encounter, 60);
@@ -61,7 +59,7 @@ describe('training encounter transition', () => {
 
   it('does not skip countdown values after a large frame delta', () => {
     const allTargetsDepleted = Object.fromEntries(ARENA_TARGETS.map(({ id }) => [id, 0]));
-    let encounter = startEncounterCountdown(createEncounterState(), allTargetsDepleted);
+    let encounter = updateTrainingProgress(createEncounterState(), allTargetsDepleted);
 
     encounter = advanceEncounterCountdown(encounter, 10);
     expect(encounterCountdownValue(encounter)).toBe(3);
@@ -82,7 +80,7 @@ describe('training encounter transition', () => {
 
   it('creates a fresh training state for restart', () => {
     const restarted = createEncounterState();
-    expect(restarted).toEqual({ phase: 'training' });
+    expect(restarted).toEqual({ phase: 'training', targetsCleared: 0 });
     expect(encounterCountdownValue(restarted)).toBeNull();
   });
 
@@ -133,7 +131,7 @@ describe('training encounter transition', () => {
   });
 
   it('removes depleted target collision before the zombie starts chasing', () => {
-    expect(trainingTargetsHaveCollision({ phase: 'training' })).toBe(true);
+    expect(trainingTargetsHaveCollision({ phase: 'training', targetsCleared: 0 })).toBe(true);
     expect(trainingTargetsHaveCollision({ phase: 'countdown', elapsedSeconds: 2 })).toBe(true);
     expect(trainingTargetsHaveCollision({ phase: 'zombie' })).toBe(false);
     expect(trainingTargetsHaveCollision({ phase: 'complete' })).toBe(false);

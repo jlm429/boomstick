@@ -40,7 +40,7 @@ import {
   createEncounterState,
   createTrainingTargetHealth,
   hasEncounterPresentationChanged,
-  startEncounterCountdown,
+  updateTrainingProgress,
   type EncounterState,
 } from '../game/encounter';
 import {
@@ -123,7 +123,7 @@ function TargetVisual({
       hitAtRef.current === null ? Infinity : performance.now() / 1000 - hitAtRef.current;
     const strength = Math.max(0, 1 - elapsed / HIT_FLASH_SECONDS);
     if (materialRef.current) {
-      materialRef.current.emissiveIntensity = depleted ? strength * 2.5 : 0.25 + strength * 2.5;
+      materialRef.current.emissiveIntensity = strength * 2;
     }
     if (meterRef.current) meterRef.current.quaternion.copy(camera.quaternion);
   });
@@ -149,16 +149,33 @@ function TargetVisual({
 
   return (
     <group ref={groupRef} position={[...target.position]} userData={{ onShotImpact }}>
+      <mesh
+        position={[0, -(target.position[1] + target.halfExtents[1]) / 2, 0]}
+        castShadow
+        raycast={() => null}
+      >
+        <boxGeometry args={[0.18, target.position[1] - target.halfExtents[1], 0.2]} />
+        <meshStandardMaterial color="#575143" roughness={0.95}>
+          <SurfaceFinish variant="wood" repeat={1} />
+        </meshStandardMaterial>
+      </mesh>
+      <mesh position={[0, -target.position[1] + 0.055, 0]} castShadow raycast={() => null}>
+        <boxGeometry args={[1.14, 0.11, 0.56]} />
+        <meshStandardMaterial color="#4e4c42" roughness={0.96} />
+      </mesh>
       <mesh castShadow receiveShadow raycast={depleted ? () => null : undefined}>
         <boxGeometry
           args={target.halfExtents.map((value) => value * 2) as [number, number, number]}
         />
         <meshStandardMaterial
           ref={materialRef}
-          color={depleted ? '#484946' : '#d9e2d5'}
-          emissive="#ff5c35"
-          emissiveIntensity={depleted ? 0 : 0.25}
-        />
+          color={depleted ? '#55544b' : '#e6dbc2'}
+          emissive="#e5683b"
+          emissiveIntensity={0}
+          roughness={0.92}
+        >
+          <SurfaceFinish variant="wood" tint />
+        </meshStandardMaterial>
       </mesh>
       <mesh
         position={[0, 0, target.halfExtents[2] + 0.012]}
@@ -172,7 +189,7 @@ function TargetVisual({
         raycast={depleted ? () => null : undefined}
       >
         <circleGeometry args={[0.23, 24]} />
-        <meshBasicMaterial color={depleted ? '#665c3d' : '#ffbb45'} />
+        <meshBasicMaterial color={depleted ? '#665c3d' : '#c89147'} />
       </mesh>
       <group
         ref={meterRef}
@@ -194,7 +211,7 @@ function TargetVisual({
           raycast={() => null}
         >
           <planeGeometry args={[TARGET_HEALTH_METER_WIDTH, TARGET_HEALTH_METER_HEIGHT]} />
-          <meshBasicMaterial color={depleted ? '#3c2922' : '#e55320'} />
+          <meshBasicMaterial color={depleted ? '#3c2922' : '#d7a454'} />
         </mesh>
       </group>
     </group>
@@ -611,7 +628,7 @@ export function CombatScene({
         [targetId]: health,
       };
       updateEncounterState(
-        startEncounterCountdown(encounterStateRef.current, trainingTargetHealthRef.current),
+        updateTrainingProgress(encounterStateRef.current, trainingTargetHealthRef.current),
       );
     },
     [updateEncounterState],

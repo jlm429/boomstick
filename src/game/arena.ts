@@ -7,7 +7,6 @@ export type ArenaBlock = Readonly<{
   position: Vector3Tuple;
   halfExtents: Vector3Tuple;
   color: string;
-  emissive?: string;
 }>;
 
 export type ArenaLightFixture = Readonly<{
@@ -19,11 +18,11 @@ export type ArenaLightFixture = Readonly<{
 }>;
 
 export const ARENA_RENDER_CONFIG = {
-  ambientLight: { color: '#a56d53', intensity: 2.8 },
-  background: '#130e0e',
+  ambientLight: { color: '#e2d8c2', intensity: 0.65 },
+  background: '#c5c4b5',
   fog: true,
   postprocessing: false,
-  toneMappingExposure: 1.22,
+  toneMappingExposure: 1.1,
   landmark: [0, 3, -10] as const,
 } as const;
 
@@ -32,52 +31,49 @@ export const ARENA_BLOCKS: readonly ArenaBlock[] = [
     id: 'floor',
     position: [0, -0.5, 0],
     halfExtents: [ARENA_HALF_EXTENT, 0.5, ARENA_HALF_EXTENT],
-    color: '#2a211d',
+    color: '#918473',
   },
   {
     id: 'north-wall',
     position: [0, 4, -ARENA_HALF_EXTENT],
     halfExtents: [ARENA_HALF_EXTENT, 4, 0.5],
-    color: '#352823',
+    color: '#8a897a',
   },
   {
     id: 'south-wall',
     position: [0, 4, ARENA_HALF_EXTENT],
     halfExtents: [ARENA_HALF_EXTENT, 4, 0.5],
-    color: '#352823',
+    color: '#878477',
   },
   {
     id: 'west-wall',
     position: [-ARENA_HALF_EXTENT, 4, 0],
     halfExtents: [0.5, 4, ARENA_HALF_EXTENT],
-    color: '#352823',
+    color: '#929082',
   },
   {
     id: 'east-wall',
     position: [ARENA_HALF_EXTENT, 4, 0],
     halfExtents: [0.5, 4, ARENA_HALF_EXTENT],
-    color: '#352823',
+    color: '#89887e',
   },
   {
     id: 'landmark-left',
     position: [-2.8, 3, -10],
     halfExtents: [0.45, 3, 0.8],
     color: '#a44a23',
-    emissive: '#421208',
   },
   {
     id: 'landmark-right',
     position: [2.8, 3, -10],
     halfExtents: [0.45, 3, 0.8],
     color: '#a44a23',
-    emissive: '#421208',
   },
   {
     id: 'landmark-top',
     position: [0, 5.65, -10],
     halfExtents: [3.25, 0.35, 0.8],
     color: '#a44a23',
-    emissive: '#421208',
   },
   {
     id: 'west-pillar',

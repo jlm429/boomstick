@@ -2,6 +2,26 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { GameHud } from './GameOverlay';
 
+it('shows the shooting objective and updates the cleared count during practice', () => {
+  const props = {
+    damageRevision: 0,
+    emptyFirePulse: 0,
+    encounterCountdown: null,
+    health: 100,
+    lifeState: 'alive',
+    playing: true,
+    weaponState: { ammunition: 10, isReloading: false },
+  } as const;
+  const { rerender } = render(<GameHud {...props} targetsCleared={0} />);
+  expect(screen.getByText('Shoot all targets to begin zombie practice')).toBeVisible();
+  expect(screen.getByText('0 / 4 cleared')).toBeVisible();
+  rerender(<GameHud {...props} targetsCleared={1} touchControls />);
+  expect(screen.getByText('1 / 4 cleared')).toBeVisible();
+  rerender(<GameHud {...props} targetsCleared={null} encounterCountdown={3} />);
+  expect(screen.queryByText('1 / 4 cleared')).toBeNull();
+  expect(screen.getByRole('status', { name: 'Zombie encounter begins in 3' })).toBeVisible();
+});
+
 describe('GameHud reload reminder', () => {
   it('keeps the center crosshair on desktop and removes it on the touch path', () => {
     const props = {

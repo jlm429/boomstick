@@ -6,7 +6,7 @@ const MAX_COUNTDOWN_FRAME_DELTA_SECONDS = 0.1;
 const COUNTDOWN_BOUNDARY_EPSILON_SECONDS = 1e-9;
 
 export type EncounterState =
-  | Readonly<{ phase: 'training' }>
+  | Readonly<{ phase: 'training'; targetsCleared: number }>
   | Readonly<{ phase: 'countdown'; elapsedSeconds: number }>
   | Readonly<{ phase: 'zombie' }>
   | Readonly<{ phase: 'complete' }>;
@@ -16,7 +16,10 @@ export type TrainingTargetHealth = Readonly<Record<string, number>>;
 export const createTrainingTargetHealth = (): TrainingTargetHealth =>
   Object.fromEntries(ARENA_TARGETS.map(({ id, maximumHealth }) => [id, maximumHealth]));
 
-export const createEncounterState = (): EncounterState => ({ phase: 'training' });
+export const createEncounterState = (): EncounterState => ({
+  phase: 'training',
+  targetsCleared: 0,
+});
 
 export const trainingTargetsHaveCollision = (state: EncounterState) =>
   state.phase === 'training' || state.phase === 'countdown';
@@ -35,17 +38,16 @@ export const recordTrainingZombieRemoval = (
 export const areAllTrainingZombiesRemoved = (removedZombieIds: ReadonlySet<TrainingZombieId>) =>
   TRAINING_ZOMBIE_SPAWNS.every(({ id }) => removedZombieIds.has(id));
 
-export const areAllTrainingTargetsDepleted = (targetHealth: TrainingTargetHealth) =>
-  ARENA_TARGETS.every(({ id }) =>
-    Object.hasOwn(targetHealth, id) ? isTargetDepleted(targetHealth[id]) : false,
-  );
-
-export function startEncounterCountdown(
+export function updateTrainingProgress(
   state: EncounterState,
   targetHealth: TrainingTargetHealth,
 ): EncounterState {
-  if (state.phase !== 'training' || !areAllTrainingTargetsDepleted(targetHealth)) return state;
-  return { phase: 'countdown', elapsedSeconds: 0 };
+  if (state.phase !== 'training') return state;
+  const targetsCleared = ARENA_TARGETS.filter(
+    ({ id }) => Object.hasOwn(targetHealth, id) && isTargetDepleted(targetHealth[id]),
+  ).length;
+  if (targetsCleared === ARENA_TARGETS.length) return { phase: 'countdown', elapsedSeconds: 0 };
+  return targetsCleared === state.targetsCleared ? state : { ...state, targetsCleared };
 }
 
 export function advanceEncounterCountdown(
@@ -76,4 +78,7 @@ export const hasEncounterPresentationChanged = (
   next: EncounterState,
 ) =>
   previous.phase !== next.phase ||
+  (previous.phase === 'training' &&
+    next.phase === 'training' &&
+    previous.targetsCleared !== next.targetsCleared) ||
   encounterCountdownValue(previous) !== encounterCountdownValue(next);

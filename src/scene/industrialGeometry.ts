@@ -21,27 +21,27 @@ export function industrialBlockGeometry(size: Vector3Tuple, landmark = false) {
   // One merged draw per obstacle. Caps and panel relief remain within the original envelope.
   add(
     new RoundedBoxGeometry(w - 0.12, h - 0.12, d - 0.12, 1, 0.1),
-    landmark ? '#985337' : '#75746a',
+    landmark ? '#685e51' : '#777970',
   );
   for (const y of [-h / 2 + 0.09, h / 2 - 0.09]) {
-    add(new RoundedBoxGeometry(w, 0.18, d, 1, 0.065), '#343c3d', [0, y, 0]);
+    add(new RoundedBoxGeometry(w, 0.18, d, 1, 0.065), '#45473e', [0, y, 0]);
   }
   for (const z of [-d / 2 + 0.03, d / 2 - 0.03]) {
     add(
       new RoundedBoxGeometry(w - 0.2, h - 0.48, 0.05, 1, 0.02),
-      landmark ? '#bc693e' : '#5b655f',
+      landmark ? '#746356' : '#68716a',
       [0, 0, z],
     );
     for (let i = 0; i < 3; i++) {
-      box([Math.min(0.6, w * 0.3), 0.022, 0.058], [0, h / 2 - 0.27 - i * 0.07, z], '#303938');
+      box([Math.min(0.6, w * 0.3), 0.022, 0.058], [0, h / 2 - 0.27 - i * 0.07, z], '#494b41');
     }
-    box([w - 0.28, 0.08, 0.06], [0, -h / 2 + 0.36, z], '#c49951');
+    box([w - 0.28, 0.08, 0.06], [0, -h / 2 + 0.36, z], '#807353');
     const count = Math.max(1, Math.floor(w / 1.5));
     for (let i = 1; i < count; i++) {
-      box([0.035, h - 0.52, 0.054], [-w / 2 + (w * i) / count, 0, z], '#303938');
+      box([0.035, h - 0.52, 0.054], [-w / 2 + (w * i) / count, 0, z], '#494b41');
     }
     for (const x of [-w / 2 + 0.18, w / 2 - 0.18]) {
-      box([0.07, h - 0.5, 0.054], [x, 0, z], '#a1a295');
+      box([0.07, h - 0.5, 0.054], [x, 0, z], '#929086');
     }
   }
   // Sparse edge chips and a small stamped service label, merged into the same draw.
@@ -59,11 +59,11 @@ export function industrialBlockGeometry(size: Vector3Tuple, landmark = false) {
     }
   }
   for (const x of [-w / 2 + 0.03, w / 2 - 0.03]) {
-    box([0.05, h - 0.48, d - 0.2], [x, 0, 0], '#5b655f');
-    box([0.06, 0.08, d - 0.28], [x, -h / 2 + 0.36, 0], '#c49951');
+    box([0.05, h - 0.48, d - 0.2], [x, 0, 0], '#68716a');
+    box([0.06, 0.08, d - 0.28], [x, -h / 2 + 0.36, 0], '#807353');
     const panels = Math.max(1, Math.floor(d / 1.5));
     for (let i = 1; i < panels; i++) {
-      box([0.054, h - 0.52, 0.025], [x, 0, -d / 2 + (d * (i - 0.25)) / panels], '#303938');
+      box([0.054, h - 0.52, 0.025], [x, 0, -d / 2 + (d * (i - 0.25)) / panels], '#494b41');
     }
   }
   const merged = mergeGeometries(parts)!;

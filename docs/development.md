@@ -9,14 +9,13 @@ npm run dev
 
 Use `npm test` for the automated suite. Before a pull request, run lint, typecheck, formatting verification, and build as listed in the README. The prototype is intentionally limited to one local arena with target training and zombie combat.
 
-Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the bright sky, textured floor,
-perimeter, beveled industrial obstacles, orange landmark, targets, and detailed shotgun before testing
+Inspect both `npm run dev` and `npm run preview` in a real browser. Verify the daylight, weathered ground, concrete perimeter, steel gateway, and supported targets before testing
 pointer lock, mouse look,
 movement, firing, reload, target health meters, range and face-accuracy damage scaling, target
-depletion, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
+depletion, target objective progress, the single 3, 2, 1 zombie transition, all five concealed zombie spawns, simultaneous
 zombie pursuit with distinct run phases and subtly varied speeds, uneven upper-body sway and head
 tilt, intact foot contact cues, exclusive attack positions,
-stable position settlement without steering jitter, the 0.80-unit chase-to-attack boundary, timed
+cover approaches, controlled turns before bites, the 0.80-unit chase-to-attack boundary, timed
 bite damage and cancellation, windup reaches and impact-timed lunges, synchronized bite audio and
 impact bursts, stable frame pacing during
 clustered bites, player health HUD bands and damage feedback, the reduced-motion-safe
@@ -38,6 +37,6 @@ Check that pause, death, restart, and menu return do not replay stale sounds.
 Development builds expose quiet live state at `window.__BOOMSTICK_DIAGNOSTICS__`, including Canvas
 size, WebGL state, frame count, camera, Rapier readiness, player position, pressed controls, and the
 latest successful shot coordinates and direction, renderer workload, and physics object counts.
-Scene helpers and diagnostics are excluded from production builds. Automated or headless
+Diagnostics are excluded from production builds. Automated or headless
 pointer-lock simulation is useful for state coverage, but it does not replace hands-on browser
 verification.

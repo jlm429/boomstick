@@ -19,7 +19,7 @@ export function SurfaceFinish({
   variant = 'concrete',
   tint = false,
 }: {
-  repeat?: number;
+  repeat?: number | readonly [number, number];
   variant?: SurfaceVariant;
   tint?: boolean;
 }) {

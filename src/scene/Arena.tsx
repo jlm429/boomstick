@@ -10,11 +10,14 @@ import {
 import type { ImpactSound, ShotImpactHandler } from '../game/impacts';
 import { SurfaceFinish } from './SurfaceFinish';
 import { industrialBlockGeometry } from './industrialGeometry';
+import { ArenaSky } from './ArenaSky';
 
 const onSurfaceImpact: ShotImpactHandler = () => 'wall';
+const WALL_TEXTURE_REPEAT = [12, 2] as const;
 
 function ArenaMesh({ block }: { block: ArenaBlock }) {
-  const { position, halfExtents, color, emissive = '#000000' } = block;
+  const { position, halfExtents, color } = block;
+  const floor = block.id === 'floor';
   const industrial = /cover|pillar|landmark/.test(block.id);
   const geometry = useMemo(
     () =>
@@ -29,31 +32,24 @@ function ArenaMesh({ block }: { block: ArenaBlock }) {
   useEffect(() => () => geometry?.dispose(), [geometry]);
   return (
     <group position={[...position]} userData={{ onShotImpact: onSurfaceImpact }}>
-      <mesh castShadow={!industrial && block.id !== 'floor'} receiveShadow>
+      <mesh castShadow={!industrial && !floor} receiveShadow>
         <boxGeometry args={halfExtents.map((value) => value * 2) as [number, number, number]} />
         {industrial ? (
           <meshBasicMaterial visible={false} />
         ) : (
-          <meshStandardMaterial
-            color={block.id === 'floor' ? '#45443e' : color}
-            emissive={emissive}
-            roughness={0.92}
-            metalness={0.04}
-            bumpScale={0.025}
-          >
-            <SurfaceFinish repeat={Math.max(...halfExtents) / 2} tint />
+          <meshStandardMaterial color={color} roughness={1} bumpScale={floor ? 0.075 : 0.045}>
+            {floor ? (
+              <SurfaceFinish variant="gravel" repeat={7} tint />
+            ) : (
+              <SurfaceFinish repeat={WALL_TEXTURE_REPEAT} tint />
+            )}
           </meshStandardMaterial>
         )}
       </mesh>
       {geometry && (
         <mesh geometry={geometry} castShadow receiveShadow raycast={() => null}>
-          <meshStandardMaterial
-            vertexColors
-            roughness={0.72}
-            metalness={0.18}
-            bumpScale={0.012}
-          >
-            <SurfaceFinish variant="metal" repeat={2} />
+          <meshStandardMaterial vertexColors roughness={0.91} metalness={0.1} bumpScale={0.04}>
+            <SurfaceFinish variant="metal" repeat={2} tint />
           </meshStandardMaterial>
         </mesh>
       )}
@@ -67,9 +63,9 @@ function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
     return (
       <pointLight
         position={[0, 0.15, 0.28]}
-        intensity={isLandmark ? 30 : 8.5}
-        distance={isLandmark ? 22 : 12}
-        color="#e75a24"
+        intensity={isLandmark ? 8 : 3}
+        distance={isLandmark ? 13 : 7}
+        color="#ffd3a2"
       />
     );
   }
@@ -78,9 +74,9 @@ function FixtureLight({ fixture }: { fixture: ArenaLightFixture }) {
   return (
     <pointLight
       position={[0, 0.3, 0]}
-      intensity={isCover ? 6 : 7}
+      intensity={isCover ? 2 : 3}
       distance={isCover ? 9.5 : 10.5}
-      color="#df5724"
+      color="#ffd3a2"
     />
   );
 }
@@ -124,9 +120,9 @@ function BreakableLight({
       >
         <sphereGeometry args={[wallMounted ? 0.13 : 0.12, 10, 8]} />
         <meshStandardMaterial
-          color={broken ? '#261714' : '#f07a2c'}
-          emissive={broken ? '#000000' : '#c13f10'}
-          emissiveIntensity={broken ? 0 : wallMounted ? 1.8 : 1.65}
+          color={broken ? '#332e27' : '#d7b681'}
+          emissive={broken ? '#000000' : '#c17e3e'}
+          emissiveIntensity={broken ? 0 : 0.7}
           roughness={broken ? 0.88 : 0.56}
         />
       </mesh>
@@ -177,13 +173,14 @@ export function ArenaVisuals() {
   return (
     <>
       <color attach="background" args={[ARENA_RENDER_CONFIG.background]} />
-      <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 20, 52]} />
+      <fog attach="fog" args={[ARENA_RENDER_CONFIG.background, 24, 65]} />
+      <ArenaSky />
       <ambientLight {...ARENA_RENDER_CONFIG.ambientLight} />
-      <hemisphereLight intensity={1.4} color="#b5c8d0" groundColor="#34291f" />
+      <hemisphereLight intensity={1.7} color="#d5e4ee" groundColor="#777162" />
       <directionalLight
-        position={[7, 13, 6]}
-        intensity={2.7}
-        color="#ffd2a0"
+        position={[-12, 16, 9]}
+        intensity={2.1}
+        color="#fff0d6"
         castShadow
         shadow-mapSize={[512, 512]}
         shadow-bias={-0.0004}

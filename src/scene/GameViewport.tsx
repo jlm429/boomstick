@@ -102,9 +102,7 @@ function RenderDiagnostics() {
     });
   });
 
-  return DEVELOPMENT_DIAGNOSTICS.showSceneHelpers ? (
-    <gridHelper args={[48, 48, '#b6f7ff', '#527e8c']} position={[0, 0.012, 0]} />
-  ) : null;
+  return null;
 }
 
 function PhysicsDiagnostics() {
@@ -188,11 +186,6 @@ function RunScene({
         onWeaponStateChange={onWeaponStateChange}
         touchInput={touchInput}
       />
-      {active && (
-        <Suspense fallback={null}>
-          <ZombieAssetWarmup />
-        </Suspense>
-      )}
       <Suspense fallback={null}>
         <Physics gravity={[0, -20, 0]} maxCcdSubsteps={2} paused={!active} timeStep={1 / 60}>
           <PhysicsDiagnostics />
@@ -256,7 +249,7 @@ export function GameViewport({
         gl.outputColorSpace = SRGBColorSpace;
         gl.toneMapping = ACESFilmicToneMapping;
         gl.toneMappingExposure = ARENA_RENDER_CONFIG.toneMappingExposure;
-        gl.setClearColor('#130e0e', 1);
+        gl.setClearColor(ARENA_RENDER_CONFIG.background, 1);
       }}
     >
       <CanvasRegistration onCanvasReady={onCanvasReady} />
@@ -273,6 +266,9 @@ export function GameViewport({
         onWeaponStateChange={onWeaponStateChange}
         touchInput={touchInput}
       />
+      <Suspense fallback={null}>
+        <ZombieAssetWarmup />
+      </Suspense>
     </Canvas>
   );
 }

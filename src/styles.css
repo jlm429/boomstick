@@ -378,6 +378,36 @@ h2 {
   letter-spacing: 0.12em;
   animation: reload-reminder-pulse 0.34s ease-out;
 }
+.training-objective {
+  position: absolute;
+  z-index: 2;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.15rem 0.85rem;
+  width: max-content;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.48rem 0.8rem;
+  border: 1px solid #938777;
+  border-left: 3px solid #b99a61;
+  background: #1b211ff2;
+  color: #faf2e5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+.training-objective strong {
+  color: #e8cd94;
+  font-variant-numeric: tabular-nums;
+}
+.has-touch-controls .training-objective {
+  top: calc(max(0.75rem, env(safe-area-inset-top)) + 3.6rem);
+}
 .encounter-countdown {
   position: absolute;
   z-index: 2;
