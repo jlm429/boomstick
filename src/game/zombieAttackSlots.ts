@@ -1,4 +1,4 @@
-export const ZOMBIE_ATTACK_SLOT_COUNT = 8;
+export const ZOMBIE_ATTACK_SLOT_COUNT = 6;
 export const ZOMBIE_ATTACK_SLOT_RADIUS = 0.79;
 export const ZOMBIE_ATTACK_WAITING_RADIUS = 1.4;
 

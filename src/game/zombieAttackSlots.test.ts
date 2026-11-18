@@ -61,13 +61,16 @@ describe('zombie attack slots', () => {
 
     const releasedSlot = coordinator.getAttackSlot('zombie-3');
     coordinator.release('zombie-3');
-    const promoted = coordinator.claim('zombie-8', { x: 0, z: 10 }, { x: 0, z: 0 });
+    const promoted = coordinator.claim(
+      `zombie-${ZOMBIE_ATTACK_SLOT_COUNT}`,
+      { x: 0, z: 10 },
+      { x: 0, z: 0 },
+    );
 
     expect(promoted).toMatchObject({ kind: 'attack', index: releasedSlot });
   });
 
-  it('uses eight attack slots strictly inside attack range', () => {
-    expect(ZOMBIE_ATTACK_SLOT_COUNT).toBe(8);
+  it('keeps attack targets strictly inside attack range', () => {
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBe(0.79);
     expect(ZOMBIE_ATTACK_SLOT_RADIUS).toBeLessThan(ZOMBIE_ATTACK_DISTANCE);
   });

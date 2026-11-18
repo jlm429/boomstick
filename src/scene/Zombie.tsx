@@ -585,7 +585,7 @@ export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
   const dying = useFBX(ZOMBIE_ASSET_URLS.dying);
   useEffect(() => {
     prepareZombieAnimationClips(model, { idle, run, attack, hit, dying });
-    const preview = createZombieModelInstance(model);
+    const preview = createZombieModelInstance(model, { shotRaycast: false });
     const textures = zombieModelTextures(preview);
     const imageWaitDeadline = performance.now() + 2000;
     let cancelled = false;
@@ -603,7 +603,6 @@ export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
       preview.traverse((child) => {
         if (!(child instanceof Mesh)) return;
         child.frustumCulled = false;
-        child.raycast = () => null;
       });
       scene.add(preview);
       removeAfterRender = addAfterEffect(() => {
@@ -614,28 +613,28 @@ export function ZombieAssetWarmup({ onReady }: { onReady: () => void }) {
 
     // FBX can resolve while its embedded images are still loading.
     const uploadNextTexture = () => {
+      if (textures.size === 0) {
+        renderPreview();
+        return;
+      }
       const texture = [...textures].find(({ image }) => image instanceof HTMLImageElement);
       if (!texture) {
-        if (textures.size > 0 && performance.now() < imageWaitDeadline) {
+        if (performance.now() < imageWaitDeadline) {
           uploadFrame = requestAnimationFrame(uploadNextTexture);
-        } else {
-          renderPreview();
         }
         return;
       }
-      textures.delete(texture);
       const image = texture.image as HTMLImageElement;
       void image.decode().then(
         () => {
           if (cancelled) return;
           uploadFrame = requestAnimationFrame(() => {
             gl.initTexture(texture);
+            textures.delete(texture);
             uploadFrame = requestAnimationFrame(uploadNextTexture);
           });
         },
-        () => {
-          if (!cancelled) uploadNextTexture();
-        },
+        () => undefined,
       );
     };
     uploadFrame = requestAnimationFrame(uploadNextTexture);

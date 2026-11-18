@@ -162,15 +162,15 @@ function optimizedZombieModelAsset(source: Group) {
   return optimized;
 }
 
-export function createZombieModelInstance(source: Group) {
+export function createZombieModelInstance(source: Group, { shotRaycast = true } = {}) {
   const model = clone(optimizedZombieModelAsset(source)) as Group;
   prepareZombieMaterials(model);
   model.traverse((child) => {
-    if (child instanceof Mesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
-    }
-    if (child instanceof SkinnedMesh) installCachedShotRaycast(child);
+    if (!(child instanceof Mesh)) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    if (!shotRaycast) child.raycast = () => null;
+    else if (child instanceof SkinnedMesh) installCachedShotRaycast(child);
   });
   return model;
 }
